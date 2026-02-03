@@ -123,6 +123,6 @@ public func priorityColor(_ priority: TaskItem.Priority) -> Color {
     case .high: return .red
     case .medium: return .orange
     case .low: return .blue
-    case .none: return .clear
+    case .none: return .white
     }
 }
