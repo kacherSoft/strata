@@ -26,7 +26,7 @@ public struct TaskRow: View {
     public var body: some View {
         VStack(spacing: 12) {
             // Main Row Content
-            HStack(spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
                 // Checkbox
                 Button(action: {}) {
                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -37,6 +37,7 @@ public struct TaskRow: View {
 
                 // Task Info
                 VStack(alignment: .leading, spacing: 8) {
+                    // Title
                     Text(task.title)
                         .font(.system(size: 13))
                         .foregroundStyle(task.isCompleted ? .secondary : .primary)
@@ -54,47 +55,54 @@ public struct TaskRow: View {
                     if !task.photos.isEmpty {
                         PhotoThumbnailStrip(photos: task.photos)
                     }
+                }
 
+                Spacer()
+            }
+
+            // Bottom Row: Metadata (left) + Action Buttons (right, when selected)
+            HStack(alignment: .center) {
+                // Left side: Tags, Due Date, Reminder (always visible)
+                HStack(spacing: 12) {
                     // Tags
                     if !task.tags.isEmpty {
                         TagCloud(tags: task.tags)
                     }
 
-                    HStack(spacing: 8) {
-                        if let dueDate = task.dueDate {
-                            HStack(spacing: 4) {
-                                Image(systemName: task.isToday ? "calendar.badge.clock" : "calendar")
-                                Text(dueDate, style: .date)
-                            }
-                            .font(.system(size: 10))
-                            .foregroundStyle(task.isToday ? .orange : .secondary)
+                    // Due date
+                    if let dueDate = task.dueDate {
+                        HStack(spacing: 4) {
+                            Image(systemName: task.isToday ? "calendar.badge.clock" : "calendar")
+                            Text(dueDate, style: .date)
                         }
+                        .font(.system(size: 10))
+                        .foregroundStyle(task.isToday ? .orange : .secondary)
+                    }
 
-                        if task.hasReminder {
-                            Image(systemName: "bell.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                        }
+                    // Reminder
+                    if task.hasReminder {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                     }
                 }
 
                 Spacer()
 
-                // Priority Indicator
-                PriorityIndicator(priority: currentPriority)
-            }
-
-            // Action Buttons (only when selected)
-            if isSelected {
-                HStack(spacing: 12) {
-                    ActionButton(icon: "paperclip") {}
-                    ActionButton(icon: "flag.fill") { cyclePriority() }
-                    Divider()
-                        .frame(height: 20)
-                    ActionButton(icon: "pencil") { showEditSheet = true }
-                    ActionButton(icon: "trash") {}
+                // Right side: Action Buttons (only when selected)
+                if isSelected {
+                    HStack(spacing: 12) {
+                        ActionButton(icon: "paperclip") {}
+                        Divider()
+                            .frame(height: 20)
+                        ActionButton(icon: "pencil") { showEditSheet = true }
+                        ActionButton(icon: "trash") {}
+                        // Priority button (last, rightmost)
+                        ActionButton(icon: "flag.fill") { cyclePriority() }
+                            .foregroundStyle(priorityColor(currentPriority))
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(16)

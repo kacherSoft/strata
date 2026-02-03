@@ -99,6 +99,20 @@ public struct TaskItem: Identifiable, Sendable {
             hasReminder: false,
             dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
             tags: ["testing", "ui"]
+        ),
+        TaskItem(
+            title: "Photo attachments test",
+            notes: "Testing the photo thumbnail strip with two attached images.",
+            isCompleted: false,
+            isToday: true,
+            priority: .high,
+            hasReminder: true,
+            dueDate: Date(),
+            tags: ["testing", "photos"],
+            photos: [
+                URL(fileURLWithPath: "/Volumes/OCW-2TB/LocalProjects/TaskManager/IMG_1228.PNG"),
+                URL(fileURLWithPath: "/Volumes/OCW-2TB/LocalProjects/TaskManager/IMG_1229.PNG")
+            ]
         )
     ]
 }
