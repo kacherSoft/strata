@@ -1,0 +1,852 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.TaskManager-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/sources",
+      "importPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/Sources/TaskManager/TaskManagerApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules/TaskManagerUIComponents.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "TaskManager",
+      "moduleOutputPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules/TaskManager.swiftmodule",
+      "objects" : [
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx15.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "TaskManager_main",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "taskmanager"
+      ],
+      "outputFileMapPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules/TaskManager.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/Sources/TaskManager/TaskManagerApp.swift"
+      ],
+      "tempsPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.TaskManagerUIComponents-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/sources",
+      "importPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/SidebarItem.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/TaskItem.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/ActionButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagCloud.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/PriorityPicker.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/SearchBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/TextareaField.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskRow.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "TaskManagerUIComponents",
+      "moduleOutputPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules/TaskManagerUIComponents.swiftmodule",
+      "objects" : [
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarItem.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskItem.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ActionButton.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/FloatingActionButton.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PrimaryButton.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ProgressIndicator.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagChip.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagCloud.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityPicker.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SearchBar.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TextareaField.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/MenuButton.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/DetailPanelView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskListView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskRow.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx15.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/include/TaskManagerUIComponents-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "taskmanageruicomponents"
+      ],
+      "outputFileMapPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarItem.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskItem.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ActionButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/FloatingActionButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PrimaryButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ProgressIndicator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagChip.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagCloud.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityPicker.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SearchBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TextareaField.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/MenuButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/DetailPanelView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskListView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskRow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules/TaskManagerUIComponents.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/SidebarItem.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/TaskItem.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/ActionButton.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagCloud.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/PriorityPicker.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/SearchBar.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/TextareaField.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskRow.swift"
+      ],
+      "tempsPath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "TaskManager" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "TaskManager",
+      "-package-name",
+      "taskmanager",
+      "-c",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/Sources/TaskManager/TaskManagerApp.swift",
+      "-I",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx15.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "TaskManager_main",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "taskmanager",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "TaskManagerUIComponents" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "TaskManagerUIComponents",
+      "-package-name",
+      "taskmanageruicomponents",
+      "-c",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/SidebarItem.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/TaskItem.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/ActionButton.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagCloud.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/PriorityPicker.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/SearchBar.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/TextareaField.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskRow.swift",
+      "-I",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx15.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/include/TaskManagerUIComponents-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "taskmanageruicomponents",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "TaskManager" : [
+      "TaskManagerUIComponents"
+    ],
+    "TaskManagerUIComponents" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager-entitlement.plist"
+    },
+    "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/Sources/TaskManager/TaskManagerApp.swift"
+        }
+      ],
+      "outputFilePath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/sources"
+    },
+    "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ActionButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/DetailPanelView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/FloatingActionButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/MenuButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PrimaryButton.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityPicker.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ProgressIndicator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SearchBar.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarItem.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagChip.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagCloud.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskItem.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskListView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskRow.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TextareaField.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.product/Objects.LinkFileList"
+    },
+    "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/SidebarItem.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Models/TaskItem.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/ActionButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagCloud.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/PriorityPicker.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/SearchBar.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Inputs/TextareaField.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskRow.swift"
+        }
+      ],
+      "outputFilePath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/sources"
+    },
+    "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

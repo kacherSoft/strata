@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager'
+relocations:     []
+...

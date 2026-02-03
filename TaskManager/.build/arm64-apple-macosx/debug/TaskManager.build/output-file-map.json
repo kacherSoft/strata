@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/master.swiftdeps"
+  },
+  "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/Sources/TaskManager/TaskManagerApp.swift": {
+    "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.d",
+    "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.swift.o",
+    "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.swiftdeps",
+    "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManager/.build/arm64-apple-macosx/debug/TaskManager.build/TaskManagerApp.dia"
+  }
+}

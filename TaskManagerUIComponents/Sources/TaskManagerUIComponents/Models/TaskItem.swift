@@ -1,0 +1,111 @@
+import SwiftUI
+
+// MARK: - Task Item Model
+public struct TaskItem: Identifiable, Sendable {
+    public let id = UUID()
+    public let title: String
+    public let notes: String
+    public var isCompleted: Bool
+    public var isToday: Bool
+    public let priority: Priority
+    public let hasReminder: Bool
+    public let dueDate: Date?
+    public let tags: [String]
+
+    public enum Priority: Sendable {
+        case high, medium, low, none
+    }
+
+    public init(
+        title: String,
+        notes: String,
+        isCompleted: Bool,
+        isToday: Bool,
+        priority: Priority,
+        hasReminder: Bool,
+        dueDate: Date?,
+        tags: [String]
+    ) {
+        self.title = title
+        self.notes = notes
+        self.isCompleted = isCompleted
+        self.isToday = isToday
+        self.priority = priority
+        self.hasReminder = hasReminder
+        self.dueDate = dueDate
+        self.tags = tags
+    }
+
+    public nonisolated(unsafe) static let sampleTasks = [
+        TaskItem(
+            title: "Design system components",
+            notes: "Create reusable UI components with liquid glass effect",
+            isCompleted: false,
+            isToday: true,
+            priority: .high,
+            hasReminder: true,
+            dueDate: Calendar.current.date(byAdding: .day, value: 0, to: Date()),
+            tags: ["design", "ui"]
+        ),
+        TaskItem(
+            title: "Review API documentation",
+            notes: "Check latest endpoints and update integration",
+            isCompleted: false,
+            isToday: true,
+            priority: .medium,
+            hasReminder: false,
+            dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
+            tags: ["backend", "api"]
+        ),
+        TaskItem(
+            title: "Setup dark mode support",
+            notes: "Ensure all components work in both light and dark mode",
+            isCompleted: false,
+            isToday: true,
+            priority: .high,
+            hasReminder: true,
+            dueDate: Date(),
+            tags: ["ui", "accessibility"]
+        ),
+        TaskItem(
+            title: "Write unit tests",
+            notes: "Add test coverage for core components",
+            isCompleted: false,
+            isToday: false,
+            priority: .low,
+            hasReminder: false,
+            dueDate: Calendar.current.date(byAdding: .day, value: 3, to: Date()),
+            tags: ["testing"]
+        ),
+        TaskItem(
+            title: "Update dependencies",
+            notes: "Update all Swift packages to latest versions",
+            isCompleted: true,
+            isToday: false,
+            priority: .none,
+            hasReminder: false,
+            dueDate: nil,
+            tags: ["maintenance"]
+        ),
+        TaskItem(
+            title: "Multi-line notes test",
+            notes: "This task has multi-line notes to test expand/collapse.\n\nSecond paragraph with more details here.\n\nKey points:\n- First item to remember\n- Second item to track\n- Third item to complete",
+            isCompleted: false,
+            isToday: false,
+            priority: .medium,
+            hasReminder: false,
+            dueDate: Calendar.current.date(byAdding: .day, value: 2, to: Date()),
+            tags: ["testing", "ui"]
+        )
+    ]
+}
+
+// MARK: - Priority Color Helper
+public func priorityColor(_ priority: TaskItem.Priority) -> Color {
+    switch priority {
+    case .high: return .red
+    case .medium: return .orange
+    case .low: return .blue
+    case .none: return .clear
+    }
+}
