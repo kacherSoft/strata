@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Task Item Model
 public struct TaskItem: Identifiable, Sendable {
-    public let id = UUID()
+    public let id: UUID
     public let title: String
     public let notes: String
     public var isCompleted: Bool
@@ -18,6 +18,7 @@ public struct TaskItem: Identifiable, Sendable {
     }
 
     public init(
+        id: UUID = UUID(),
         title: String,
         notes: String,
         isCompleted: Bool,
@@ -28,6 +29,7 @@ public struct TaskItem: Identifiable, Sendable {
         tags: [String],
         photos: [URL] = []
     ) {
+        self.id = id
         self.title = title
         self.notes = notes
         self.isCompleted = isCompleted

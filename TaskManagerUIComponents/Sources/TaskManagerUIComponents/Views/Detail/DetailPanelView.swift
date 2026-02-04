@@ -7,6 +7,11 @@ public struct DetailPanelView: View {
     let tasks: [TaskItem]
     @Binding var searchText: String
     @Binding var showNewTaskSheet: Bool
+    
+    let onToggleComplete: ((TaskItem) -> Void)?
+    let onEdit: ((TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void)?
+    let onDelete: ((TaskItem) -> Void)?
+    let onPriorityChange: ((TaskItem, TaskItem.Priority) -> Void)?
 
     public init(
         selectedSidebarItem: SidebarItem?,
@@ -20,6 +25,32 @@ public struct DetailPanelView: View {
         self.tasks = tasks
         self._searchText = searchText
         self._showNewTaskSheet = showNewTaskSheet
+        self.onToggleComplete = nil
+        self.onEdit = nil
+        self.onDelete = nil
+        self.onPriorityChange = nil
+    }
+    
+    public init(
+        selectedSidebarItem: SidebarItem?,
+        selectedTask: Binding<TaskItem?>,
+        tasks: [TaskItem],
+        searchText: Binding<String>,
+        showNewTaskSheet: Binding<Bool>,
+        onToggleComplete: @escaping (TaskItem) -> Void,
+        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void,
+        onDelete: @escaping (TaskItem) -> Void,
+        onPriorityChange: @escaping (TaskItem, TaskItem.Priority) -> Void
+    ) {
+        self.selectedSidebarItem = selectedSidebarItem
+        self._selectedTask = selectedTask
+        self.tasks = tasks
+        self._searchText = searchText
+        self._showNewTaskSheet = showNewTaskSheet
+        self.onToggleComplete = onToggleComplete
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.onPriorityChange = onPriorityChange
     }
 
     public var body: some View {
@@ -32,10 +63,21 @@ public struct DetailPanelView: View {
                 )
 
                 // Task List
-                TaskListView(
-                    tasks: filteredTasks,
-                    selectedTask: $selectedTask
-                )
+                if let onToggleComplete, let onEdit, let onDelete, let onPriorityChange {
+                    TaskListView(
+                        tasks: filteredTasks,
+                        selectedTask: $selectedTask,
+                        onToggleComplete: onToggleComplete,
+                        onEdit: onEdit,
+                        onDelete: onDelete,
+                        onPriorityChange: onPriorityChange
+                    )
+                } else {
+                    TaskListView(
+                        tasks: filteredTasks,
+                        selectedTask: $selectedTask
+                    )
+                }
             }
             .frame(minWidth: 600, minHeight: 400)
             .overlay {

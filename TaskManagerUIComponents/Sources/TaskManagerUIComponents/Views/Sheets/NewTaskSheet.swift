@@ -11,9 +11,20 @@ public struct NewTaskSheet: View {
     @State private var selectedPriority: TaskItem.Priority = .none
     @State private var newTag = ""
     @State private var tags: [String] = []
+    
+    private let onCreate: ((String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void)?
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
+        self.onCreate = nil
+    }
+    
+    public init(
+        isPresented: Binding<Bool>,
+        onCreate: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void
+    ) {
+        self._isPresented = isPresented
+        self.onCreate = onCreate
     }
 
     public var body: some View {
@@ -84,8 +95,18 @@ public struct NewTaskSheet: View {
                     Button("Cancel") { isPresented = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") { isPresented = false }
-                        .disabled(taskTitle.isEmpty)
+                    Button("Create") {
+                        onCreate?(
+                            taskTitle,
+                            taskNotes,
+                            hasDate ? selectedDate : nil,
+                            hasReminder,
+                            selectedPriority,
+                            tags
+                        )
+                        isPresented = false
+                    }
+                    .disabled(taskTitle.isEmpty)
                 }
             }
         }

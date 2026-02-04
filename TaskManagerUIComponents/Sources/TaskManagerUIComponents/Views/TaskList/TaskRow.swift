@@ -4,6 +4,11 @@ import SwiftUI
 public struct TaskRow: View {
     let task: TaskItem
     let isSelected: Bool
+    let onToggleComplete: (() -> Void)?
+    let onEdit: ((String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void)?
+    let onDelete: (() -> Void)?
+    let onPriorityChange: ((TaskItem.Priority) -> Void)?
+    
     @State private var isExpanded = false
     @State private var showEditSheet = false
     @State private var currentPriority: TaskItem.Priority
@@ -12,6 +17,27 @@ public struct TaskRow: View {
         self.task = task
         self.isSelected = isSelected
         self._currentPriority = State(initialValue: task.priority)
+        self.onToggleComplete = nil
+        self.onEdit = nil
+        self.onDelete = nil
+        self.onPriorityChange = nil
+    }
+    
+    public init(
+        task: TaskItem,
+        isSelected: Bool,
+        onToggleComplete: @escaping () -> Void,
+        onEdit: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void,
+        onDelete: @escaping () -> Void,
+        onPriorityChange: @escaping (TaskItem.Priority) -> Void
+    ) {
+        self.task = task
+        self.isSelected = isSelected
+        self._currentPriority = State(initialValue: task.priority)
+        self.onToggleComplete = onToggleComplete
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.onPriorityChange = onPriorityChange
     }
 
     private func cyclePriority() {
@@ -21,6 +47,7 @@ public struct TaskRow: View {
         case .medium: currentPriority = .high
         case .high: currentPriority = .none
         }
+        onPriorityChange?(currentPriority)
     }
 
     public var body: some View {
@@ -28,7 +55,7 @@ public struct TaskRow: View {
             // Main Row Content
             HStack(alignment: .top, spacing: 16) {
                 // Checkbox
-                Button(action: {}) {
+                Button(action: { onToggleComplete?() }) {
                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
                         .foregroundStyle(task.isCompleted ? .blue : .secondary)
@@ -106,7 +133,7 @@ public struct TaskRow: View {
                         Divider()
                             .frame(height: 20)
                         ActionButton(icon: "pencil") { showEditSheet = true }
-                        ActionButton(icon: "trash") {}
+                        ActionButton(icon: "trash") { onDelete?() }
                     }
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
@@ -126,7 +153,16 @@ public struct TaskRow: View {
             }
         }
         .sheet(isPresented: $showEditSheet) {
-            EditTaskSheet(task: task, isPresented: $showEditSheet)
+            if let onEdit, let onDelete {
+                EditTaskSheet(
+                    task: task,
+                    isPresented: $showEditSheet,
+                    onSave: onEdit,
+                    onDelete: onDelete
+                )
+            } else {
+                EditTaskSheet(task: task, isPresented: $showEditSheet)
+            }
         }
     }
 }
