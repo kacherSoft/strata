@@ -44,6 +44,13 @@
     "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.swiftdeps",
     "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.dia"
   },
+  "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift": {
+    "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.d",
+    "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.swift.o",
+    "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.swiftdeps",
+    "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.dia"
+  },
   "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift": {
     "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.d",
     "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o",
@@ -113,13 +120,6 @@
     "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView~partial.swiftmodule",
     "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swiftdeps",
     "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.dia"
-  },
-  "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift": {
-    "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.d",
-    "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.swift.o",
-    "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView~partial.swiftmodule",
-    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.swiftdeps",
-    "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.dia"
   },
   "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift": {
     "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.d",

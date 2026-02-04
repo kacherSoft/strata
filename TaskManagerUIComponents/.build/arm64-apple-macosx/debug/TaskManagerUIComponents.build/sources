@@ -4,6 +4,7 @@
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift
+/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift
@@ -14,7 +15,6 @@
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift
-/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift
 /Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift

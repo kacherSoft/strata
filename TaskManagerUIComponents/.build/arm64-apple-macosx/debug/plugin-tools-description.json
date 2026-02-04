@@ -48,6 +48,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift"
         },
         {
@@ -85,10 +89,6 @@
         {
           "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift"
-        },
-        {
-          "kind" : "file",
-          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift"
         },
         {
           "kind" : "file",
@@ -133,6 +133,7 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/FloatingActionButton.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PrimaryButton.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EmptyStateView.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/ProgressIndicator.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TagChip.swift.o",
@@ -143,7 +144,6 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/MenuButton.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/DetailPanelView.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swift.o",
-        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o",
@@ -234,6 +234,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PhotoViewer.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/PriorityIndicator.swift.o"
         },
         {
@@ -274,10 +278,6 @@
         },
         {
           "kind" : "file",
-          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskDetailView.swift.o"
-        },
-        {
-          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o"
         },
         {
@@ -313,6 +313,7 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift",
@@ -323,7 +324,6 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
-        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
@@ -352,6 +352,7 @@
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/FloatingActionButton.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Buttons/PrimaryButton.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/EmptyStateView.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/ProgressIndicator.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/TagChip.swift",
@@ -362,7 +363,6 @@
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Misc/MenuButton.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/DetailPanelView.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
-      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
@@ -478,6 +478,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PhotoViewer.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Components/Display/PriorityIndicator.swift"
         },
         {
@@ -515,10 +519,6 @@
         {
           "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift"
-        },
-        {
-          "kind" : "file",
-          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/TaskDetailView.swift"
         },
         {
           "kind" : "file",

@@ -11,6 +11,10 @@ public struct NewTaskSheet: View {
     @State private var selectedPriority: TaskItem.Priority = .none
     @State private var newTag = ""
     @State private var tags: [String] = []
+    @State private var showValidationError = false
+    @State private var showCreateConfirmation = false
+    @State private var showTagConfirmation = false
+    @State private var pendingTag = ""
     
     private let onCreate: ((String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void)?
 
@@ -26,13 +30,65 @@ public struct NewTaskSheet: View {
         self._isPresented = isPresented
         self.onCreate = onCreate
     }
+    
+    private func requestAddTag() {
+        let trimmed = newTag.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty, !tags.contains(trimmed) else {
+            newTag = ""
+            return
+        }
+        pendingTag = trimmed
+        showTagConfirmation = true
+    }
+    
+    private func confirmAddTag() {
+        tags.append(pendingTag)
+        newTag = ""
+        pendingTag = ""
+    }
+    
+    private func validateAndCreate() {
+        if taskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            showValidationError = true
+            return
+        }
+        showCreateConfirmation = true
+    }
+    
+    private func performCreate() {
+        onCreate?(
+            taskTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+            taskNotes,
+            hasDate ? selectedDate : nil,
+            hasReminder,
+            selectedPriority,
+            tags
+        )
+        isPresented = false
+    }
 
     public var body: some View {
         NavigationStack {
             Form {
                 Section("Task Details") {
-                    TextField("Task title", text: $taskTitle)
-                        .textFieldStyle(.plain)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            TextField("Task title", text: $taskTitle)
+                                .textFieldStyle(.plain)
+                            Text("*")
+                                .foregroundStyle(.red)
+                                .font(.caption)
+                        }
+                        .onChange(of: taskTitle) { _, _ in
+                            showValidationError = false
+                        }
+                        
+                        if showValidationError {
+                            Label("Title is required", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
 
                     TextareaField(
                         text: $taskNotes,
@@ -70,21 +126,23 @@ public struct NewTaskSheet: View {
 
                 Section("Tags") {
                     HStack {
-                        TextField("Add tag", text: $newTag)
+                        TextField("Add tag (press Enter)", text: $newTag)
                             .textFieldStyle(.plain)
+                            .onSubmit {
+                                requestAddTag()
+                            }
 
                         Button("Add") {
-                            if !newTag.isEmpty {
-                                tags.append(newTag)
-                                newTag = ""
-                            }
+                            requestAddTag()
                         }
                         .buttonStyle(.borderless)
                         .disabled(newTag.isEmpty)
                     }
 
                     if !tags.isEmpty {
-                        TagCloud(tags: tags)
+                        TagCloud(tags: tags, onRemove: { tag in
+                            tags.removeAll { $0 == tag }
+                        })
                     }
                 }
             }
@@ -96,18 +154,35 @@ public struct NewTaskSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        onCreate?(
-                            taskTitle,
-                            taskNotes,
-                            hasDate ? selectedDate : nil,
-                            hasReminder,
-                            selectedPriority,
-                            tags
-                        )
-                        isPresented = false
+                        validateAndCreate()
                     }
-                    .disabled(taskTitle.isEmpty)
                 }
+            }
+            .confirmationDialog(
+                "Create Task?",
+                isPresented: $showCreateConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Create Task") {
+                    performCreate()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Create task \"\(taskTitle.trimmingCharacters(in: .whitespacesAndNewlines))\"?")
+            }
+            .confirmationDialog(
+                "Create Tag?",
+                isPresented: $showTagConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Create \"\(pendingTag)\"") {
+                    confirmAddTag()
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingTag = ""
+                }
+            } message: {
+                Text("Create new tag \"\(pendingTag)\" and add it to this task?")
             }
         }
         .frame(minWidth: 500, minHeight: 400)

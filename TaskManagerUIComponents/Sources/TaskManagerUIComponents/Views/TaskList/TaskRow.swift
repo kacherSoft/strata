@@ -11,6 +11,7 @@ public struct TaskRow: View {
     
     @State private var isExpanded = false
     @State private var showEditSheet = false
+    @State private var showDeleteConfirmation = false
     @State private var currentPriority: TaskItem.Priority
 
     public init(task: TaskItem, isSelected: Bool) {
@@ -133,7 +134,7 @@ public struct TaskRow: View {
                         Divider()
                             .frame(height: 20)
                         ActionButton(icon: "pencil") { showEditSheet = true }
-                        ActionButton(icon: "trash") { onDelete?() }
+                        ActionButton(icon: "trash") { showDeleteConfirmation = true }
                     }
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
@@ -152,6 +153,9 @@ public struct TaskRow: View {
                 isExpanded = newValue
             }
         }
+        .onChange(of: task.priority) { _, newPriority in
+            currentPriority = newPriority
+        }
         .sheet(isPresented: $showEditSheet) {
             if let onEdit, let onDelete {
                 EditTaskSheet(
@@ -163,6 +167,18 @@ public struct TaskRow: View {
             } else {
                 EditTaskSheet(task: task, isPresented: $showEditSheet)
             }
+        }
+        .confirmationDialog(
+            "Delete Task?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                onDelete?()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete \"\(task.title)\"? This action cannot be undone.")
         }
     }
 }
