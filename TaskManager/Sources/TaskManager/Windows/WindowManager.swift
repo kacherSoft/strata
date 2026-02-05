@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import SwiftData
+import TaskManagerUIComponents
 
 @MainActor
 final class WindowManager: ObservableObject {
@@ -25,9 +26,12 @@ final class WindowManager: ObservableObject {
         
         guard let panel = quickEntryPanel, let container = modelContainer else { return }
         
-        let view = QuickEntryView(
+        let view = QuickEntryWrapper(
             onDismiss: { [weak self] in self?.hideQuickEntry() },
-            onSave: { [weak self] in self?.hideQuickEntry() }
+            onCreate: { [weak self] title, notes, dueDate, hasReminder, priority, tags in
+                self?.createTask(title: title, notes: notes, dueDate: dueDate, hasReminder: hasReminder, priority: priority, tags: tags)
+                self?.hideQuickEntry()
+            }
         )
         .modelContainer(container)
         
@@ -41,15 +45,41 @@ final class WindowManager: ObservableObject {
         quickEntryPanel?.orderOut(nil)
     }
     
+    private func createTask(title: String, notes: String, dueDate: Date?, hasReminder: Bool, priority: TaskItem.Priority, tags: [String]) {
+        guard let container = modelContainer else { return }
+        let context = container.mainContext
+        
+        let task = TaskModel(
+            title: title,
+            taskDescription: notes,
+            dueDate: dueDate,
+            priority: TaskPriority.from(priority),
+            tags: tags,
+            hasReminder: hasReminder
+        )
+        context.insert(task)
+        try? context.save()
+    }
+    
     // MARK: - Main Window
     
     func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main-window" || $0.title == "Task Manager" }) {
-            window.makeKeyAndOrderFront(nil)
-        } else if let window = NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible }) {
+        if let window = getMainWindow() {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+    
+    func getMainWindow() -> NSWindow? {
+        NSApp.windows.first(where: { $0.identifier?.rawValue == "main-window" || $0.title == "Task Manager" })
+        ?? NSApp.windows.first(where: { !($0 is NSPanel) && $0.isVisible })
+    }
+    
+    // MARK: - Always on Top
+    
+    func setAlwaysOnTop(_ enabled: Bool) {
+        guard let window = getMainWindow() else { return }
+        window.level = enabled ? .floating : .normal
     }
     
     // MARK: - Settings

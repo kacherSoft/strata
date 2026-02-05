@@ -25,6 +25,7 @@ struct GeneralSettingsView: View {
                             set: { newValue in
                                 currentSettings?.alwaysOnTop = newValue
                                 currentSettings?.touch()
+                                WindowManager.shared.setAlwaysOnTop(newValue)
                             }
                         )
                     )

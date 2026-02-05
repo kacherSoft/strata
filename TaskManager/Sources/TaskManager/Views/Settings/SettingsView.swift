@@ -23,14 +23,24 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
     
     var body: some View {
-        NavigationSplitView {
-            List(SettingsTab.allCases, selection: $selectedTab) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
-                    .tag(tab)
+        HStack(spacing: 0) {
+            // Sidebar
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(SettingsTab.allCases) { tab in
+                    SettingsSidebarRow(
+                        tab: tab,
+                        isSelected: selectedTab == tab
+                    ) {
+                        selectedTab = tab
+                    }
+                }
+                Spacer()
             }
-            .listStyle(.sidebar)
+            .padding(12)
             .frame(width: 180)
-        } detail: {
+            .background(.ultraThinMaterial)
+            
+            // Content
             Group {
                 switch selectedTab {
                 case .general:
@@ -44,8 +54,32 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.ultraThinMaterial)
         }
         .frame(width: 650, height: 480)
+    }
+}
+
+struct SettingsSidebarRow: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 14))
+                    .frame(width: 20)
+                Text(tab.rawValue)
+                    .font(.system(size: 13))
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSelected ? .primary : .secondary)
     }
 }

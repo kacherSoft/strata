@@ -5,14 +5,36 @@ import TaskManagerUIComponents
 import KeyboardShortcuts
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    var modelContainer: ModelContainer?
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        
+        // Apply saved settings on launch
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.applySettingsOnLaunch()
+        }
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {
         if let window = NSApp.windows.first(where: { !($0 is NSPanel) }) {
             window.makeKeyAndOrderFront(nil)
+        }
+    }
+    
+    @MainActor
+    private func applySettingsOnLaunch() {
+        guard let container = modelContainer else { return }
+        let context = container.mainContext
+        
+        do {
+            let descriptor = FetchDescriptor<SettingsModel>()
+            if let settings = try context.fetch(descriptor).first {
+                WindowManager.shared.setAlwaysOnTop(settings.alwaysOnTop)
+            }
+        } catch {
+            print("Failed to load settings: \(error)")
         }
     }
 }
@@ -37,6 +59,9 @@ struct TaskManagerApp: App {
         
         // Initialize shortcut manager (registers shortcuts)
         _ = ShortcutManager.shared
+        
+        // Pass container to app delegate for settings (after all inits)
+        appDelegate.modelContainer = container
     }
     
     var body: some Scene {
