@@ -100,6 +100,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/QuickEntryContent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/TaskFormContent.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift"
         },
         {
@@ -146,6 +154,8 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/HeaderView.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/EditTaskSheet.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.swift.o",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarView.swift.o",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskListView.swift.o",
@@ -286,6 +296,14 @@
         },
         {
           "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o"
         },
         {
@@ -326,6 +344,8 @@
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/QuickEntryContent.swift",
+        "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/TaskFormContent.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift",
         "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift",
@@ -365,6 +385,8 @@
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Detail/HeaderView.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/EditTaskSheet.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/QuickEntryContent.swift",
+      "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/TaskFormContent.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarView.swift",
       "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/TaskList/TaskListView.swift",
@@ -527,6 +549,14 @@
         {
           "kind" : "file",
           "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/NewTaskSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/QuickEntryContent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/TaskFormContent.swift"
         },
         {
           "kind" : "file",

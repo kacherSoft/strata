@@ -135,6 +135,20 @@
     "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.swiftdeps",
     "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/NewTaskSheet.dia"
   },
+  "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/QuickEntryContent.swift": {
+    "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.d",
+    "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.swift.o",
+    "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.swiftdeps",
+    "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/QuickEntryContent.dia"
+  },
+  "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sheets/TaskFormContent.swift": {
+    "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.d",
+    "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.swift.o",
+    "swiftmodule": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent~partial.swiftmodule",
+    "swift-dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.swiftdeps",
+    "diagnostics": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/TaskFormContent.dia"
+  },
   "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/Sources/TaskManagerUIComponents/Views/Sidebar/SidebarRow.swift": {
     "dependencies": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.d",
     "object": "/Volumes/OCW-2TB/LocalProjects/TaskManager/TaskManagerUIComponents/.build/arm64-apple-macosx/debug/TaskManagerUIComponents.build/SidebarRow.swift.o",

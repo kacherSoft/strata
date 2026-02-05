@@ -1,8 +1,7 @@
 import SwiftUI
 
-// MARK: - New Task Sheet (for modal sheet presentation)
-public struct NewTaskSheet: View {
-    @Binding var isPresented: Bool
+// MARK: - Quick Entry Content (for floating window presentation)
+public struct QuickEntryContent: View {
     @State private var taskTitle = ""
     @State private var taskNotes = ""
     @State private var selectedDate = Date()
@@ -13,18 +12,14 @@ public struct NewTaskSheet: View {
     @State private var showValidationError = false
     @State private var showCreateConfirmation = false
     
-    private let onCreate: ((String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void)?
+    public var onCancel: () -> Void
+    public var onCreate: (String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void
 
-    public init(isPresented: Binding<Bool>) {
-        self._isPresented = isPresented
-        self.onCreate = nil
-    }
-    
     public init(
-        isPresented: Binding<Bool>,
+        onCancel: @escaping () -> Void,
         onCreate: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void
     ) {
-        self._isPresented = isPresented
+        self.onCancel = onCancel
         self.onCreate = onCreate
     }
     
@@ -37,7 +32,7 @@ public struct NewTaskSheet: View {
     }
     
     private func performCreate() {
-        onCreate?(
+        onCreate(
             taskTitle.trimmingCharacters(in: .whitespacesAndNewlines),
             taskNotes,
             hasDate ? selectedDate : nil,
@@ -45,11 +40,11 @@ public struct NewTaskSheet: View {
             selectedPriority,
             tags
         )
-        isPresented = false
     }
 
     public var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // Content
             TaskFormContent(
                 taskTitle: $taskTitle,
                 taskNotes: $taskNotes,
@@ -60,30 +55,38 @@ public struct NewTaskSheet: View {
                 tags: $tags,
                 showValidationError: $showValidationError
             )
-            .navigationTitle("New Task")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { isPresented = false }
+            
+            Divider()
+            
+            // Footer buttons
+            HStack {
+                Button("Cancel") {
+                    onCancel()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        validateAndCreate()
-                    }
+                .keyboardShortcut(.escape, modifiers: [])
+                
+                Spacer()
+                
+                Button("Create") {
+                    validateAndCreate()
                 }
+                .keyboardShortcut(.return, modifiers: .command)
+                .buttonStyle(.borderedProminent)
             }
-            .confirmationDialog(
-                "Create Task?",
-                isPresented: $showCreateConfirmation,
-                titleVisibility: Visibility.visible
-            ) {
-                Button("Create Task") {
-                    performCreate()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Create task \"\(taskTitle.trimmingCharacters(in: .whitespacesAndNewlines))\"?")
-            }
+            .padding(16)
         }
-        .frame(minWidth: 500, minHeight: 400)
+        .confirmationDialog(
+            "Create Task?",
+            isPresented: $showCreateConfirmation,
+            titleVisibility: Visibility.visible
+        ) {
+            Button("Create Task") {
+                performCreate()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Create task \"\(taskTitle.trimmingCharacters(in: .whitespacesAndNewlines))\"?")
+        }
+        .frame(minWidth: 400, minHeight: 450)
     }
 }
