@@ -1,23 +1,32 @@
 import SwiftUI
 import SwiftData
 
+private struct EditModeItem: Identifiable {
+    let id: UUID
+}
+
 struct AIModesSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \AIModeModel.sortOrder) private var modes: [AIModeModel]
     
-    @State private var selectedMode: AIModeModel?
+    @State private var selectedModeId: UUID?
     @State private var showAddSheet = false
-    @State private var editingMode: AIModeModel?
+    @State private var editingItem: EditModeItem?
+    
+    private var selectedMode: AIModeModel? {
+        guard let id = selectedModeId else { return nil }
+        return modes.first { $0.id == id }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            List(selection: $selectedMode) {
+            List(selection: $selectedModeId) {
                 ForEach(modes) { mode in
                     ModeRow(mode: mode)
-                        .tag(mode)
+                        .tag(mode.id)
                         .contextMenu {
                             Button("Edit") {
-                                editingMode = mode
+                                editingItem = EditModeItem(id: mode.id)
                             }
                             if !mode.isBuiltIn {
                                 Button("Delete", role: .destructive) {
@@ -56,9 +65,11 @@ struct AIModesSettingsView: View {
                 addMode(name: name, prompt: prompt, provider: provider, model: model)
             }
         }
-        .sheet(item: $editingMode) { mode in
-            ModeEditorSheet(mode: mode) { name, prompt, provider, model in
-                updateMode(mode, name: name, prompt: prompt, provider: provider, model: model)
+        .sheet(item: $editingItem) { item in
+            if let mode = modes.first(where: { $0.id == item.id }) {
+                ModeEditorSheet(mode: mode) { name, prompt, provider, model in
+                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model)
+                }
             }
         }
     }
@@ -86,7 +97,7 @@ struct AIModesSettingsView: View {
     private func deleteSelected() {
         guard let mode = selectedMode, !mode.isBuiltIn else { return }
         deleteMode(mode)
-        selectedMode = nil
+        selectedModeId = nil
     }
     
     private func moveMode(from source: IndexSet, to destination: Int) {
@@ -156,7 +167,24 @@ private struct ModeEditorSheet: View {
     @State private var name = ""
     @State private var systemPrompt = ""
     @State private var selectedProvider: AIProviderType = .gemini
-    @State private var selectedModel = ""
+    @State private var selectedModel: String
+    
+    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String) -> Void) {
+        self.mode = mode
+        self.onSave = onSave
+        let provider: AIProviderType = mode?.provider ?? .gemini
+        let validModel: String = if let mode, provider.availableModels.contains(mode.modelName) {
+            mode.modelName
+        } else {
+            provider.defaultModel
+        }
+        _selectedModel = State(initialValue: validModel)
+        _selectedProvider = State(initialValue: provider)
+        if let mode {
+            _name = State(initialValue: mode.name)
+            _systemPrompt = State(initialValue: mode.systemPrompt)
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -228,7 +256,8 @@ private struct ModeEditorSheet: View {
                 name = mode.name
                 systemPrompt = mode.systemPrompt
                 selectedProvider = mode.provider
-                selectedModel = mode.modelName
+                let valid = selectedProvider.availableModels.contains(mode.modelName)
+                selectedModel = valid ? mode.modelName : selectedProvider.defaultModel
             } else {
                 selectedModel = selectedProvider.defaultModel
             }

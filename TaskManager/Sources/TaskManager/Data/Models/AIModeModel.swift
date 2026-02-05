@@ -25,7 +25,7 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
 }
 
 @Model
-final class AIModeModel {
+final class AIModeModel: Identifiable {
     @Attribute(.unique) var id: UUID
     var name: String
     var systemPrompt: String
