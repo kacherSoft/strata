@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import AppKit
 import TaskManagerUIComponents
+import KeyboardShortcuts
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -10,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {
-        if let window = NSApp.windows.first {
+        if let window = NSApp.windows.first(where: { !($0 is NSPanel) }) {
             window.makeKeyAndOrderFront(nil)
         }
     }
@@ -20,14 +21,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let container: ModelContainer
+    private let menuBarController: MenuBarController
     
     init() {
         do {
             container = try ModelContainer.configured()
+            WindowManager.shared.configure(modelContainer: container)
             seedDefaultData(container: container)
         } catch {
             fatalError("Failed to configure SwiftData: \(error)")
         }
+        
+        // Initialize menu bar
+        menuBarController = MenuBarController()
+        
+        // Initialize shortcut manager (registers shortcuts)
+        _ = ShortcutManager.shared
     }
     
     var body: some Scene {

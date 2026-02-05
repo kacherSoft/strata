@@ -1,10 +1,10 @@
-# Phase 2: Global Shortcuts & Quick Entry
+# Phase 2: Global Shortcuts, Quick Entry & Settings
 
 **Priority:** HIGH | **Status:** Pending | **Effort:** 1 week
 
 ## Overview
 
-Implement global keyboard shortcuts using KeyboardShortcuts package and create quick-entry floating panel for instant task capture from anywhere.
+Implement global keyboard shortcuts using KeyboardShortcuts package, create quick-entry floating panel for instant task capture, and build Settings window with shortcut customization.
 
 ## Context Links
 
@@ -59,26 +59,86 @@ TaskManager/Sources/TaskManager/
 ├── Windows/
 │   ├── QuickEntryPanel.swift    # NSPanel subclass
 │   ├── QuickEntryView.swift     # SwiftUI content
+│   ├── SettingsWindow.swift     # Settings NSWindow
 │   └── WindowManager.swift      # Window state management
+├── Views/
+│   ├── Settings/
+│   │   ├── SettingsView.swift           # Main settings container
+│   │   ├── GeneralSettingsView.swift    # General tab content
+│   │   ├── ShortcutsSettingsView.swift  # Shortcuts tab content
+│   │   ├── AIConfigSettingsView.swift   # AI config (placeholder)
+│   │   └── AIModesSettingsView.swift    # AI modes (placeholder)
+│   └── Components/
+│       └── SettingsSidebar.swift        # Sidebar navigation
 ├── MenuBar/
 │   └── MenuBarController.swift  # Status bar icon + menu
 └── TaskManagerApp.swift         # Register shortcuts on launch
 ```
+
+## Settings Window Design
+
+### Layout (Sidebar Navigation - macOS 26 Style)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Settings                                              ─ □ x│
+├─────────────┬───────────────────────────────────────────────┤
+│             │                                               │
+│  ○ General  │   General Settings                           │
+│             │   ─────────────────────────────────────────   │
+│  ○ Shortcuts│   ☑ Always on Top                            │
+│             │     Keep window above other applications      │
+│  ○ AI Config│                                               │
+│             │   ☑ Show Completed Tasks                      │
+│  ○ AI Modes │     Display completed tasks in list           │
+│             │                                               │
+│             │   ☐ Reduced Motion                            │
+│             │     Minimize animations                       │
+│             │                                               │
+│             │   Default Priority                            │
+│             │   ┌──────────────────────────────────────┐   │
+│             │   │ Medium                            ▾  │   │
+│             │   └──────────────────────────────────────┘   │
+│             │                                               │
+└─────────────┴───────────────────────────────────────────────┘
+```
+
+### Tabs Content
+
+| Tab | Phase 2 Status | Content |
+|-----|----------------|---------|
+| General | ✅ Full | Always on Top, Show Completed, Reduced Motion, Default Priority |
+| Shortcuts | ✅ Full | KeyboardShortcuts.Recorder for each shortcut, Reset buttons |
+| AI Config | 🔜 Placeholder | "Coming in Phase 3" message |
+| AI Modes | 🔜 Placeholder | "Coming in Phase 3" message |
+
+### Window Specifications
+
+- **Size:** 650 × 480 (fixed, non-resizable)
+- **Style:** `.ultraThinMaterial` background (liquid glass)
+- **Sidebar:** 180px width, icons + labels
+- **Content:** Remaining width with 24px padding
 
 ## Related Code Files
 
 ### Create
 - `TaskManager/Sources/TaskManager/Shortcuts/ShortcutNames.swift`
 - `TaskManager/Sources/TaskManager/Shortcuts/ShortcutManager.swift`
-- `TaskManager/Sources/TaskManager/Shortcuts/ShortcutSettings.swift`
 - `TaskManager/Sources/TaskManager/Windows/QuickEntryPanel.swift`
 - `TaskManager/Sources/TaskManager/Windows/QuickEntryView.swift`
+- `TaskManager/Sources/TaskManager/Windows/SettingsWindow.swift`
 - `TaskManager/Sources/TaskManager/Windows/WindowManager.swift`
+- `TaskManager/Sources/TaskManager/Views/Settings/SettingsView.swift`
+- `TaskManager/Sources/TaskManager/Views/Settings/GeneralSettingsView.swift`
+- `TaskManager/Sources/TaskManager/Views/Settings/ShortcutsSettingsView.swift`
+- `TaskManager/Sources/TaskManager/Views/Settings/AIConfigSettingsView.swift`
+- `TaskManager/Sources/TaskManager/Views/Settings/AIModesSettingsView.swift`
 - `TaskManager/Sources/TaskManager/MenuBar/MenuBarController.swift`
 
 ### Modify
 - `TaskManager/Package.swift` - Add KeyboardShortcuts dependency
 - `TaskManager/Sources/TaskManager/TaskManagerApp.swift` - Initialize shortcuts
+- `TaskManager/Sources/TaskManager/Data/Models/SettingsModel.swift` - Add shortcut storage fields if needed
 
 ## Implementation Steps
 
@@ -430,7 +490,313 @@ final class MenuBarController {
 }
 ```
 
-### Step 7: App Integration (Day 5)
+### Step 7: Settings Window & Views (Day 5-6)
+
+**SettingsWindow.swift**
+```swift
+import AppKit
+import SwiftUI
+import SwiftData
+
+final class SettingsWindow: NSWindow {
+    init(modelContainer: ModelContainer) {
+        super.init(
+            contentRect: NSRect(x: 0, y: 0, width: 650, height: 480),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        self.title = "Settings"
+        self.titlebarAppearsTransparent = true
+        self.isMovableByWindowBackground = true
+        self.backgroundColor = .clear
+        self.center()
+        
+        let settingsView = SettingsView()
+            .modelContainer(modelContainer)
+        
+        self.contentView = NSHostingView(rootView: settingsView)
+    }
+}
+```
+
+**SettingsView.swift**
+```swift
+import SwiftUI
+import KeyboardShortcuts
+
+enum SettingsTab: String, CaseIterable {
+    case general = "General"
+    case shortcuts = "Shortcuts"
+    case aiConfig = "AI Config"
+    case aiModes = "AI Modes"
+    
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .shortcuts: return "keyboard"
+        case .aiConfig: return "cpu"
+        case .aiModes: return "sparkles"
+        }
+    }
+}
+
+struct SettingsView: View {
+    @State private var selectedTab: SettingsTab = .general
+    
+    var body: some View {
+        NavigationSplitView {
+            List(SettingsTab.allCases, id: \.self, selection: $selectedTab) { tab in
+                Label(tab.rawValue, systemImage: tab.icon)
+            }
+            .listStyle(.sidebar)
+            .frame(width: 180)
+        } detail: {
+            Group {
+                switch selectedTab {
+                case .general:
+                    GeneralSettingsView()
+                case .shortcuts:
+                    ShortcutsSettingsView()
+                case .aiConfig:
+                    AIConfigSettingsView()
+                case .aiModes:
+                    AIModesSettingsView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial)
+        }
+        .frame(width: 650, height: 480)
+    }
+}
+```
+
+**GeneralSettingsView.swift**
+```swift
+import SwiftUI
+import SwiftData
+
+struct GeneralSettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var settings: [SettingsModel]
+    
+    private var currentSettings: SettingsModel? { settings.first }
+    
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Always on Top", isOn: Binding(
+                    get: { currentSettings?.alwaysOnTop ?? false },
+                    set: { newValue in
+                        currentSettings?.alwaysOnTop = newValue
+                        currentSettings?.touch()
+                    }
+                ))
+                Text("Keep window above other applications")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section {
+                Toggle("Show Completed Tasks", isOn: Binding(
+                    get: { currentSettings?.showCompletedTasks ?? true },
+                    set: { newValue in
+                        currentSettings?.showCompletedTasks = newValue
+                        currentSettings?.touch()
+                    }
+                ))
+                Text("Display completed tasks in the list")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section {
+                Toggle("Reduced Motion", isOn: Binding(
+                    get: { currentSettings?.reducedMotion ?? false },
+                    set: { newValue in
+                        currentSettings?.reducedMotion = newValue
+                        currentSettings?.touch()
+                    }
+                ))
+                Text("Minimize animations throughout the app")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section {
+                Picker("Default Priority", selection: Binding(
+                    get: { currentSettings?.defaultPriority ?? .medium },
+                    set: { newValue in
+                        currentSettings?.defaultPriority = newValue
+                        currentSettings?.touch()
+                    }
+                )) {
+                    ForEach(TaskPriority.allCases, id: \.self) { priority in
+                        Text(priority.rawValue.capitalized)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("General")
+        .padding()
+    }
+}
+```
+
+**ShortcutsSettingsView.swift**
+```swift
+import SwiftUI
+import KeyboardShortcuts
+
+struct ShortcutsSettingsView: View {
+    var body: some View {
+        Form {
+            Section("Task Shortcuts") {
+                ShortcutRow(
+                    name: .quickEntry,
+                    title: "Quick Entry",
+                    description: "Open quick task entry panel"
+                )
+                
+                ShortcutRow(
+                    name: .mainWindow,
+                    title: "Show Main Window",
+                    description: "Focus the main task list"
+                )
+            }
+            
+            Section("AI Shortcuts") {
+                ShortcutRow(
+                    name: .enhanceMe,
+                    title: "Enhance Me",
+                    description: "Open AI enhancement panel"
+                )
+                
+                ShortcutRow(
+                    name: .cycleAIMode,
+                    title: "Cycle AI Mode",
+                    description: "Switch between AI modes"
+                )
+            }
+            
+            Section("App Shortcuts") {
+                ShortcutRow(
+                    name: .settings,
+                    title: "Settings",
+                    description: "Open settings window"
+                )
+            }
+            
+            Section {
+                Button("Reset All to Defaults") {
+                    resetAllShortcuts()
+                }
+                .foregroundStyle(.red)
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Shortcuts")
+        .padding()
+    }
+    
+    private func resetAllShortcuts() {
+        KeyboardShortcuts.reset(.quickEntry, .mainWindow, .enhanceMe, .settings, .cycleAIMode)
+        // Re-register defaults
+        KeyboardShortcuts.setShortcut(.init(.n, modifiers: [.command, .shift]), for: .quickEntry)
+        KeyboardShortcuts.setShortcut(.init(.t, modifiers: [.command, .shift]), for: .mainWindow)
+        KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .shift]), for: .enhanceMe)
+        KeyboardShortcuts.setShortcut(.init(.comma, modifiers: [.command, .shift]), for: .settings)
+        KeyboardShortcuts.setShortcut(.init(.m, modifiers: [.command, .shift]), for: .cycleAIMode)
+    }
+}
+
+struct ShortcutRow: View {
+    let name: KeyboardShortcuts.Name
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            KeyboardShortcuts.Recorder(for: name)
+                .frame(width: 150)
+        }
+        .padding(.vertical, 4)
+    }
+}
+```
+
+**AIConfigSettingsView.swift** (Placeholder)
+```swift
+import SwiftUI
+
+struct AIConfigSettingsView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cpu")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            
+            Text("AI Configuration")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Coming in Phase 3")
+                .foregroundStyle(.secondary)
+            
+            Text("Configure AI providers, API keys, and model settings.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+}
+```
+
+**AIModesSettingsView.swift** (Placeholder)
+```swift
+import SwiftUI
+
+struct AIModesSettingsView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            
+            Text("AI Modes")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Coming in Phase 3")
+                .foregroundStyle(.secondary)
+            
+            Text("Create custom AI enhancement modes with your own prompts.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+}
+```
+
+### Step 8: App Integration (Day 6-7)
 
 **TaskManagerApp.swift** updates:
 ```swift
@@ -463,8 +829,23 @@ struct TaskManagerApp: App {
 }
 ```
 
+**WindowManager.swift** - Add settings window support:
+```swift
+func showSettings() {
+    if settingsWindow == nil {
+        guard let container = modelContainer else { return }
+        settingsWindow = SettingsWindow(modelContainer: container)
+    }
+    
+    settingsWindow?.center()
+    settingsWindow?.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+}
+```
+
 ## Todo List
 
+### Shortcuts & Quick Entry
 - [ ] Add KeyboardShortcuts to Package.swift
 - [ ] Create ShortcutNames.swift
 - [ ] Create ShortcutManager.swift
@@ -478,14 +859,30 @@ struct TaskManagerApp: App {
 - [ ] Test conflict detection
 - [ ] Add success animation to quick entry
 
+### Settings Window
+- [ ] Create SettingsWindow.swift (NSWindow)
+- [ ] Create SettingsView.swift (main container with sidebar)
+- [ ] Create GeneralSettingsView.swift (toggles + picker)
+- [ ] Create ShortcutsSettingsView.swift (KeyboardShortcuts.Recorder)
+- [ ] Create AIConfigSettingsView.swift (placeholder)
+- [ ] Create AIModesSettingsView.swift (placeholder)
+- [ ] Add showSettings() to WindowManager
+- [ ] Test CMD+Shift+, opens settings
+- [ ] Test shortcut customization works
+- [ ] Test Reset All to Defaults
+
 ## Success Criteria
 
 - [ ] CMD+Shift+N opens quick entry in <200ms
 - [ ] CMD+Shift+T focuses main window
+- [ ] CMD+Shift+, opens settings window
 - [ ] Quick entry creates real task in SwiftData
 - [ ] Menu bar icon works as fallback
 - [ ] Shortcuts work from any application
 - [ ] Panel auto-dismisses after save
+- [ ] Settings window displays with liquid glass style
+- [ ] Shortcut recorder allows customization
+- [ ] Settings persist between app launches
 
 ## Risk Assessment
 
