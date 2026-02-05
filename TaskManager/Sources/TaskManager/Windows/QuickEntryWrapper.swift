@@ -8,13 +8,7 @@ struct QuickEntryWrapper: View {
     var onCreate: (String, String, Date?, Bool, TaskItem.Priority, [String]) -> Void
     
     var body: some View {
-        Color.clear
-            .frame(width: 500, height: 450)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                NewTaskSheet(isPresented: $isPresented, onCreate: onCreate)
-            }
+        NewTaskSheet(isPresented: $isPresented, onCreate: onCreate)
             .onChange(of: isPresented) { _, newValue in
                 if !newValue {
                     onDismiss()

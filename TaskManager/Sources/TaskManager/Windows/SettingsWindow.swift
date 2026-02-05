@@ -12,9 +12,6 @@ final class SettingsWindow: NSWindow {
         )
         
         self.title = "Settings"
-        self.titlebarAppearsTransparent = true
-        self.isMovableByWindowBackground = true
-        self.backgroundColor = .clear
         self.center()
         
         let settingsView = SettingsView()

@@ -4,20 +4,16 @@ import SwiftUI
 final class QuickEntryPanel: NSPanel {
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 380),
-            styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
+            styleMask: [.titled, .closable, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
+        self.title = "Quick Entry"
         self.level = .floating
         self.isFloatingPanel = true
         self.hidesOnDeactivate = false
-        self.titlebarAppearsTransparent = true
-        self.titleVisibility = .hidden
-        self.isMovableByWindowBackground = true
-        self.backgroundColor = .clear
-        self.isOpaque = false
         
         self.center()
     }
