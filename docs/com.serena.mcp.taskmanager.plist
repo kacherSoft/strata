@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.serena.mcp.taskmanager</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/kacher/.local/bin/serena</string>
+        <string>start-mcp-server</string>
+        <string>--transport</string>
+        <string>sse</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>24280</string>
+        <string>--project</string>
+        <string>/Volumes/OCW-2TB/LocalProjects/TaskManager</string>
+        <string>--enable-web-dashboard</string>
+        <string>true</string>
+        <string>--open-web-dashboard</string>
+        <string>false</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/serena-taskmanager.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/serena-taskmanager.err</string>
+</dict>
+</plist>

@@ -63,6 +63,7 @@ final class WindowManager: ObservableObject {
         guard let container = modelContainer else { return }
         let context = container.mainContext
         
+        let storedPaths = photos.isEmpty ? [] : PhotoStorageService.shared.storePhotos(photos)
         let task = TaskModel(
             title: title,
             taskDescription: notes,
@@ -70,7 +71,7 @@ final class WindowManager: ObservableObject {
             priority: TaskPriority.from(priority),
             tags: tags,
             hasReminder: hasReminder,
-            photos: photos.map { $0.absoluteString }
+            photos: storedPaths
         )
         context.insert(task)
         try? context.save()
@@ -82,6 +83,8 @@ final class WindowManager: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         if let window = getMainWindow() {
             window.makeKeyAndOrderFront(nil)
+        } else {
+            NSApp.sendAction(Selector(("newWindowForTab:")), to: nil, from: nil)
         }
     }
     

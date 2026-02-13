@@ -37,6 +37,9 @@ struct EnhanceMeView: View {
             aiService.loadDefaultMode(from: modelContext)
             shouldFocusTextField = true
         }
+        .background(EnhanceMeShortcutHandler(onCycleMode: {
+            aiService.cycleMode(in: modelContext)
+        }))
     }
     
     // MARK: - Header
@@ -80,7 +83,7 @@ struct EnhanceMeView: View {
             Button(action: { aiService.cycleMode(in: modelContext) }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("⌘⇧M")
+                    Text("Tab")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -88,7 +91,7 @@ struct EnhanceMeView: View {
                 .padding(.vertical, 6)
             }
             .buttonStyle(.bordered)
-            .help("Cycle Mode (⌘⇧M)")
+            .help("Cycle Mode (Tab)")
         }
     }
     
@@ -262,6 +265,33 @@ struct EnhanceMeView: View {
 }
 
 // MARK: - Custom TextEditor with Enter handling
+
+struct EnhanceMeShortcutHandler: NSViewRepresentable {
+    var onCycleMode: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = EnhanceMeShortcutNSView()
+        view.onCycleMode = onCycleMode
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? EnhanceMeShortcutNSView)?.onCycleMode = onCycleMode
+    }
+}
+
+final class EnhanceMeShortcutNSView: KeyEventMonitorNSView {
+    var onCycleMode: (() -> Void)?
+
+    override func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        guard window?.isKeyWindow == true else { return event }
+        if event.keyCode == 48 && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == [] {
+            onCycleMode?()
+            return nil
+        }
+        return event
+    }
+}
 
 struct EnhanceTextEditor: NSViewRepresentable {
     @Binding var text: String

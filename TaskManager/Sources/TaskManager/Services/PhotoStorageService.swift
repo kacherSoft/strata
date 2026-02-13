@@ -98,4 +98,21 @@ final class PhotoStorageService {
     func photoExists(at path: String) -> Bool {
         fileManager.fileExists(atPath: path)
     }
+    
+    func isStoredPhoto(_ url: URL) -> Bool {
+        let dir = photosDirectory.standardizedFileURL.path
+        return url.standardizedFileURL.path.hasPrefix(dir + "/")
+    }
+    
+    func normalizeToStoredPaths(_ urls: [URL]) -> [String] {
+        var result: [String] = []
+        for url in urls {
+            if isStoredPhoto(url) {
+                result.append(url.path)
+            } else {
+                result.append(contentsOf: storePhotos([url]))
+            }
+        }
+        return result
+    }
 }

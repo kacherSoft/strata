@@ -142,6 +142,7 @@ struct ContentView: View {
         .sheet(isPresented: $showOnboarding) {
             OnboardingView()
         }
+        .background(LocalShortcutHandler())
     }
     
     private var taskItems: [TaskItem] {
@@ -157,6 +158,7 @@ struct ContentView: View {
         tags: [String],
         photos: [URL] = []
     ) {
+        let storedPaths = photos.isEmpty ? [] : PhotoStorageService.shared.storePhotos(photos)
         let task = TaskModel(
             title: title,
             taskDescription: notes,
@@ -164,7 +166,7 @@ struct ContentView: View {
             priority: TaskPriority.from(priority),
             tags: tags,
             hasReminder: hasReminder,
-            photos: photos.map { $0.absoluteString }
+            photos: storedPaths
         )
         modelContext.insert(task)
         try? modelContext.save()
@@ -203,7 +205,7 @@ struct ContentView: View {
         task.hasReminder = hasReminder
         task.priority = TaskPriority.from(priority)
         task.tags = tags
-        task.photos = photos.map { $0.path }
+        task.photos = PhotoStorageService.shared.normalizeToStoredPaths(photos)
         task.touch()
         try? modelContext.save()
     }
@@ -224,11 +226,39 @@ struct ContentView: View {
     
     private func addPhotos(taskItem: TaskItem, urls: [URL]) {
         guard let task = findTaskModel(for: taskItem) else { return }
-        PhotoStorageService.shared.pickPhotos { selectedURLs in
-            let storedPaths = PhotoStorageService.shared.storePhotos(selectedURLs)
+        
+        if urls.isEmpty {
+            PhotoStorageService.shared.pickPhotos { pickedURLs in
+                guard !pickedURLs.isEmpty else { return }
+                let storedPaths = PhotoStorageService.shared.storePhotos(pickedURLs)
+                task.photos.append(contentsOf: storedPaths)
+                task.touch()
+                try? self.modelContext.save()
+            }
+        } else {
+            let storedPaths = PhotoStorageService.shared.storePhotos(urls)
             task.photos.append(contentsOf: storedPaths)
             task.touch()
-            try? self.modelContext.save()
+            try? modelContext.save()
         }
+    }
+}
+
+struct LocalShortcutHandler: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { LocalShortcutNSView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+final class LocalShortcutNSView: KeyEventMonitorNSView {
+    override func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        if event.matchesShortcut(.mainWindow) {
+            ShortcutManager.shared.showMainWindow()
+            return nil
+        }
+        if event.matchesShortcut(.settings) {
+            ShortcutManager.shared.showSettings()
+            return nil
+        }
+        return event
     }
 }
