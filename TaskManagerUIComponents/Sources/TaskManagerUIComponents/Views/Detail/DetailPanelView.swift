@@ -10,14 +10,16 @@ public struct DetailPanelView: View {
     let selectedTag: String?
     let selectedDate: Date?
     let dateFilterMode: CalendarFilterMode
+    let selectedPriority: TaskItem.Priority?
     
     let onToggleComplete: ((TaskItem) -> Void)?
-    let onEdit: ((TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
     let onDelete: ((TaskItem) -> Void)?
     let onPriorityChange: ((TaskItem, TaskItem.Priority) -> Void)?
     let onAddPhotos: ((TaskItem, [URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
+    let onSetReminder: ((TaskItem) -> Void)?
 
     public init(
         selectedSidebarItem: SidebarItem?,
@@ -27,7 +29,8 @@ public struct DetailPanelView: View {
         showNewTaskSheet: Binding<Bool>,
         selectedTag: String? = nil,
         selectedDate: Date? = nil,
-        dateFilterMode: CalendarFilterMode = .all
+        dateFilterMode: CalendarFilterMode = .all,
+        selectedPriority: TaskItem.Priority? = nil
     ) {
         self.selectedSidebarItem = selectedSidebarItem
         self._selectedTask = selectedTask
@@ -37,6 +40,7 @@ public struct DetailPanelView: View {
         self.selectedTag = selectedTag
         self.selectedDate = selectedDate
         self.dateFilterMode = dateFilterMode
+        self.selectedPriority = selectedPriority
         self.onToggleComplete = nil
         self.onEdit = nil
         self.onDelete = nil
@@ -44,6 +48,7 @@ public struct DetailPanelView: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
+        self.onSetReminder = nil
     }
     
     public init(
@@ -55,13 +60,15 @@ public struct DetailPanelView: View {
         selectedTag: String? = nil,
         selectedDate: Date? = nil,
         dateFilterMode: CalendarFilterMode = .all,
+        selectedPriority: TaskItem.Priority? = nil,
         onToggleComplete: @escaping (TaskItem) -> Void,
-        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
         onPriorityChange: @escaping (TaskItem, TaskItem.Priority) -> Void,
         onAddPhotos: @escaping (TaskItem, [URL]) -> Void = { _, _ in },
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
-        onDeletePhoto: ((URL) -> Void)? = nil
+        onDeletePhoto: ((URL) -> Void)? = nil,
+        onSetReminder: ((TaskItem) -> Void)? = nil
     ) {
         self.selectedSidebarItem = selectedSidebarItem
         self._selectedTask = selectedTask
@@ -71,6 +78,7 @@ public struct DetailPanelView: View {
         self.selectedTag = selectedTag
         self.selectedDate = selectedDate
         self.dateFilterMode = dateFilterMode
+        self.selectedPriority = selectedPriority
         self.onToggleComplete = onToggleComplete
         self.onEdit = onEdit
         self.onDelete = onDelete
@@ -78,6 +86,7 @@ public struct DetailPanelView: View {
         self.onAddPhotos = onAddPhotos
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
+        self.onSetReminder = onSetReminder
     }
 
     public var body: some View {
@@ -89,46 +98,48 @@ public struct DetailPanelView: View {
                     searchText: $searchText
                 )
 
-                // Task List
-                if let onToggleComplete, let onEdit, let onDelete, let onPriorityChange, let onAddPhotos {
-                    TaskListView(
-                        tasks: filteredTasks,
-                        selectedTask: $selectedTask,
-                        calendarFilterDate: selectedDate,
-                        calendarFilterMode: dateFilterMode,
-                        onToggleComplete: onToggleComplete,
-                        onEdit: onEdit,
-                        onDelete: onDelete,
-                        onPriorityChange: onPriorityChange,
-                        onAddPhotos: onAddPhotos,
-                        onPickPhotos: onPickPhotos,
-                        onDeletePhoto: onDeletePhoto
-                    )
-                } else {
-                    TaskListView(
-                        tasks: filteredTasks,
-                        selectedTask: $selectedTask,
-                        calendarFilterDate: selectedDate,
-                        calendarFilterMode: dateFilterMode
-                    )
+                // Task List with empty state
+                ZStack {
+                    if let onToggleComplete, let onEdit, let onDelete, let onPriorityChange, let onAddPhotos {
+                        TaskListView(
+                            tasks: filteredTasks,
+                            selectedTask: $selectedTask,
+                            calendarFilterDate: selectedDate,
+                            calendarFilterMode: dateFilterMode,
+                            onToggleComplete: onToggleComplete,
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                            onPriorityChange: onPriorityChange,
+                            onAddPhotos: onAddPhotos,
+                            onPickPhotos: onPickPhotos,
+                            onDeletePhoto: onDeletePhoto,
+                            onSetReminder: onSetReminder
+                        )
+                    } else {
+                        TaskListView(
+                            tasks: filteredTasks,
+                            selectedTask: $selectedTask,
+                            calendarFilterDate: selectedDate,
+                            calendarFilterMode: dateFilterMode
+                        )
+                    }
+
+                    if filteredTasks.isEmpty && !searchText.isEmpty {
+                        EmptyStateView(
+                            icon: "magnifyingglass",
+                            title: "No results found",
+                            message: "Try a different search term"
+                        )
+                    } else if filteredTasks.isEmpty {
+                        EmptyStateView(
+                            icon: "tray",
+                            title: "No tasks yet",
+                            message: "Create your first task to get started"
+                        )
+                    }
                 }
             }
             .frame(minWidth: 600, minHeight: 400)
-            .overlay {
-                if filteredTasks.isEmpty && !searchText.isEmpty {
-                    EmptyStateView(
-                        icon: "magnifyingglass",
-                        title: "No results found",
-                        message: "Try a different search term"
-                    )
-                } else if filteredTasks.isEmpty {
-                    EmptyStateView(
-                        icon: "tray",
-                        title: "No tasks yet",
-                        message: "Create your first task to get started"
-                    )
-                }
-            }
 
             // Floating Action Button
             FloatingActionButton(icon: "plus") {
@@ -139,6 +150,14 @@ public struct DetailPanelView: View {
     }
 
     private var headerTitle: String {
+        if let priority = selectedPriority {
+            switch priority {
+            case .high: return "High Priority"
+            case .medium: return "Medium Priority"
+            case .low: return "Low Priority"
+            case .none: return "No Priority"
+            }
+        }
         if let tag = selectedTag {
             return "#\(tag)"
         }
@@ -154,8 +173,12 @@ public struct DetailPanelView: View {
     private var filteredTasks: [TaskItem] {
         var result = tasks
 
+        // Filter by priority
+        if let priority = selectedPriority {
+            result = result.filter { $0.priority == priority }
+        }
         // Filter by tag
-        if let tag = selectedTag {
+        else if let tag = selectedTag {
             result = result.filter { $0.tags.contains(tag) }
         }
         // Filter by date
