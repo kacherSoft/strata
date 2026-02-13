@@ -11,6 +11,8 @@ extension TaskModel {
             isToday: isToday,
             priority: priority.toUIComponentPriority(),
             hasReminder: hasReminder,
+            reminderDuration: reminderDuration,
+            reminderFireDate: reminderFireDate,
             dueDate: dueDate,
             tags: tags,
             photos: photos.map { URL(fileURLWithPath: $0) },

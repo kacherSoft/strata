@@ -8,6 +8,8 @@ final class TaskModel {
     var taskDescription: String
     var dueDate: Date?
     var reminderDate: Date?
+    var reminderDuration: Double = 1800
+    var reminderFireDate: Date?  = nil
     var priority: TaskPriority
     var tags: [String]
     var statusRaw: String = TaskStatus.todo.rawValue
@@ -32,6 +34,7 @@ final class TaskModel {
         taskDescription: String = "",
         dueDate: Date? = nil,
         reminderDate: Date? = nil,
+        reminderDuration: Double = 1800,
         priority: TaskPriority = .medium,
         tags: [String] = [],
         status: TaskStatus = .todo,
@@ -44,6 +47,8 @@ final class TaskModel {
         self.taskDescription = taskDescription
         self.dueDate = dueDate
         self.reminderDate = reminderDate
+        self.reminderDuration = reminderDuration
+        self.reminderFireDate = nil
         self.priority = priority
         self.tags = tags
         self.statusRaw = status.rawValue

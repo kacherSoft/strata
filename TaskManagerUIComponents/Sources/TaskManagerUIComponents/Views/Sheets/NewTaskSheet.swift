@@ -8,13 +8,14 @@ public struct NewTaskSheet: View {
     @State private var selectedDate = Date()
     @State private var hasDate = false
     @State private var hasReminder = false
+    @State private var reminderDuration: TimeInterval = 1800
     @State private var selectedPriority: TaskItem.Priority = .none
     @State private var tags: [String] = []
     @State private var photos: [URL] = []
     @State private var showValidationError = false
     @State private var showCreateConfirmation = false
     
-    private let onCreate: ((String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void)?
+    private let onCreate: ((String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
 
@@ -29,7 +30,7 @@ public struct NewTaskSheet: View {
         isPresented: Binding<Bool>,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil,
-        onCreate: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void
+        onCreate: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void
     ) {
         self._isPresented = isPresented
         self.onPickPhotos = onPickPhotos
@@ -51,6 +52,7 @@ public struct NewTaskSheet: View {
             taskNotes,
             hasDate ? selectedDate : nil,
             hasReminder,
+            reminderDuration,
             selectedPriority,
             tags,
             photos
@@ -66,6 +68,7 @@ public struct NewTaskSheet: View {
                 selectedDate: $selectedDate,
                 hasDate: $hasDate,
                 hasReminder: $hasReminder,
+                reminderDuration: $reminderDuration,
                 selectedPriority: $selectedPriority,
                 tags: $tags,
                 showValidationError: $showValidationError,

@@ -6,12 +6,13 @@ public struct TaskListView: View {
     @Binding var selectedTask: TaskItem?
     
     let onToggleComplete: ((TaskItem) -> Void)?
-    let onEdit: ((TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
     let onDelete: ((TaskItem) -> Void)?
     let onPriorityChange: ((TaskItem, TaskItem.Priority) -> Void)?
     let onAddPhotos: ((TaskItem, [URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
+    let onSetReminder: ((TaskItem) -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
 
@@ -32,6 +33,7 @@ public struct TaskListView: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
+        self.onSetReminder = nil
     }
     
     public init(
@@ -40,12 +42,13 @@ public struct TaskListView: View {
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
         onToggleComplete: @escaping (TaskItem) -> Void,
-        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
         onPriorityChange: @escaping (TaskItem, TaskItem.Priority) -> Void,
         onAddPhotos: @escaping (TaskItem, [URL]) -> Void = { _, _ in },
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
-        onDeletePhoto: ((URL) -> Void)? = nil
+        onDeletePhoto: ((URL) -> Void)? = nil,
+        onSetReminder: ((TaskItem) -> Void)? = nil
     ) {
         self.tasks = tasks
         self._selectedTask = selectedTask
@@ -58,6 +61,7 @@ public struct TaskListView: View {
         self.onAddPhotos = onAddPhotos
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
+        self.onSetReminder = onSetReminder
     }
 
     public var body: some View {
@@ -71,14 +75,15 @@ public struct TaskListView: View {
                             calendarFilterDate: calendarFilterDate,
                             calendarFilterMode: calendarFilterMode,
                             onStatusChange: { _ in onToggleComplete(task) },
-                            onEdit: { title, notes, dueDate, hasReminder, priority, tags, photos in
-                                onEdit(task, title, notes, dueDate, hasReminder, priority, tags, photos)
+                            onEdit: { title, notes, dueDate, hasReminder, duration, priority, tags, photos in
+                                onEdit(task, title, notes, dueDate, hasReminder, duration, priority, tags, photos)
                             },
                             onDelete: { onDelete(task) },
                             onPriorityChange: { priority in onPriorityChange(task, priority) },
                             onAddPhotos: { urls in onAddPhotos(task, urls) },
                             onPickPhotos: onPickPhotos,
-                            onDeletePhoto: onDeletePhoto
+                            onDeletePhoto: onDeletePhoto,
+                            onSetReminder: { onSetReminder?(task) }
                         )
                         .onTapGesture { selectedTask = task }
                     } else {

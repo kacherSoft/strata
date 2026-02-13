@@ -7,6 +7,7 @@ public struct TaskFormContent: View {
     @Binding var selectedDate: Date
     @Binding var hasDate: Bool
     @Binding var hasReminder: Bool
+    @Binding var reminderDuration: TimeInterval
     @Binding var selectedPriority: TaskItem.Priority
     @Binding var tags: [String]
     @Binding var showValidationError: Bool
@@ -25,6 +26,7 @@ public struct TaskFormContent: View {
         selectedDate: Binding<Date>,
         hasDate: Binding<Bool>,
         hasReminder: Binding<Bool>,
+        reminderDuration: Binding<TimeInterval>,
         selectedPriority: Binding<TaskItem.Priority>,
         tags: Binding<[String]>,
         showValidationError: Binding<Bool>,
@@ -37,6 +39,7 @@ public struct TaskFormContent: View {
         self._selectedDate = selectedDate
         self._hasDate = hasDate
         self._hasReminder = hasReminder
+        self._reminderDuration = reminderDuration
         self._selectedPriority = selectedPriority
         self._tags = tags
         self._showValidationError = showValidationError
@@ -103,6 +106,10 @@ public struct TaskFormContent: View {
                 }
 
                 Toggle("Set Reminder", isOn: $hasReminder)
+
+                if hasReminder {
+                    ReminderDurationPicker(duration: $reminderDuration)
+                }
 
                 if hasReminder && hasDate {
                     DatePicker(

@@ -57,8 +57,8 @@ final class WindowManager: ObservableObject {
         
         let view = QuickEntryWrapper(
             onDismiss: { [weak self] in self?.hideQuickEntry() },
-            onCreate: { [weak self] title, notes, dueDate, hasReminder, priority, tags, photos in
-                self?.createTask(title: title, notes: notes, dueDate: dueDate, hasReminder: hasReminder, priority: priority, tags: tags, photos: photos)
+            onCreate: { [weak self] title, notes, dueDate, hasReminder, duration, priority, tags, photos in
+                self?.createTask(title: title, notes: notes, dueDate: dueDate, hasReminder: hasReminder, reminderDuration: duration, priority: priority, tags: tags, photos: photos)
                 self?.hideQuickEntry()
             },
             onPickPhotos: { completion in
@@ -77,7 +77,7 @@ final class WindowManager: ObservableObject {
         quickEntryPanel?.orderOut(nil)
     }
     
-    private func createTask(title: String, notes: String, dueDate: Date?, hasReminder: Bool, priority: TaskItem.Priority, tags: [String], photos: [URL] = []) {
+    private func createTask(title: String, notes: String, dueDate: Date?, hasReminder: Bool, reminderDuration: TimeInterval = 1800, priority: TaskItem.Priority, tags: [String], photos: [URL] = []) {
         guard let container = modelContainer else { return }
         let context = container.mainContext
         
@@ -86,6 +86,7 @@ final class WindowManager: ObservableObject {
             title: title,
             taskDescription: notes,
             dueDate: dueDate,
+            reminderDuration: reminderDuration,
             priority: TaskPriority.from(priority),
             tags: tags,
             hasReminder: hasReminder,

@@ -93,6 +93,38 @@ struct GeneralSettingsView: View {
                         }
                         .frame(width: 120)
                     }
+                    
+                    Divider()
+                    
+                    // Reminder Sound
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Reminder Sound")
+                                .font(.body)
+                            Text("Sound played when a reminder fires")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Picker("", selection: Binding(
+                            get: { currentSettings?.reminderSoundId ?? "default" },
+                            set: { newValue in
+                                currentSettings?.reminderSoundId = newValue
+                                currentSettings?.touch()
+                            }
+                        )) {
+                            ForEach(NotificationService.availableSounds, id: \.id) { sound in
+                                Text(sound.name).tag(sound.id)
+                            }
+                        }
+                        .frame(width: 120)
+                    }
                 }
                 .padding(20)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))

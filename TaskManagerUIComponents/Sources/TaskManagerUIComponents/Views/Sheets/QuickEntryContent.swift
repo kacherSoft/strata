@@ -7,6 +7,7 @@ public struct QuickEntryContent: View {
     @State private var selectedDate = Date()
     @State private var hasDate = false
     @State private var hasReminder = false
+    @State private var reminderDuration: TimeInterval = 1800
     @State private var selectedPriority: TaskItem.Priority = .none
     @State private var tags: [String] = []
     @State private var photos: [URL] = []
@@ -14,13 +15,13 @@ public struct QuickEntryContent: View {
     @State private var showCreateConfirmation = false
     
     public var onCancel: () -> Void
-    public var onCreate: (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void
+    public var onCreate: (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void
     public var onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     public var onDeletePhoto: ((URL) -> Void)?
 
     public init(
         onCancel: @escaping () -> Void,
-        onCreate: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onCreate: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil
     ) {
@@ -44,6 +45,7 @@ public struct QuickEntryContent: View {
             taskNotes,
             hasDate ? selectedDate : nil,
             hasReminder,
+            reminderDuration,
             selectedPriority,
             tags,
             photos
@@ -59,6 +61,7 @@ public struct QuickEntryContent: View {
                 selectedDate: $selectedDate,
                 hasDate: $hasDate,
                 hasReminder: $hasReminder,
+                reminderDuration: $reminderDuration,
                 selectedPriority: $selectedPriority,
                 tags: $tags,
                 showValidationError: $showValidationError,

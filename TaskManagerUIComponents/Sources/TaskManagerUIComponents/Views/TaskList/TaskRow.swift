@@ -6,12 +6,13 @@ public struct TaskRow: View {
     let isSelected: Bool
     let onToggleComplete: (() -> Void)?
     let onStatusChange: ((TaskItem.Status) -> Void)?
-    let onEdit: ((String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
     let onDelete: (() -> Void)?
     let onPriorityChange: ((TaskItem.Priority) -> Void)?
     let onAddPhotos: (([URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
+    let onSetReminder: (() -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
     
@@ -41,6 +42,7 @@ public struct TaskRow: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
+        self.onSetReminder = nil
     }
     
     public init(
@@ -49,7 +51,7 @@ public struct TaskRow: View {
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
         onToggleComplete: @escaping () -> Void,
-        onEdit: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onDelete: @escaping () -> Void,
         onPriorityChange: @escaping (TaskItem.Priority) -> Void
     ) {
@@ -67,6 +69,7 @@ public struct TaskRow: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
+        self.onSetReminder = nil
     }
     
     public init(
@@ -75,12 +78,13 @@ public struct TaskRow: View {
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
         onStatusChange: @escaping (TaskItem.Status) -> Void,
-        onEdit: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onDelete: @escaping () -> Void,
         onPriorityChange: @escaping (TaskItem.Priority) -> Void,
         onAddPhotos: @escaping ([URL]) -> Void,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
-        onDeletePhoto: ((URL) -> Void)? = nil
+        onDeletePhoto: ((URL) -> Void)? = nil,
+        onSetReminder: (() -> Void)? = nil
     ) {
         self.task = task
         self.isSelected = isSelected
@@ -96,6 +100,7 @@ public struct TaskRow: View {
         self.onAddPhotos = onAddPhotos
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
+        self.onSetReminder = onSetReminder
     }
 
     private func cyclePriority() {
@@ -228,9 +233,16 @@ public struct TaskRow: View {
 
                     // Reminder
                     if task.hasReminder {
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 3) {
+                            Image(systemName: task.isReminderActive ? "bell.badge.fill" : "bell.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(task.isReminderActive ? .orange : .secondary)
+                            if task.isReminderActive, let fireDate = task.reminderFireDate {
+                                Text(fireDate, style: .relative)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.orange)
+                            }
+                        }
                     }
                 }
 
@@ -239,6 +251,12 @@ public struct TaskRow: View {
                 // Right side: Action Buttons (only when selected)
                 if isSelected {
                     HStack(spacing: 12) {
+                        if task.hasReminder {
+                            ActionButton(icon: task.isReminderActive ? "bell.slash" : "bell.badge") {
+                                onSetReminder?()
+                            }
+                            .help(task.isReminderActive ? "Cancel reminder" : "Start reminder timer")
+                        }
                         ActionButton(icon: "paperclip") { onAddPhotos?([]) }
                         Divider()
                             .frame(height: 20)

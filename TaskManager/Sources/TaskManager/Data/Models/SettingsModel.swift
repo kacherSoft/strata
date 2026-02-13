@@ -10,6 +10,7 @@ final class SettingsModel {
     var reducedMotion: Bool
     var showCompletedTasks: Bool
     var defaultPriority: TaskPriority
+    var reminderSoundId: String = "default"
     var createdAt: Date
     var updatedAt: Date
     
@@ -20,6 +21,7 @@ final class SettingsModel {
         self.reducedMotion = false
         self.showCompletedTasks = true
         self.defaultPriority = .medium
+        self.reminderSoundId = "default"
         self.createdAt = Date()
         self.updatedAt = Date()
     }

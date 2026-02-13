@@ -9,6 +9,7 @@ public struct EditTaskSheet: View {
     @State private var selectedDate: Date?
     @State private var hasDate: Bool
     @State private var hasReminder: Bool
+    @State private var reminderDuration: TimeInterval
     @State private var selectedPriority: TaskItem.Priority
     @State private var tags: [String]
     @State private var newTag: String = ""
@@ -19,7 +20,7 @@ public struct EditTaskSheet: View {
     @State private var pendingTag = ""
     @State private var photos: [URL]
     
-    private let onSave: ((String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void)?
+    private let onSave: ((String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
     private let onDelete: (() -> Void)?
     private let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     private let onDeletePhoto: ((URL) -> Void)?
@@ -32,6 +33,7 @@ public struct EditTaskSheet: View {
         _selectedDate = State(initialValue: task.dueDate)
         _hasDate = State(initialValue: task.dueDate != nil)
         _hasReminder = State(initialValue: task.hasReminder)
+        _reminderDuration = State(initialValue: task.reminderDuration)
         _selectedPriority = State(initialValue: task.priority)
         _tags = State(initialValue: task.tags)
         _photos = State(initialValue: task.photos)
@@ -44,7 +46,7 @@ public struct EditTaskSheet: View {
     public init(
         task: TaskItem,
         isPresented: Binding<Bool>,
-        onSave: @escaping (String, String, Date?, Bool, TaskItem.Priority, [String], [URL]) -> Void,
+        onSave: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
         onDelete: @escaping () -> Void,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil
@@ -56,6 +58,7 @@ public struct EditTaskSheet: View {
         _selectedDate = State(initialValue: task.dueDate)
         _hasDate = State(initialValue: task.dueDate != nil)
         _hasReminder = State(initialValue: task.hasReminder)
+        _reminderDuration = State(initialValue: task.reminderDuration)
         _selectedPriority = State(initialValue: task.priority)
         _tags = State(initialValue: task.tags)
         _photos = State(initialValue: task.photos)
@@ -95,6 +98,7 @@ public struct EditTaskSheet: View {
             taskNotes,
             hasDate ? selectedDate : nil,
             hasReminder,
+            reminderDuration,
             selectedPriority,
             tags,
             photos
@@ -148,6 +152,10 @@ public struct EditTaskSheet: View {
                     }
 
                     Toggle("Set Reminder", isOn: $hasReminder)
+
+                    if hasReminder {
+                        ReminderDurationPicker(duration: $reminderDuration)
+                    }
                 }
 
                 Section("Priority") {

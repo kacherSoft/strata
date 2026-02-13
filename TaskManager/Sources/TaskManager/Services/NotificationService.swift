@@ -13,6 +13,15 @@ final class NotificationService: NSObject {
     private static let completeAction = "COMPLETE_ACTION"
     private static let snoozeAction = "SNOOZE_ACTION"
     
+    // Available reminder sounds
+    static let availableSounds: [(name: String, id: String)] = [
+        ("Default", "default"),
+        ("Tri-tone", "tri-tone"),
+        ("Chime", "chime"),
+        ("Glass", "glass"),
+        ("Ping", "ping"),
+    ]
+    
     private override init() {
         super.init()
         setupCategories()
@@ -49,13 +58,28 @@ final class NotificationService: NSObject {
         center.setNotificationCategories([category])
     }
     
-    func scheduleReminder(for taskId: UUID, title: String, dueDate: Date) {
+    private func notificationSound(for soundId: String) -> UNNotificationSound {
+        switch soundId {
+        case "tri-tone":
+            return UNNotificationSound(named: UNNotificationSoundName("Tri-tone.aiff"))
+        case "chime":
+            return UNNotificationSound(named: UNNotificationSoundName("Chime.aiff"))
+        case "glass":
+            return UNNotificationSound(named: UNNotificationSoundName("Glass.aiff"))
+        case "ping":
+            return UNNotificationSound(named: UNNotificationSoundName("Ping.aiff"))
+        default:
+            return .default
+        }
+    }
+    
+    func scheduleReminder(for taskId: UUID, title: String, dueDate: Date, soundId: String = "default") {
         center.removePendingNotificationRequests(withIdentifiers: [taskId.uuidString])
         
         let content = UNMutableNotificationContent()
         content.title = "Task Due"
         content.body = title
-        content.sound = .default
+        content.sound = notificationSound(for: soundId)
         content.categoryIdentifier = Self.taskReminderCategory
         content.userInfo = ["taskId": taskId.uuidString]
         
@@ -73,8 +97,36 @@ final class NotificationService: NSObject {
         center.add(request)
     }
     
+    func scheduleTimerReminder(for taskId: UUID, title: String, duration: TimeInterval, soundId: String = "default") {
+        let reminderId = "reminder-\(taskId.uuidString)"
+        center.removePendingNotificationRequests(withIdentifiers: [reminderId])
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Reminder"
+        content.body = title
+        content.sound = notificationSound(for: soundId)
+        content.categoryIdentifier = Self.taskReminderCategory
+        content.userInfo = ["taskId": taskId.uuidString]
+        
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: max(1, duration),
+            repeats: false
+        )
+        
+        let request = UNNotificationRequest(
+            identifier: reminderId,
+            content: content,
+            trigger: trigger
+        )
+        
+        center.add(request)
+    }
+    
     func cancelReminder(for taskId: UUID) {
-        center.removePendingNotificationRequests(withIdentifiers: [taskId.uuidString])
+        center.removePendingNotificationRequests(withIdentifiers: [
+            taskId.uuidString,
+            "reminder-\(taskId.uuidString)"
+        ])
     }
 }
 

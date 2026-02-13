@@ -9,6 +9,8 @@ public struct TaskItem: Identifiable, Sendable {
     public var isToday: Bool
     public let priority: Priority
     public let hasReminder: Bool
+    public let reminderDuration: TimeInterval
+    public let reminderFireDate: Date?
     public let dueDate: Date?
     public let tags: [String]
     public let photos: [URL]
@@ -27,6 +29,11 @@ public struct TaskItem: Identifiable, Sendable {
     public var isCompleted: Bool { status == .completed }
     public var isInProgress: Bool { status == .inProgress }
 
+    public var isReminderActive: Bool {
+        guard hasReminder, let fireDate = reminderFireDate else { return false }
+        return fireDate > Date()
+    }
+
     public init(
         id: UUID = UUID(),
         title: String,
@@ -35,6 +42,8 @@ public struct TaskItem: Identifiable, Sendable {
         isToday: Bool,
         priority: Priority,
         hasReminder: Bool,
+        reminderDuration: TimeInterval = 1800,
+        reminderFireDate: Date? = nil,
         dueDate: Date?,
         tags: [String],
         photos: [URL] = [],
@@ -47,6 +56,8 @@ public struct TaskItem: Identifiable, Sendable {
         self.isToday = isToday
         self.priority = priority
         self.hasReminder = hasReminder
+        self.reminderDuration = reminderDuration
+        self.reminderFireDate = reminderFireDate
         self.dueDate = dueDate
         self.tags = tags
         self.photos = photos
@@ -74,6 +85,8 @@ public struct TaskItem: Identifiable, Sendable {
         self.isToday = isToday
         self.priority = priority
         self.hasReminder = hasReminder
+        self.reminderDuration = 1800
+        self.reminderFireDate = nil
         self.dueDate = dueDate
         self.tags = tags
         self.photos = photos
