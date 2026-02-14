@@ -123,7 +123,7 @@ final class NotificationService: NSObject {
         center.add(request)
     }
     
-    func previewSound(for soundId: String) {
+    static func previewSound(for soundId: String) {
         let soundName: String? = switch soundId {
         case "tri-tone": "Tink"
         case "chime": "Blow"

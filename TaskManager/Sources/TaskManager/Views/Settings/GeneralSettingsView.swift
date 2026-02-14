@@ -126,7 +126,7 @@ struct GeneralSettingsView: View {
                         .frame(width: 120)
                         
                         Button {
-                            NotificationService.shared.previewSound(
+                            NotificationService.previewSound(
                                 for: currentSettings?.reminderSoundId ?? "default"
                             )
                         } label: {
