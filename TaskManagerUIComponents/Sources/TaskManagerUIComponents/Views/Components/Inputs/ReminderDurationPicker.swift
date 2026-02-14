@@ -18,6 +18,8 @@ public struct ReminderDurationPicker: View {
     @State private var hours: Int = 0
     @State private var minutes: Int = 30
     
+    private let minuteOptions = Array(0...59)
+    
     public init(duration: Binding<TimeInterval>) {
         self._duration = duration
         let total = Int(duration.wrappedValue)
@@ -74,6 +76,8 @@ public struct ReminderDurationPicker: View {
                             Text("\(h)").tag(h)
                         }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                     .frame(width: 60)
                     Text("hr")
                         .font(.system(size: 12))
@@ -82,10 +86,12 @@ public struct ReminderDurationPicker: View {
                 
                 HStack(spacing: 4) {
                     Picker("", selection: $minutes) {
-                        ForEach([0, 5, 10, 15, 20, 30, 45], id: \.self) { m in
+                        ForEach(minuteOptions, id: \.self) { m in
                             Text("\(m)").tag(m)
                         }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                     .frame(width: 60)
                     Text("min")
                         .font(.system(size: 12))

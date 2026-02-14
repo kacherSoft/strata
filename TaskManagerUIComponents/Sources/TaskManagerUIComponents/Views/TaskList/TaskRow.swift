@@ -12,7 +12,10 @@ public struct TaskRow: View {
     let onAddPhotos: (([URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
-    let onSetReminder: (() -> Void)?
+    let onCreateReminder: ((TimeInterval) -> Void)?
+    let onEditReminder: ((TimeInterval) -> Void)?
+    let onRemoveReminder: (() -> Void)?
+    let onStopAlarm: (() -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
     
@@ -21,6 +24,9 @@ public struct TaskRow: View {
     @State private var showDeleteConfirmation = false
     @State private var currentPriority: TaskItem.Priority
     @State private var currentStatus: TaskItem.Status
+    @State private var showReminderPopover = false
+    @State private var now = Date()
+    private let countdownTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     public init(
         task: TaskItem,
@@ -42,7 +48,10 @@ public struct TaskRow: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
-        self.onSetReminder = nil
+        self.onCreateReminder = nil
+        self.onEditReminder = nil
+        self.onRemoveReminder = nil
+        self.onStopAlarm = nil
     }
     
     public init(
@@ -69,7 +78,10 @@ public struct TaskRow: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
-        self.onSetReminder = nil
+        self.onCreateReminder = nil
+        self.onEditReminder = nil
+        self.onRemoveReminder = nil
+        self.onStopAlarm = nil
     }
     
     public init(
@@ -84,7 +96,10 @@ public struct TaskRow: View {
         onAddPhotos: @escaping ([URL]) -> Void,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil,
-        onSetReminder: (() -> Void)? = nil
+        onCreateReminder: ((TimeInterval) -> Void)? = nil,
+        onEditReminder: ((TimeInterval) -> Void)? = nil,
+        onRemoveReminder: (() -> Void)? = nil,
+        onStopAlarm: (() -> Void)? = nil
     ) {
         self.task = task
         self.isSelected = isSelected
@@ -100,7 +115,10 @@ public struct TaskRow: View {
         self.onAddPhotos = onAddPhotos
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
-        self.onSetReminder = onSetReminder
+        self.onCreateReminder = onCreateReminder
+        self.onEditReminder = onEditReminder
+        self.onRemoveReminder = onRemoveReminder
+        self.onStopAlarm = onStopAlarm
     }
 
     private func cyclePriority() {
@@ -139,6 +157,46 @@ public struct TaskRow: View {
         }
     }
     
+    private var isReminderActiveNow: Bool {
+        guard task.hasReminder, let fireDate = task.reminderFireDate else { return false }
+        return fireDate > now
+    }
+
+    private var isReminderOverdueNow: Bool {
+        guard task.hasReminder, let fireDate = task.reminderFireDate else { return false }
+        return fireDate <= now
+    }
+
+    private var reminderIcon: String {
+        if isReminderOverdueNow {
+            return "bell.and.waves.left.and.right.fill"
+        } else if isReminderActiveNow {
+            return "bell.badge.fill"
+        } else {
+            return "bell.fill"
+        }
+    }
+
+    private var reminderColor: Color {
+        if isReminderOverdueNow {
+            return .red
+        } else if isReminderActiveNow {
+            return .orange
+        } else {
+            return .secondary
+        }
+    }
+
+    private var reminderHelpText: String {
+        if isReminderOverdueNow {
+            return "Alarm ringing — click to stop"
+        } else if isReminderActiveNow {
+            return "Reminder active — click to edit or remove"
+        } else {
+            return "Set reminder"
+        }
+    }
+
     public var body: some View {
         VStack(spacing: 12) {
             // Main Row Content
@@ -231,40 +289,81 @@ public struct TaskRow: View {
                         .foregroundStyle(task.isToday ? .orange : .secondary)
                     }
 
-                    // Reminder
-                    if task.hasReminder {
-                        HStack(spacing: 3) {
-                            Image(systemName: task.isReminderActive ? "bell.badge.fill" : "bell.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(task.isReminderActive ? .orange : .secondary)
-                            if task.isReminderActive, let fireDate = task.reminderFireDate {
-                                Text(fireDate, style: .relative)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.orange)
-                            }
-                        }
-                    }
+
                 }
 
                 Spacer()
 
-                // Right side: Action Buttons (only when selected)
-                if isSelected {
-                    HStack(spacing: 12) {
-                        if task.hasReminder {
-                            ActionButton(icon: task.isReminderActive ? "bell.slash" : "bell.badge") {
-                                onSetReminder?()
-                            }
-                            .help(task.isReminderActive ? "Cancel reminder" : "Start reminder timer")
+                // Right side: Action Buttons
+                HStack(spacing: 12) {
+                    // Reminder bell — always visible for all tasks
+                    Button {
+                        if isReminderOverdueNow {
+                            // Alarm ringing → stop it
+                            onStopAlarm?()
+                        } else if isReminderActiveNow {
+                            // Active countdown → edit or remove
+                            showReminderPopover = true
+                        } else {
+                            // No reminder → set one up
+                            showReminderPopover = true
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: reminderIcon)
+                                .font(.system(size: 13))
+                            if isReminderActiveNow, let fireDate = task.reminderFireDate {
+                                Text(fireDate, style: .relative)
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                        }
+                        .foregroundStyle(reminderColor)
+                        .padding(.horizontal, isReminderActiveNow || isReminderOverdueNow ? 8 : 0)
+                        .padding(.vertical, isReminderActiveNow || isReminderOverdueNow ? 4 : 0)
+                        .background(
+                            (isReminderActiveNow || isReminderOverdueNow)
+                                ? AnyShapeStyle(reminderColor.opacity(0.15))
+                                : AnyShapeStyle(.ultraThinMaterial)
+                        , in: Capsule())
+                        .frame(minWidth: 28, minHeight: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .help(reminderHelpText)
+                    .popover(isPresented: $showReminderPopover) {
+                        if isReminderActiveNow {
+                            ReminderActionPopover(
+                                isPresented: $showReminderPopover,
+                                currentDuration: task.reminderDuration,
+                                mode: .edit,
+                                onSetDuration: { duration in
+                                    onEditReminder?(duration)
+                                },
+                                onRemoveReminder: {
+                                    onRemoveReminder?()
+                                }
+                            )
+                        } else {
+                            ReminderActionPopover(
+                                isPresented: $showReminderPopover,
+                                currentDuration: task.reminderDuration,
+                                mode: .create,
+                                onSetDuration: { duration in
+                                    onCreateReminder?(duration)
+                                }
+                            )
+                        }
+                    }
+
+                    // Other action buttons only when selected
+                    if isSelected {
                         ActionButton(icon: "paperclip") { onAddPhotos?([]) }
                         Divider()
                             .frame(height: 20)
                         ActionButton(icon: "pencil") { showEditSheet = true }
                         ActionButton(icon: "trash") { showDeleteConfirmation = true }
                     }
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
+                .transition(.opacity.combined(with: .move(edge: .trailing)))
             }
         }
         .padding(16)
@@ -285,6 +384,9 @@ public struct TaskRow: View {
         }
         .onChange(of: task.status) { _, newStatus in
             currentStatus = newStatus
+        }
+        .onReceive(countdownTimer) { date in
+            now = date
         }
         .sheet(isPresented: $showEditSheet) {
             if let onEdit, let onDelete {

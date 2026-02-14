@@ -34,6 +34,11 @@ public struct TaskItem: Identifiable, Sendable {
         return fireDate > Date()
     }
 
+    public var isReminderOverdue: Bool {
+        guard hasReminder, let fireDate = reminderFireDate else { return false }
+        return fireDate <= Date()
+    }
+
     public init(
         id: UUID = UUID(),
         title: String,

@@ -12,7 +12,10 @@ public struct TaskListView: View {
     let onAddPhotos: ((TaskItem, [URL]) -> Void)?
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
-    let onSetReminder: ((TaskItem) -> Void)?
+    let onCreateReminder: ((TaskItem, TimeInterval) -> Void)?
+    let onEditReminder: ((TaskItem, TimeInterval) -> Void)?
+    let onRemoveReminder: ((TaskItem) -> Void)?
+    let onStopAlarm: ((TaskItem) -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
 
@@ -33,7 +36,10 @@ public struct TaskListView: View {
         self.onAddPhotos = nil
         self.onPickPhotos = nil
         self.onDeletePhoto = nil
-        self.onSetReminder = nil
+        self.onCreateReminder = nil
+        self.onEditReminder = nil
+        self.onRemoveReminder = nil
+        self.onStopAlarm = nil
     }
     
     public init(
@@ -48,7 +54,10 @@ public struct TaskListView: View {
         onAddPhotos: @escaping (TaskItem, [URL]) -> Void = { _, _ in },
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil,
-        onSetReminder: ((TaskItem) -> Void)? = nil
+        onCreateReminder: ((TaskItem, TimeInterval) -> Void)? = nil,
+        onEditReminder: ((TaskItem, TimeInterval) -> Void)? = nil,
+        onRemoveReminder: ((TaskItem) -> Void)? = nil,
+        onStopAlarm: ((TaskItem) -> Void)? = nil
     ) {
         self.tasks = tasks
         self._selectedTask = selectedTask
@@ -61,7 +70,10 @@ public struct TaskListView: View {
         self.onAddPhotos = onAddPhotos
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
-        self.onSetReminder = onSetReminder
+        self.onCreateReminder = onCreateReminder
+        self.onEditReminder = onEditReminder
+        self.onRemoveReminder = onRemoveReminder
+        self.onStopAlarm = onStopAlarm
     }
 
     public var body: some View {
@@ -83,7 +95,10 @@ public struct TaskListView: View {
                             onAddPhotos: { urls in onAddPhotos(task, urls) },
                             onPickPhotos: onPickPhotos,
                             onDeletePhoto: onDeletePhoto,
-                            onSetReminder: { onSetReminder?(task) }
+                            onCreateReminder: { duration in onCreateReminder?(task, duration) },
+                            onEditReminder: { duration in onEditReminder?(task, duration) },
+                            onRemoveReminder: { onRemoveReminder?(task) },
+                            onStopAlarm: { onStopAlarm?(task) }
                         )
                         .onTapGesture { selectedTask = task }
                     } else {
