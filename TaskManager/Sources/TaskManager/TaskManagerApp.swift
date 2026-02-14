@@ -92,6 +92,7 @@ struct ContentView: View {
     @State private var selectedDate: Date?
     @State private var dateFilterMode: CalendarFilterMode = .all
     @State private var selectedPriority: TaskItem.Priority?
+    private let reminderWatchTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var currentSettings: SettingsModel? { settings.first }
 
@@ -168,8 +169,17 @@ struct ContentView: View {
                 onDeletePhoto: { url in
                     PhotoStorageService.shared.deletePhoto(at: url.path)
                 },
-                onSetReminder: { taskItem in
-                    toggleReminder(taskItem: taskItem)
+                onCreateReminder: { taskItem, duration in
+                    createReminder(taskItem: taskItem, duration: duration)
+                },
+                onEditReminder: { taskItem, duration in
+                    editReminder(taskItem: taskItem, newDuration: duration)
+                },
+                onRemoveReminder: { taskItem in
+                    removeReminder(taskItem: taskItem)
+                },
+                onStopAlarm: { taskItem in
+                    stopAlarm(taskItem: taskItem)
                 }
             )
         }
@@ -203,6 +213,24 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showNewTaskSheet)) { _ in
             showNewTaskSheet = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .reminderAlarmFired)) { notification in
+            if let taskId = notification.userInfo?["taskId"] as? String {
+                handleAlarmFired(taskId: taskId)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .taskCompletedFromNotification)) { notification in
+            if let taskId = notification.userInfo?["taskId"] as? String {
+                handleTaskCompletedFromNotification(taskId: taskId)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .reminderDismissedFromNotification)) { notification in
+            if let taskId = notification.userInfo?["taskId"] as? String {
+                handleReminderDismissed(taskId: taskId)
+            }
+        }
+        .onReceive(reminderWatchTimer) { _ in
+            monitorReminderTimers()
+        }
     }
     
     private var taskItems: [TaskItem] {
@@ -234,6 +262,19 @@ struct ContentView: View {
             hasReminder: hasReminder,
             photos: storedPaths
         )
+        
+        // Auto-start reminder timer when creating a task with a reminder
+        if hasReminder {
+            let soundId = currentSettings?.reminderSoundId ?? "default"
+            task.reminderFireDate = Date().addingTimeInterval(reminderDuration)
+            NotificationService.shared.scheduleTimerReminder(
+                for: task.id,
+                title: title,
+                duration: reminderDuration,
+                soundId: soundId
+            )
+        }
+        
         modelContext.insert(task)
         try? modelContext.save()
     }
@@ -245,12 +286,18 @@ struct ContentView: View {
     private func toggleComplete(taskItem: TaskItem) {
         guard let task = findTaskModel(for: taskItem) else { return }
         task.cycleStatus()
+        if task.isCompleted {
+            cancelReminder(for: task)
+        }
         try? modelContext.save()
     }
     
     private func updateStatus(taskItem: TaskItem, status: TaskItem.Status) {
         guard let task = findTaskModel(for: taskItem) else { return }
         task.setStatus(TaskStatus.from(status))
+        if task.isCompleted {
+            cancelReminder(for: task)
+        }
         try? modelContext.save()
     }
     
@@ -269,11 +316,29 @@ struct ContentView: View {
         task.title = title
         task.taskDescription = notes
         task.dueDate = dueDate
+        let reminderChanged = task.hasReminder != hasReminder || task.reminderDuration != reminderDuration
         task.hasReminder = hasReminder
         task.reminderDuration = reminderDuration
         task.priority = TaskPriority.from(priority)
         task.tags = tags
         task.photos = PhotoStorageService.shared.normalizeToStoredPaths(photos)
+        
+        // Auto-start/restart reminder when enabled or duration changed via edit
+        if hasReminder && reminderChanged {
+            NotificationService.shared.cancelReminder(for: task.id)
+            let soundId = currentSettings?.reminderSoundId ?? "default"
+            task.reminderFireDate = Date().addingTimeInterval(reminderDuration)
+            NotificationService.shared.scheduleTimerReminder(
+                for: task.id,
+                title: task.title,
+                duration: reminderDuration,
+                soundId: soundId
+            )
+        } else if !hasReminder {
+            NotificationService.shared.cancelReminder(for: task.id)
+            task.reminderFireDate = nil
+        }
+        
         task.touch()
         try? modelContext.save()
     }
@@ -293,26 +358,122 @@ struct ContentView: View {
         try? modelContext.save()
     }
     
-    private func toggleReminder(taskItem: TaskItem) {
+    private func createReminder(taskItem: TaskItem, duration: TimeInterval) {
         guard let task = findTaskModel(for: taskItem) else { return }
         
-        if let fireDate = task.reminderFireDate, fireDate > Date() {
-            // Cancel active reminder
-            NotificationService.shared.cancelReminder(for: task.id)
-            task.reminderFireDate = nil
-        } else {
-            // Start reminder timer
-            let soundId = currentSettings?.reminderSoundId ?? "default"
-            task.reminderFireDate = Date().addingTimeInterval(task.reminderDuration)
-            NotificationService.shared.scheduleTimerReminder(
-                for: task.id,
-                title: task.title,
-                duration: task.reminderDuration,
-                soundId: soundId
-            )
-        }
+        let soundId = currentSettings?.reminderSoundId ?? "default"
+        task.hasReminder = true
+        task.reminderDuration = duration
+        task.reminderFireDate = Date().addingTimeInterval(duration)
+        NotificationService.shared.scheduleTimerReminder(
+            for: task.id,
+            title: task.title,
+            duration: duration,
+            soundId: soundId
+        )
         task.touch()
         try? modelContext.save()
+    }
+    
+    private func editReminder(taskItem: TaskItem, newDuration: TimeInterval) {
+        guard let task = findTaskModel(for: taskItem) else { return }
+        
+        // Cancel existing and restart with new duration
+        NotificationService.shared.cancelReminder(for: task.id)
+        let soundId = currentSettings?.reminderSoundId ?? "default"
+        task.reminderDuration = newDuration
+        task.reminderFireDate = Date().addingTimeInterval(newDuration)
+        NotificationService.shared.scheduleTimerReminder(
+            for: task.id,
+            title: task.title,
+            duration: newDuration,
+            soundId: soundId
+        )
+        task.touch()
+        try? modelContext.save()
+    }
+    
+    private func removeReminder(taskItem: TaskItem) {
+        guard let task = findTaskModel(for: taskItem) else { return }
+        
+        NotificationService.shared.cancelReminder(for: task.id)
+        task.hasReminder = false
+        task.reminderFireDate = nil
+        task.touch()
+        try? modelContext.save()
+    }
+    
+    private func stopAlarm(taskItem: TaskItem) {
+        guard let task = findTaskModel(for: taskItem) else { return }
+
+        stopAlarm(for: task)
+    }
+    
+    private func handleAlarmFired(taskId: String) {
+        guard let uuid = UUID(uuidString: taskId),
+              let task = taskModels.first(where: { $0.id == uuid }),
+              !task.isCompleted else { return }
+        let soundId = currentSettings?.reminderSoundId ?? "default"
+        NotificationService.shared.startAlarm(for: uuid, soundId: soundId)
+    }
+
+    private func handleTaskCompletedFromNotification(taskId: String) {
+        guard let uuid = UUID(uuidString: taskId),
+              let task = taskModels.first(where: { $0.id == uuid }) else { return }
+        task.setStatus(.completed)
+        cancelReminder(for: task)
+        try? modelContext.save()
+    }
+
+    private func handleReminderDismissed(taskId: String) {
+        guard let uuid = UUID(uuidString: taskId),
+              let task = taskModels.first(where: { $0.id == uuid }) else { return }
+        cancelReminder(for: task)
+        try? modelContext.save()
+    }
+
+    private func cancelReminder(for task: TaskModel) {
+        NotificationService.shared.cancelReminder(for: task.id)
+        task.hasReminder = false
+        task.reminderFireDate = nil
+        task.touch()
+    }
+
+    private func stopAlarm(for task: TaskModel) {
+        NotificationService.shared.stopAlarm()
+        cancelReminder(for: task)
+        try? modelContext.save()
+    }
+    
+    private func monitorReminderTimers() {
+        let now = Date()
+
+        if let alarmingTaskId = NotificationService.shared.alarmingTaskId {
+            guard let alarmingTask = taskModels.first(where: { $0.id == alarmingTaskId }),
+                  alarmingTask.hasReminder,
+                  !alarmingTask.isCompleted,
+                  let fireDate = alarmingTask.reminderFireDate,
+                  fireDate <= now else {
+                NotificationService.shared.stopAlarm()
+                return
+            }
+            return
+        }
+
+        let overdueTasks = taskModels.filter {
+            $0.hasReminder &&
+            !$0.isCompleted &&
+            ($0.reminderFireDate ?? .distantFuture) <= now
+        }
+
+        guard let overdueTask = overdueTasks.min(by: {
+            ($0.reminderFireDate ?? .distantFuture) < ($1.reminderFireDate ?? .distantFuture)
+        }) else {
+            return
+        }
+
+        let soundId = currentSettings?.reminderSoundId ?? "default"
+        NotificationService.shared.startAlarm(for: overdueTask.id, soundId: soundId)
     }
     
     private func addPhotos(taskItem: TaskItem, urls: [URL]) {
@@ -336,4 +497,3 @@ struct ContentView: View {
         }
     }
 }
-

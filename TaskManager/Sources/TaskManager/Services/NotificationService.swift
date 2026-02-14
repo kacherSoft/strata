@@ -5,7 +5,9 @@ import UserNotifications
 final class NotificationService: NSObject {
     static let shared = NotificationService()
     
-    private let center = UNUserNotificationCenter.current()
+    private let center: UNUserNotificationCenter?
+    private var alarmSound: NSSound?
+    private(set) var alarmingTaskId: UUID?
     
     // Category identifiers
     private static let taskReminderCategory = "TASK_REMINDER"
@@ -24,12 +26,21 @@ final class NotificationService: NSObject {
     ]
     
     private override init() {
+        // UNUserNotificationCenter requires a bundle identifier; guard against its absence
+        if Bundle.main.bundleIdentifier != nil {
+            self.center = UNUserNotificationCenter.current()
+        } else {
+            self.center = nil
+        }
         super.init()
-        setupCategories()
-        center.delegate = self
+        if let center {
+            setupCategories()
+            center.delegate = self
+        }
     }
     
     func requestAuthorization() async -> Bool {
+        guard let center else { return false }
         do {
             return try await center.requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
@@ -38,6 +49,7 @@ final class NotificationService: NSObject {
     }
     
     private func setupCategories() {
+        guard let center else { return }
         let completeAction = UNNotificationAction(
             identifier: Self.completeAction,
             title: "Complete",
@@ -46,7 +58,7 @@ final class NotificationService: NSObject {
         
         let snoozeAction = UNNotificationAction(
             identifier: Self.snoozeAction,
-            title: "Snooze 15 min",
+            title: "Dismiss",
             options: []
         )
         
@@ -75,6 +87,7 @@ final class NotificationService: NSObject {
     }
     
     func scheduleReminder(for taskId: UUID, title: String, dueDate: Date, soundId: String = "default") {
+        guard let center else { return }
         center.removePendingNotificationRequests(withIdentifiers: [taskId.uuidString])
         
         let content = UNMutableNotificationContent()
@@ -99,6 +112,7 @@ final class NotificationService: NSObject {
     }
     
     func scheduleTimerReminder(for taskId: UUID, title: String, duration: TimeInterval, soundId: String = "default") {
+        guard let center else { return }
         let reminderId = "reminder-\(taskId.uuidString)"
         center.removePendingNotificationRequests(withIdentifiers: [reminderId])
         
@@ -139,10 +153,49 @@ final class NotificationService: NSObject {
     }
     
     func cancelReminder(for taskId: UUID) {
+        guard let center else { return }
         center.removePendingNotificationRequests(withIdentifiers: [
             taskId.uuidString,
             "reminder-\(taskId.uuidString)"
         ])
+    }
+    
+    func startAlarm(soundId: String) {
+        stopAlarm()
+        let soundName: String? = switch soundId {
+        case "tri-tone": "Tink"
+        case "chime": "Blow"
+        case "glass": "Glass"
+        case "ping": "Ping"
+        default: nil
+        }
+        if let soundName, let sound = NSSound(named: NSSound.Name(soundName)) {
+            sound.loops = true
+            sound.play()
+            alarmSound = sound
+        } else {
+            // Use system beep as fallback — play on a timer for looping
+            if let sound = NSSound(named: NSSound.Name("Ping")) {
+                sound.loops = true
+                sound.play()
+                alarmSound = sound
+            }
+        }
+    }
+
+    func startAlarm(for taskId: UUID, soundId: String) {
+        alarmingTaskId = taskId
+        startAlarm(soundId: soundId)
+    }
+
+    func stopAlarm() {
+        alarmSound?.stop()
+        alarmSound = nil
+        alarmingTaskId = nil
+    }
+
+    var isAlarmPlaying: Bool {
+        alarmSound?.isPlaying ?? false
     }
 }
 
@@ -159,8 +212,6 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         }
         
         let actionId = response.actionIdentifier
-        let taskTitle = response.notification.request.content.body
-        
         Task { @MainActor in
             switch actionId {
             case NotificationService.completeAction:
@@ -170,14 +221,11 @@ extension NotificationService: UNUserNotificationCenterDelegate {
                     userInfo: ["taskId": taskIdString]
                 )
             case NotificationService.snoozeAction:
-                if let taskId = UUID(uuidString: taskIdString) {
-                    let snoozeDate = Date().addingTimeInterval(15 * 60)
-                    NotificationService.shared.scheduleReminder(
-                        for: taskId,
-                        title: taskTitle,
-                        dueDate: snoozeDate
-                    )
-                }
+                NotificationCenter.default.post(
+                    name: .reminderDismissedFromNotification,
+                    object: nil,
+                    userInfo: ["taskId": taskIdString]
+                )
             default:
                 break
             }
@@ -190,10 +238,21 @@ extension NotificationService: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound])
+        let userInfo = notification.request.content.userInfo
+        if let taskIdString = userInfo["taskId"] as? String {
+            NotificationCenter.default.post(
+                name: .reminderAlarmFired,
+                object: nil,
+                userInfo: ["taskId": taskIdString]
+            )
+        }
+        // Don't play the notification sound — we'll play our own looping alarm
+        completionHandler([.banner])
     }
 }
 
 extension Notification.Name {
     static let taskCompletedFromNotification = Notification.Name("taskCompletedFromNotification")
+    static let reminderAlarmFired = Notification.Name("reminderAlarmFired")
+    static let reminderDismissedFromNotification = Notification.Name("reminderDismissedFromNotification")
 }

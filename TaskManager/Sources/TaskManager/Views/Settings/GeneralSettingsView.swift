@@ -149,6 +149,11 @@ struct GeneralSettingsView: View {
                         .font(.headline)
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
+
+                    Text("Reminders are not included in exports or imports.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 20)
                     
                     HStack(spacing: 12) {
                         Button {

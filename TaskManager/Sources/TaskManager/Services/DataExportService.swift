@@ -7,13 +7,11 @@ struct ExportableTask: Codable {
     let title: String
     let description: String
     let dueDate: Date?
-    let reminderDate: Date?
     let priority: String
     let tags: [String]
     let status: String
     let completedAt: Date?
     let isToday: Bool
-    let hasReminder: Bool
     let photos: [String]
     let createdAt: Date
     let updatedAt: Date
@@ -48,13 +46,11 @@ final class DataExportService {
                 title: task.title,
                 description: task.taskDescription,
                 dueDate: task.dueDate,
-                reminderDate: task.reminderDate,
                 priority: task.priority.rawValue,
                 tags: task.tags,
                 status: task.status.rawValue,
                 completedAt: task.completedAt,
                 isToday: task.isToday,
-                hasReminder: task.hasReminder,
                 photos: task.photos,
                 createdAt: task.createdAt,
                 updatedAt: task.updatedAt,
@@ -97,12 +93,10 @@ final class DataExportService {
                     title: exportTask.title,
                     taskDescription: exportTask.description,
                     dueDate: exportTask.dueDate,
-                    reminderDate: exportTask.reminderDate,
                     priority: TaskPriority(rawValue: exportTask.priority) ?? .medium,
                     tags: exportTask.tags,
                     status: TaskStatus(rawValue: exportTask.status) ?? .todo,
                     isToday: exportTask.isToday,
-                    hasReminder: exportTask.hasReminder,
                     photos: exportTask.photos
                 )
                 task.completedAt = exportTask.completedAt
