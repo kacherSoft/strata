@@ -1,3 +1,4 @@
+import AppKit
 import UserNotifications
 
 @MainActor
@@ -120,6 +121,21 @@ final class NotificationService: NSObject {
         )
         
         center.add(request)
+    }
+    
+    func previewSound(for soundId: String) {
+        let soundName: String? = switch soundId {
+        case "tri-tone": "Tink"
+        case "chime": "Blow"
+        case "glass": "Glass"
+        case "ping": "Ping"
+        default: nil
+        }
+        if let soundName, let sound = NSSound(named: NSSound.Name(soundName)) {
+            sound.play()
+        } else {
+            NSSound.beep()
+        }
     }
     
     func cancelReminder(for taskId: UUID) {

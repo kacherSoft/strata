@@ -124,6 +124,20 @@ struct GeneralSettingsView: View {
                             }
                         }
                         .frame(width: 120)
+                        
+                        Button {
+                            NotificationService.shared.previewSound(
+                                for: currentSettings?.reminderSoundId ?? "default"
+                            )
+                        } label: {
+                            Image(systemName: "speaker.wave.2")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 28, height: 28)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Preview sound")
                     }
                 }
                 .padding(20)
