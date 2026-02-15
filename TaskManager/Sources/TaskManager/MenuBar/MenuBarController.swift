@@ -13,7 +13,14 @@ final class MenuBarController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "TaskFlow Pro")
+            if let icon = NSImage(named: NSImage.Name("MenuBarIcon")) {
+                icon.isTemplate = true
+                button.image = icon
+            } else {
+                button.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "TaskManager")
+            }
+            button.imagePosition = .imageOnly
+            button.toolTip = "TaskManager"
         }
         
         let menu = NSMenu()

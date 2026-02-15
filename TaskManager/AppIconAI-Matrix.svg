@@ -1,0 +1,24 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="96" x2="928" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#050B08"/>
+      <stop offset="1" stop-color="#0D2A1D"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="280" y1="260" x2="760" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7CFFB2"/>
+      <stop offset="1" stop-color="#1EE88F"/>
+    </linearGradient>
+  </defs>
+  <rect x="96" y="96" width="832" height="832" rx="188" fill="url(#bg)" stroke="#1C4B36" stroke-width="2"/>
+  <rect x="224" y="208" width="576" height="624" rx="92" fill="#091710" stroke="#27563F" stroke-width="2"/>
+  <g fill="#163525">
+    <rect x="314" y="314" width="32" height="32" rx="8"/><rect x="370" y="314" width="32" height="32" rx="8"/><rect x="426" y="314" width="32" height="32" rx="8"/>
+    <rect x="314" y="370" width="32" height="32" rx="8"/><rect x="426" y="370" width="32" height="32" rx="8"/><rect x="482" y="370" width="32" height="32" rx="8"/>
+    <rect x="314" y="426" width="32" height="32" rx="8"/><rect x="370" y="426" width="32" height="32" rx="8"/><rect x="482" y="426" width="32" height="32" rx="8"/>
+  </g>
+  <rect x="548" y="320" width="150" height="150" rx="26" fill="#0E2A1D" stroke="url(#mint)" stroke-width="4"/>
+  <text x="623" y="413" text-anchor="middle" fill="url(#mint)" font-family="Inter, SF Pro Display, Arial" font-size="72" font-weight="700">AI</text>
+  <path d="M314 580H690M314 640H640" stroke="#27563F" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="690" cy="700" r="92" fill="#0B1E15" stroke="#2C674C" stroke-width="4"/>
+  <path d="M650 700L680 730L734 676" stroke="#7CFFB2" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
