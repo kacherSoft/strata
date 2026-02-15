@@ -5,6 +5,13 @@ Package.resolved
 
 # Build artifacts
 build/
+.DerivedData/
+
+# Xcode generated project/user data
+TaskManager/TaskManagerApp.xcodeproj/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
 
 # macOS
 .DS_Store

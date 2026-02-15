@@ -4,13 +4,33 @@ A macOS productivity app built with Liquid Glass UI components.
 
 ## Quick Start
 
-### Using Xcode
+### Using Xcode (recommended for app submission)
 ```bash
 cd TaskManager
-open Package.swift
+./scripts/generate_xcodeproj.sh
+open TaskManagerApp.xcodeproj
 ```
 
-### Using Command Line
+### Build archive with .app output (unsigned/local test)
+```bash
+cd TaskManager
+./scripts/archive_macos_app.sh
+```
+
+### Build signed archive (for Organizer upload)
+```bash
+cd TaskManager
+xcodebuild -project TaskManagerApp.xcodeproj -scheme TaskManager -configuration Release -destination "generic/platform=macOS" -archivePath ../build/TaskManager-signed.xcarchive archive
+```
+
+Archive output:
+- `../build/TaskManager.xcarchive`
+- `../build/TaskManager.xcarchive/Products/Applications/TaskManager.app`
+- `../build/TaskManager-signed.xcarchive`
+
+See full release flow: `../docs/macos-release-workflow.md`
+
+### Using Command Line (SPM run)
 ```bash
 cd TaskManager
 swift run
