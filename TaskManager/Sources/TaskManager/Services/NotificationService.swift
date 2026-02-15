@@ -240,11 +240,13 @@ extension NotificationService: UNUserNotificationCenterDelegate {
     ) {
         let userInfo = notification.request.content.userInfo
         if let taskIdString = userInfo["taskId"] as? String {
-            NotificationCenter.default.post(
-                name: .reminderAlarmFired,
-                object: nil,
-                userInfo: ["taskId": taskIdString]
-            )
+            Task { @MainActor in
+                NotificationCenter.default.post(
+                    name: .reminderAlarmFired,
+                    object: nil,
+                    userInfo: ["taskId": taskIdString]
+                )
+            }
         }
         // Don't play the notification sound — we'll play our own looping alarm
         completionHandler([.banner])

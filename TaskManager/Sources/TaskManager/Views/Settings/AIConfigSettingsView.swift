@@ -149,7 +149,16 @@ struct AIConfigSettingsView: View {
     }
     
     private func saveKey(_ value: String, for key: KeychainService.Key) {
-        try? keychain.save(value.trimmingCharacters(in: .whitespaces), for: key)
+        do {
+            try keychain.save(value.trimmingCharacters(in: .whitespaces), for: key)
+        } catch {
+            switch key {
+            case .geminiAPIKey:
+                geminiTestResult = .failure(error.localizedDescription)
+            case .zaiAPIKey:
+                zaiTestResult = .failure(error.localizedDescription)
+            }
+        }
     }
     
     private func removeKey(_ key: KeychainService.Key) {

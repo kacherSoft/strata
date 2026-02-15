@@ -157,13 +157,21 @@ struct GeneralSettingsView: View {
                     
                     HStack(spacing: 12) {
                         Button {
-                            DataExportService.shared.exportTasks(context: modelContext)
+                            do {
+                                try DataExportService.shared.exportTasks(context: modelContext)
+                            } catch {
+                                dataErrorMessage = error.localizedDescription
+                            }
                         } label: {
                             Label("Export Tasks", systemImage: "square.and.arrow.up")
                         }
-                        
+
                         Button {
-                            DataExportService.shared.importTasks(context: modelContext)
+                            do {
+                                try DataExportService.shared.importTasks(context: modelContext)
+                            } catch {
+                                dataErrorMessage = error.localizedDescription
+                            }
                         } label: {
                             Label("Import Tasks", systemImage: "square.and.arrow.down")
                         }
@@ -197,14 +205,31 @@ struct GeneralSettingsView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+        .alert("Data Operation Failed", isPresented: Binding(
+            get: { dataErrorMessage != nil },
+            set: { if !$0 { dataErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                dataErrorMessage = nil
+            }
+        } message: {
+            Text(dataErrorMessage ?? "")
+        }
     }
     
     @State private var showDeleteConfirmation = false
-    
+    @State private var dataErrorMessage: String?
+
     private func deleteAllTasks() {
-        try? modelContext.delete(model: TaskModel.self)
+        do {
+            try modelContext.delete(model: TaskModel.self)
+            try modelContext.save()
+        } catch {
+            dataErrorMessage = error.localizedDescription
+        }
     }
 }
+
 
 struct SettingsToggleRow: View {
     let title: String

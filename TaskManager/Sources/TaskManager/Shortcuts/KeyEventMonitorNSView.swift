@@ -1,8 +1,9 @@
 import AppKit
 import KeyboardShortcuts
 
+@MainActor
 class KeyEventMonitorNSView: NSView {
-    private nonisolated(unsafe) var monitor: Any?
+    private var monitor: Any?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -29,9 +30,6 @@ class KeyEventMonitorNSView: NSView {
         self.monitor = nil
     }
 
-    deinit {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-    }
 }
 
 extension NSEvent {

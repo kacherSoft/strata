@@ -9,13 +9,17 @@ final class PhotoStorageService {
     private let fileManager = FileManager.default
     
     private var photosDirectory: URL {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? fileManager.temporaryDirectory
         let photosDir = appSupport.appendingPathComponent("TaskFlowPro/Photos", isDirectory: true)
-        
+
         if !fileManager.fileExists(atPath: photosDir.path) {
-            try? fileManager.createDirectory(at: photosDir, withIntermediateDirectories: true)
+            do {
+                try fileManager.createDirectory(at: photosDir, withIntermediateDirectories: true)
+            } catch {
+                return fileManager.temporaryDirectory
+            }
         }
-        
+
         return photosDir
     }
     
@@ -81,7 +85,7 @@ final class PhotoStorageService {
                 try fileManager.copyItem(at: sourceURL, to: destinationURL)
                 storedPaths.append(destinationURL.path)
             } catch {
-                print("Failed to copy photo: \(error)")
+                continue
             }
         }
         
@@ -91,7 +95,11 @@ final class PhotoStorageService {
     /// Delete a photo from app storage
     func deletePhoto(at path: String) {
         let url = URL(fileURLWithPath: path)
-        try? fileManager.removeItem(at: url)
+        do {
+            try fileManager.removeItem(at: url)
+        } catch {
+            return
+        }
     }
     
     /// Check if photo exists at path
@@ -114,5 +122,10 @@ final class PhotoStorageService {
             }
         }
         return result
+    }
+
+    func storedPhotoPath(forFileName fileName: String) -> String? {
+        let resolved = photosDirectory.appendingPathComponent(fileName)
+        return fileManager.fileExists(atPath: resolved.path) ? resolved.path : nil
     }
 }

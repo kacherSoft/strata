@@ -26,11 +26,11 @@ public struct SidebarItem: Identifiable, Hashable, Sendable {
         SidebarItem(title: tagName, icon: "tag.fill", isTag: true)
     }
 
-    public nonisolated(unsafe) static let allTasks = SidebarItem(title: "All Tasks", icon: "tray.full")
-    public nonisolated(unsafe) static let today = SidebarItem(title: "Today", icon: "sun.max.fill")
-    public nonisolated(unsafe) static let upcoming = SidebarItem(title: "Upcoming", icon: "calendar")
-    public nonisolated(unsafe) static let inProgress = SidebarItem(title: "In Progress", icon: "play.circle")
-    public nonisolated(unsafe) static let completed = SidebarItem(title: "Completed", icon: "checkmark.circle")
+    public static let allTasks = SidebarItem(title: "All Tasks", icon: "tray.full")
+    public static let today = SidebarItem(title: "Today", icon: "sun.max.fill")
+    public static let upcoming = SidebarItem(title: "Upcoming", icon: "calendar")
+    public static let inProgress = SidebarItem(title: "In Progress", icon: "play.circle")
+    public static let completed = SidebarItem(title: "Completed", icon: "checkmark.circle")
 
-    public nonisolated(unsafe) static let mainItems = [allTasks, today, upcoming, inProgress, completed]
+    public static let mainItems = [allTasks, today, upcoming, inProgress, completed]
 }

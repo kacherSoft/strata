@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class AIModeRepository: ObservableObject {
     private let modelContext: ModelContext
+    private var lastSaveError: Error?
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -27,30 +28,43 @@ final class AIModeRepository: ObservableObject {
     @discardableResult
     func create(name: String, systemPrompt: String) -> AIModeModel {
         let mode = AIModeModel(name: name, systemPrompt: systemPrompt, isBuiltIn: false)
-        
-        if let maxOrder = try? fetchAll().map(\.sortOrder).max() {
-            mode.sortOrder = maxOrder + 1
+
+        do {
+            if let maxOrder = try fetchAll().map(\.sortOrder).max() {
+                mode.sortOrder = maxOrder + 1
+            }
+        } catch {
+            lastSaveError = error
         }
-        
+
         modelContext.insert(mode)
-        try? modelContext.save()
+        saveContext()
         return mode
     }
     
     func update(_ mode: AIModeModel) {
-        try? modelContext.save()
+        saveContext()
     }
     
     func delete(_ mode: AIModeModel) {
         guard !mode.isBuiltIn else { return }
         modelContext.delete(mode)
-        try? modelContext.save()
+        saveContext()
     }
     
     func reorder(_ modes: [AIModeModel]) {
         for (index, mode) in modes.enumerated() {
             mode.sortOrder = index
         }
-        try? modelContext.save()
+        saveContext()
+    }
+
+    private func saveContext() {
+        do {
+            try modelContext.save()
+            lastSaveError = nil
+        } catch {
+            lastSaveError = error
+        }
     }
 }

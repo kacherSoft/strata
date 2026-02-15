@@ -7,7 +7,7 @@ final class ShortcutManager: ObservableObject {
     static let shared = ShortcutManager()
     
     private var modelContainer: ModelContainer?
-    private nonisolated(unsafe) var localMonitor: Any?
+    private var localMonitor: Any?
     
     private init() {
         registerDefaultShortcuts()

@@ -22,6 +22,7 @@ enum TaskSortOrder: Sendable {
 @MainActor
 final class TaskRepository: ObservableObject {
     private let modelContext: ModelContext
+    private var lastSaveError: Error?
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -37,13 +38,15 @@ final class TaskRepository: ObservableObject {
         descriptor.sortBy = sortDescriptors(for: sortOrder)
         
         var tasks = try modelContext.fetch(descriptor)
-        
+
         tasks = applyFilter(tasks, filter: filter)
-        
+
         if !searchText.isEmpty {
             tasks = applySearch(tasks, searchText: searchText)
         }
-        
+
+        tasks = applyPrioritySortIfNeeded(tasks, order: sortOrder)
+
         return tasks
     }
     
@@ -73,18 +76,18 @@ final class TaskRepository: ObservableObject {
             isToday: isToday
         )
         modelContext.insert(task)
-        try? modelContext.save()
+        saveContext()
         return task
     }
     
     func update(_ task: TaskModel) {
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     func delete(_ task: TaskModel) {
         modelContext.delete(task)
-        try? modelContext.save()
+        saveContext()
     }
     
     func deleteAll() throws {
@@ -98,7 +101,7 @@ final class TaskRepository: ObservableObject {
         } else {
             task.markComplete()
         }
-        try? modelContext.save()
+        saveContext()
     }
     
     private func sortDescriptors(for order: TaskSortOrder) -> [SortDescriptor<TaskModel>] {
@@ -145,6 +148,34 @@ final class TaskRepository: ObservableObject {
             task.title.lowercased().contains(lowercasedSearch) ||
             task.taskDescription.lowercased().contains(lowercasedSearch) ||
             task.tags.contains { $0.lowercased().contains(lowercasedSearch) }
+        }
+    }
+
+    private func applyPrioritySortIfNeeded(_ tasks: [TaskModel], order: TaskSortOrder) -> [TaskModel] {
+        guard case .priority(let ascending) = order else { return tasks }
+
+        return tasks.sorted {
+            let lhsValue = $0.priority.sortValue
+            let rhsValue = $1.priority.sortValue
+
+            if lhsValue == rhsValue {
+                return $0.createdAt > $1.createdAt
+            }
+
+            if ascending {
+                return lhsValue < rhsValue
+            }
+
+            return lhsValue > rhsValue
+        }
+    }
+
+    private func saveContext() {
+        do {
+            try modelContext.save()
+            lastSaveError = nil
+        } catch {
+            lastSaveError = error
         }
     }
 }

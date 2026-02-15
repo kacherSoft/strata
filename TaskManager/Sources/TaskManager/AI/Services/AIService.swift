@@ -34,26 +34,56 @@ final class AIService {
     func setMode(_ mode: AIModeModel) {
         currentMode = mode
     }
+
+    private func persistSelectedMode(_ modeId: UUID?, in context: ModelContext) {
+        do {
+            if let settings = try context.fetch(FetchDescriptor<SettingsModel>()).first {
+                settings.selectedAIModeId = modeId
+                settings.touch()
+                try context.save()
+            }
+        } catch {
+            return
+        }
+    }
     
     func cycleMode(in context: ModelContext) {
         let descriptor = FetchDescriptor<AIModeModel>(sortBy: [SortDescriptor(\.sortOrder)])
-        guard let modes = try? context.fetch(descriptor), !modes.isEmpty else { return }
-        
-        if let current = currentMode,
-           let currentIndex = modes.firstIndex(where: { $0.id == current.id }) {
-            let nextIndex = (currentIndex + 1) % modes.count
-            currentMode = modes[nextIndex]
-        } else {
-            currentMode = modes.first
+        do {
+            let modes = try context.fetch(descriptor)
+            guard !modes.isEmpty else { return }
+
+            if let current = currentMode,
+               let currentIndex = modes.firstIndex(where: { $0.id == current.id }) {
+                let nextIndex = (currentIndex + 1) % modes.count
+                currentMode = modes[nextIndex]
+            } else {
+                currentMode = modes.first
+            }
+
+            persistSelectedMode(currentMode?.id, in: context)
+        } catch {
+            return
         }
     }
     
     func loadDefaultMode(from context: ModelContext) {
         guard currentMode == nil else { return }
-        
+
         let descriptor = FetchDescriptor<AIModeModel>(sortBy: [SortDescriptor(\.sortOrder)])
-        if let modes = try? context.fetch(descriptor), let first = modes.first {
-            currentMode = first
+        do {
+            let modes = try context.fetch(descriptor)
+            if let settings = try context.fetch(FetchDescriptor<SettingsModel>()).first,
+               let selectedModeId = settings.selectedAIModeId,
+               let selected = modes.first(where: { $0.id == selectedModeId }) {
+                currentMode = selected
+                return
+            }
+
+            currentMode = modes.first
+            persistSelectedMode(currentMode?.id, in: context)
+        } catch {
+            return
         }
     }
     

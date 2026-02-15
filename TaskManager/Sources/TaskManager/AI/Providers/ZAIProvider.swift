@@ -39,7 +39,7 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = timeout
-        request.httpBody = try? JSONSerialization.data(withJSONObject: requestBody)
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -59,7 +59,7 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
                 throw AIError.providerError("HTTP \(httpResponse.statusCode)")
             }
             
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let choices = json["choices"] as? [[String: Any]],
                   let firstChoice = choices.first,
                   let message = firstChoice["message"] as? [String: Any],

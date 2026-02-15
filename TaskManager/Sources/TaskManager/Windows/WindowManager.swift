@@ -80,20 +80,36 @@ final class WindowManager: ObservableObject {
     private func createTask(title: String, notes: String, dueDate: Date?, hasReminder: Bool, reminderDuration: TimeInterval = 1800, priority: TaskItem.Priority, tags: [String], photos: [URL] = []) {
         guard let container = modelContainer else { return }
         let context = container.mainContext
-        
+
+        let defaultPriority: TaskPriority = {
+            do {
+                if let settings = try context.fetch(FetchDescriptor<SettingsModel>()).first {
+                    return settings.defaultPriority
+                }
+            } catch {
+                return .medium
+            }
+            return .medium
+        }()
+
+        let resolvedPriority: TaskPriority = priority == .none ? defaultPriority : TaskPriority.from(priority)
         let storedPaths = photos.isEmpty ? [] : PhotoStorageService.shared.storePhotos(photos)
         let task = TaskModel(
             title: title,
             taskDescription: notes,
             dueDate: dueDate,
             reminderDuration: reminderDuration,
-            priority: TaskPriority.from(priority),
+            priority: resolvedPriority,
             tags: tags,
             hasReminder: hasReminder,
             photos: storedPaths
         )
         context.insert(task)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            return
+        }
     }
     
     // MARK: - Main Window

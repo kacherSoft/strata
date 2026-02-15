@@ -12,6 +12,7 @@ struct AIModesSettingsView: View {
     @State private var selectedModeId: UUID?
     @State private var showAddSheet = false
     @State private var editingItem: EditModeItem?
+    @State private var saveErrorMessage: String?
     
     private var selectedMode: AIModeModel? {
         guard let id = selectedModeId else { return nil }
@@ -72,13 +73,23 @@ struct AIModesSettingsView: View {
                 }
             }
         }
+        .alert("Unable to Save Mode", isPresented: Binding(
+            get: { saveErrorMessage != nil },
+            set: { if !$0 { saveErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                saveErrorMessage = nil
+            }
+        } message: {
+            Text(saveErrorMessage ?? "")
+        }
     }
     
     private func addMode(name: String, prompt: String, provider: AIProviderType, model: String) {
         let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false)
         mode.sortOrder = modes.count
         modelContext.insert(mode)
-        try? modelContext.save()
+        saveModes()
     }
     
     private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String) {
@@ -86,12 +97,12 @@ struct AIModesSettingsView: View {
         mode.systemPrompt = prompt
         mode.provider = provider
         mode.modelName = model
-        try? modelContext.save()
+        saveModes()
     }
     
     private func deleteMode(_ mode: AIModeModel) {
         modelContext.delete(mode)
-        try? modelContext.save()
+        saveModes()
     }
     
     private func deleteSelected() {
@@ -103,11 +114,19 @@ struct AIModesSettingsView: View {
     private func moveMode(from source: IndexSet, to destination: Int) {
         var orderedModes = modes
         orderedModes.move(fromOffsets: source, toOffset: destination)
-        
+
         for (index, mode) in orderedModes.enumerated() {
             mode.sortOrder = index
         }
-        try? modelContext.save()
+        saveModes()
+    }
+
+    private func saveModes() {
+        do {
+            try modelContext.save()
+        } catch {
+            saveErrorMessage = error.localizedDescription
+        }
     }
 }
 

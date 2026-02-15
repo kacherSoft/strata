@@ -98,7 +98,7 @@ public struct TaskItem: Identifiable, Sendable {
         self.createdAt = createdAt
     }
 
-    public nonisolated(unsafe) static let sampleTasks = [
+    public static let sampleTasks = [
         TaskItem(
             title: "Design system components",
             notes: "Create reusable UI components with liquid glass effect",
@@ -168,10 +168,7 @@ public struct TaskItem: Identifiable, Sendable {
             hasReminder: true,
             dueDate: Date(),
             tags: ["testing", "photos"],
-            photos: [
-                URL(fileURLWithPath: "/Volumes/OCW-2TB/LocalProjects/TaskManager/IMG_1228.PNG"),
-                URL(fileURLWithPath: "/Volumes/OCW-2TB/LocalProjects/TaskManager/IMG_1229.PNG")
-            ]
+            photos: []
         )
     ]
 }

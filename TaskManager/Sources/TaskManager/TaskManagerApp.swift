@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 WindowManager.shared.setAlwaysOnTop(settings.alwaysOnTop)
             }
         } catch {
-            print("Failed to load settings: \(error)")
+            return
         }
     }
 }
@@ -41,33 +41,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let container: ModelContainer
-    private let menuBarController: MenuBarController
-    
+    let container: ModelContainer?
+    private let menuBarController = MenuBarController()
+
     init() {
+        let resolvedContainer: ModelContainer?
+
         do {
-            container = try ModelContainer.configured()
-            WindowManager.shared.configure(modelContainer: container)
-            seedDefaultData(container: container)
+            let configured = try ModelContainer.configured()
+            try seedDefaultData(container: configured)
+            resolvedContainer = configured
         } catch {
-            fatalError("Failed to configure SwiftData: \(error)")
+            do {
+                let fallback = try ModelContainer.inMemoryFallback()
+                try seedDefaultData(container: fallback)
+                resolvedContainer = fallback
+            } catch {
+                resolvedContainer = nil
+            }
         }
-        
-        // Initialize menu bar
-        menuBarController = MenuBarController()
-        
-        // Initialize shortcut manager (registers shortcuts)
-        ShortcutManager.shared.configure(modelContainer: container)
-        
-        // Pass container to app delegate for settings (after all inits)
-        appDelegate.modelContainer = container
+
+        container = resolvedContainer
+        if let container {
+            WindowManager.shared.configure(modelContainer: container)
+            ShortcutManager.shared.configure(modelContainer: container)
+            appDelegate.modelContainer = container
+        }
+
     }
-    
+
     var body: some Scene {
         WindowGroup("Task Manager", id: "main-window") {
-            ContentView()
+            if let container {
+                ContentView()
+                    .modelContainer(container)
+            } else {
+                Text("Unable to initialize local data store.")
+                    .padding()
+            }
         }
-        .modelContainer(container)
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1000, height: 700)
         .commands {
@@ -92,6 +104,7 @@ struct ContentView: View {
     @State private var selectedDate: Date?
     @State private var dateFilterMode: CalendarFilterMode = .all
     @State private var selectedPriority: TaskItem.Priority?
+    @State private var persistenceErrorMessage: String?
     private let reminderWatchTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var currentSettings: SettingsModel? { settings.first }
@@ -231,14 +244,41 @@ struct ContentView: View {
         .onReceive(reminderWatchTimer) { _ in
             monitorReminderTimers()
         }
+        .alert("Unable to Save Changes", isPresented: Binding(
+            get: { persistenceErrorMessage != nil },
+            set: { if !$0 { persistenceErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                persistenceErrorMessage = nil
+            }
+        } message: {
+            Text(persistenceErrorMessage ?? "")
+        }
     }
     
     private var taskItems: [TaskItem] {
-        taskModels.map { $0.toTaskItem() }
+        let mapped = taskModels.map { $0.toTaskItem() }
+        let showCompleted = currentSettings?.showCompletedTasks ?? true
+        return showCompleted ? mapped : mapped.filter { !$0.isCompleted }
     }
     
     private var allTags: [String] {
         Array(Set(taskModels.flatMap { $0.tags })).sorted()
+    }
+
+    private func saveContext() {
+        do {
+            try modelContext.save()
+        } catch {
+            persistenceErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func resolvedPriority(_ priority: TaskItem.Priority) -> TaskPriority {
+        if priority == .none {
+            return currentSettings?.defaultPriority ?? .medium
+        }
+        return TaskPriority.from(priority)
     }
     
     private func createTask(
@@ -257,7 +297,7 @@ struct ContentView: View {
             taskDescription: notes,
             dueDate: dueDate,
             reminderDuration: reminderDuration,
-            priority: TaskPriority.from(priority),
+            priority: resolvedPriority(priority),
             tags: tags,
             hasReminder: hasReminder,
             photos: storedPaths
@@ -276,7 +316,7 @@ struct ContentView: View {
         }
         
         modelContext.insert(task)
-        try? modelContext.save()
+        saveContext()
     }
     
     private func findTaskModel(for taskItem: TaskItem) -> TaskModel? {
@@ -289,17 +329,9 @@ struct ContentView: View {
         if task.isCompleted {
             cancelReminder(for: task)
         }
-        try? modelContext.save()
+        saveContext()
     }
     
-    private func updateStatus(taskItem: TaskItem, status: TaskItem.Status) {
-        guard let task = findTaskModel(for: taskItem) else { return }
-        task.setStatus(TaskStatus.from(status))
-        if task.isCompleted {
-            cancelReminder(for: task)
-        }
-        try? modelContext.save()
-    }
     
     private func updateTask(
         taskItem: TaskItem,
@@ -340,22 +372,22 @@ struct ContentView: View {
         }
         
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     private func deleteTask(taskItem: TaskItem) {
         guard let task = findTaskModel(for: taskItem) else { return }
         NotificationService.shared.cancelReminder(for: task.id)
         modelContext.delete(task)
-        try? modelContext.save()
+        saveContext()
         selectedTask = nil
     }
     
     private func updatePriority(taskItem: TaskItem, priority: TaskItem.Priority) {
         guard let task = findTaskModel(for: taskItem) else { return }
-        task.priority = TaskPriority.from(priority)
+        task.priority = resolvedPriority(priority)
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     private func createReminder(taskItem: TaskItem, duration: TimeInterval) {
@@ -372,7 +404,7 @@ struct ContentView: View {
             soundId: soundId
         )
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     private func editReminder(taskItem: TaskItem, newDuration: TimeInterval) {
@@ -390,7 +422,7 @@ struct ContentView: View {
             soundId: soundId
         )
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     private func removeReminder(taskItem: TaskItem) {
@@ -400,7 +432,7 @@ struct ContentView: View {
         task.hasReminder = false
         task.reminderFireDate = nil
         task.touch()
-        try? modelContext.save()
+        saveContext()
     }
     
     private func stopAlarm(taskItem: TaskItem) {
@@ -422,14 +454,14 @@ struct ContentView: View {
               let task = taskModels.first(where: { $0.id == uuid }) else { return }
         task.setStatus(.completed)
         cancelReminder(for: task)
-        try? modelContext.save()
+        saveContext()
     }
 
     private func handleReminderDismissed(taskId: String) {
         guard let uuid = UUID(uuidString: taskId),
               let task = taskModels.first(where: { $0.id == uuid }) else { return }
         cancelReminder(for: task)
-        try? modelContext.save()
+        saveContext()
     }
 
     private func cancelReminder(for task: TaskModel) {
@@ -442,7 +474,7 @@ struct ContentView: View {
     private func stopAlarm(for task: TaskModel) {
         NotificationService.shared.stopAlarm()
         cancelReminder(for: task)
-        try? modelContext.save()
+        saveContext()
     }
     
     private func monitorReminderTimers() {
@@ -486,14 +518,14 @@ struct ContentView: View {
                     let storedPaths = PhotoStorageService.shared.storePhotos(pickedURLs)
                     task.photos.append(contentsOf: storedPaths)
                     task.touch()
-                    try? self.modelContext.save()
+                    self.saveContext()
                 }
             }
         } else {
             let storedPaths = PhotoStorageService.shared.storePhotos(urls)
             task.photos.append(contentsOf: storedPaths)
             task.touch()
-            try? modelContext.save()
+            saveContext()
         }
     }
 }

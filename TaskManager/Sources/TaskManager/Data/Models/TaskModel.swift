@@ -30,6 +30,7 @@ final class TaskModel {
     var isInProgress: Bool { status == .inProgress }
     
     init(
+        id: UUID = UUID(),
         title: String,
         taskDescription: String = "",
         dueDate: Date? = nil,
@@ -42,7 +43,7 @@ final class TaskModel {
         hasReminder: Bool = false,
         photos: [String] = []
     ) {
-        self.id = UUID()
+        self.id = id
         self.title = title
         self.taskDescription = taskDescription
         self.dueDate = dueDate
