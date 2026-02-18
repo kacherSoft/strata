@@ -12,14 +12,14 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
         keychain.hasKey(.zaiAPIKey)
     }
     
-    func enhance(text: String, mode: AIModeData) async throws -> AIEnhancementResult {
+    func enhance(text: String, attachments: [AIAttachment], mode: AIModeData) async throws -> AIEnhancementResult {
         guard let apiKey = keychain.get(.zaiAPIKey) else {
             throw AIError.notConfigured
         }
-        
+
         let startTime = Date()
         let modelName = mode.modelName.isEmpty ? defaultModel : mode.modelName
-        
+
         let requestBody: [String: Any] = [
             "model": modelName,
             "messages": [
@@ -98,25 +98,26 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
         guard let apiKey = keychain.get(.zaiAPIKey) else {
             throw AIError.notConfigured
         }
-        
+
         guard let url = URL(string: "\(baseURL)/models") else {
             throw AIError.invalidResponse
         }
-        
+
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 10
-        
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AIError.invalidResponse
         }
-        
+
         if httpResponse.statusCode == 401 {
             throw AIError.invalidAPIKey
         }
-        
+
         return httpResponse.statusCode >= 200 && httpResponse.statusCode < 300
     }
+
 }

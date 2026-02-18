@@ -18,7 +18,7 @@ final class SettingsWindow: NSPanel {
         self.center()
         
         let settingsView = SettingsView()
-            .modelContainer(modelContainer)
+            .withAppEnvironment(container: modelContainer)
         
         self.contentView = NSHostingView(rootView: settingsView)
     }

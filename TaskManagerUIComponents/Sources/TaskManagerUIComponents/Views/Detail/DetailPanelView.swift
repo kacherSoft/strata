@@ -13,7 +13,7 @@ public struct DetailPanelView: View {
     let selectedPriority: TaskItem.Priority?
     
     let onToggleComplete: ((TaskItem) -> Void)?
-    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void)?
     let onDelete: ((TaskItem) -> Void)?
     let onPriorityChange: ((TaskItem, TaskItem.Priority) -> Void)?
     let onAddPhotos: ((TaskItem, [URL]) -> Void)?
@@ -23,6 +23,8 @@ public struct DetailPanelView: View {
     let onEditReminder: ((TaskItem, TimeInterval) -> Void)?
     let onRemoveReminder: ((TaskItem) -> Void)?
     let onStopAlarm: ((TaskItem) -> Void)?
+    let recurringFeatureEnabled: Bool
+    let customFieldsFeatureEnabled: Bool
 
     public init(
         selectedSidebarItem: SidebarItem?,
@@ -33,7 +35,9 @@ public struct DetailPanelView: View {
         selectedTag: String? = nil,
         selectedDate: Date? = nil,
         dateFilterMode: CalendarFilterMode = .all,
-        selectedPriority: TaskItem.Priority? = nil
+        selectedPriority: TaskItem.Priority? = nil,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false
     ) {
         self.selectedSidebarItem = selectedSidebarItem
         self._selectedTask = selectedTask
@@ -55,6 +59,8 @@ public struct DetailPanelView: View {
         self.onEditReminder = nil
         self.onRemoveReminder = nil
         self.onStopAlarm = nil
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
     }
     
     public init(
@@ -67,8 +73,10 @@ public struct DetailPanelView: View {
         selectedDate: Date? = nil,
         dateFilterMode: CalendarFilterMode = .all,
         selectedPriority: TaskItem.Priority? = nil,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false,
         onToggleComplete: @escaping (TaskItem) -> Void,
-        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
         onPriorityChange: @escaping (TaskItem, TaskItem.Priority) -> Void,
         onAddPhotos: @escaping (TaskItem, [URL]) -> Void = { _, _ in },
@@ -99,6 +107,8 @@ public struct DetailPanelView: View {
         self.onEditReminder = onEditReminder
         self.onRemoveReminder = onRemoveReminder
         self.onStopAlarm = onStopAlarm
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
     }
 
     public var body: some View {
@@ -118,6 +128,8 @@ public struct DetailPanelView: View {
                             selectedTask: $selectedTask,
                             calendarFilterDate: selectedDate,
                             calendarFilterMode: dateFilterMode,
+                            recurringFeatureEnabled: recurringFeatureEnabled,
+                            customFieldsFeatureEnabled: customFieldsFeatureEnabled,
                             onToggleComplete: onToggleComplete,
                             onEdit: onEdit,
                             onDelete: onDelete,
@@ -135,7 +147,9 @@ public struct DetailPanelView: View {
                             tasks: filteredTasks,
                             selectedTask: $selectedTask,
                             calendarFilterDate: selectedDate,
-                            calendarFilterMode: dateFilterMode
+                            calendarFilterMode: dateFilterMode,
+                            recurringFeatureEnabled: recurringFeatureEnabled,
+                            customFieldsFeatureEnabled: customFieldsFeatureEnabled
                         )
                     }
 

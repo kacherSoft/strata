@@ -6,7 +6,7 @@ public struct TaskRow: View {
     let isSelected: Bool
     let onToggleComplete: (() -> Void)?
     let onStatusChange: ((TaskItem.Status) -> Void)?
-    let onEdit: ((String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void)?
     let onDelete: (() -> Void)?
     let onPriorityChange: ((TaskItem.Priority) -> Void)?
     let onAddPhotos: (([URL]) -> Void)?
@@ -18,6 +18,8 @@ public struct TaskRow: View {
     let onStopAlarm: (() -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
+    let recurringFeatureEnabled: Bool
+    let customFieldsFeatureEnabled: Bool
     
     @State private var isExpanded = false
     @State private var showEditSheet = false
@@ -32,12 +34,16 @@ public struct TaskRow: View {
         task: TaskItem,
         isSelected: Bool,
         calendarFilterDate: Date? = nil,
-        calendarFilterMode: CalendarFilterMode = .all
+        calendarFilterMode: CalendarFilterMode = .all,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false
     ) {
         self.task = task
         self.isSelected = isSelected
         self.calendarFilterDate = calendarFilterDate
         self.calendarFilterMode = calendarFilterMode
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = nil
@@ -59,8 +65,10 @@ public struct TaskRow: View {
         isSelected: Bool,
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false,
         onToggleComplete: @escaping () -> Void,
-        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void,
         onDelete: @escaping () -> Void,
         onPriorityChange: @escaping (TaskItem.Priority) -> Void
     ) {
@@ -68,6 +76,8 @@ public struct TaskRow: View {
         self.isSelected = isSelected
         self.calendarFilterDate = calendarFilterDate
         self.calendarFilterMode = calendarFilterMode
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = onToggleComplete
@@ -89,8 +99,10 @@ public struct TaskRow: View {
         isSelected: Bool,
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false,
         onStatusChange: @escaping (TaskItem.Status) -> Void,
-        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void,
         onDelete: @escaping () -> Void,
         onPriorityChange: @escaping (TaskItem.Priority) -> Void,
         onAddPhotos: @escaping ([URL]) -> Void,
@@ -105,6 +117,8 @@ public struct TaskRow: View {
         self.isSelected = isSelected
         self.calendarFilterDate = calendarFilterDate
         self.calendarFilterMode = calendarFilterMode
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = nil
@@ -214,6 +228,13 @@ public struct TaskRow: View {
                 VStack(alignment: .leading, spacing: 8) {
                     // Title
                     HStack(spacing: 6) {
+                        if task.isRecurring {
+                            Image(systemName: "arrow.trianglehead.clockwise")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .help("Recurring task")
+                        }
+
                         Text(task.title)
                             .font(.system(size: 13))
                             .foregroundStyle(task.isCompleted ? .secondary : .primary)
@@ -289,7 +310,25 @@ public struct TaskRow: View {
                         .foregroundStyle(task.isToday ? .orange : .secondary)
                     }
 
+                    if customFieldsFeatureEnabled {
+                        if let client = task.client {
+                            Text(client)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
 
+                        if let budget = task.budget {
+                            Text(budget, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let effort = task.effort {
+                            Text("\(effort, format: .number)h")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Spacer()
@@ -393,6 +432,8 @@ public struct TaskRow: View {
                 EditTaskSheet(
                     task: task,
                     isPresented: $showEditSheet,
+                    recurringFeatureEnabled: recurringFeatureEnabled,
+                    customFieldsFeatureEnabled: customFieldsFeatureEnabled,
                     onSave: onEdit,
                     onDelete: onDelete,
                     onPickPhotos: onPickPhotos,

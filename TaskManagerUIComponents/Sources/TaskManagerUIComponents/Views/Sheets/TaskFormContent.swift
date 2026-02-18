@@ -12,6 +12,14 @@ public struct TaskFormContent: View {
     @Binding var tags: [String]
     @Binding var showValidationError: Bool
     @Binding var photos: [URL]
+    @Binding var isRecurring: Bool
+    @Binding var recurrenceRule: RecurrenceRule
+    @Binding var recurrenceInterval: Int
+    @Binding var budget: Decimal?
+    @Binding var client: String
+    @Binding var effortHours: Double?
+    let recurringFeatureEnabled: Bool
+    let customFieldsFeatureEnabled: Bool
     
     let onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     let onDeletePhoto: ((URL) -> Void)?
@@ -31,6 +39,14 @@ public struct TaskFormContent: View {
         tags: Binding<[String]>,
         showValidationError: Binding<Bool>,
         photos: Binding<[URL]> = .constant([]),
+        isRecurring: Binding<Bool> = .constant(false),
+        recurrenceRule: Binding<RecurrenceRule> = .constant(.weekly),
+        recurrenceInterval: Binding<Int> = .constant(1),
+        budget: Binding<Decimal?> = .constant(nil),
+        client: Binding<String> = .constant(""),
+        effortHours: Binding<Double?> = .constant(nil),
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil
     ) {
@@ -44,10 +60,22 @@ public struct TaskFormContent: View {
         self._tags = tags
         self._showValidationError = showValidationError
         self._photos = photos
+        self._isRecurring = isRecurring
+        self._recurrenceRule = recurrenceRule
+        self._recurrenceInterval = recurrenceInterval
+        self._budget = budget
+        self._client = client
+        self._effortHours = effortHours
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self.onPickPhotos = onPickPhotos
         self.onDeletePhoto = onDeletePhoto
     }
     
+    private var currencyCode: String {
+        Locale.current.currency?.identifier ?? "USD"
+    }
+
     private func requestAddTag() {
         let trimmed = newTag.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !trimmed.isEmpty, !tags.contains(trimmed) else {
@@ -146,6 +174,72 @@ public struct TaskFormContent: View {
                 }
             }
             
+            Section("Recurrence") {
+                Toggle("Recurring Task", isOn: $isRecurring)
+                    .disabled(!recurringFeatureEnabled)
+
+                if !recurringFeatureEnabled {
+                    Text("Premium feature")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if isRecurring {
+                    if recurringFeatureEnabled {
+                        Picker("Repeats", selection: $recurrenceRule) {
+                            ForEach(RecurrenceRule.allCases, id: \.self) { rule in
+                                Text(rule.displayName).tag(rule)
+                            }
+                        }
+
+                        let unit = recurrenceRule == .daily ? "day(s)" :
+                            recurrenceRule == .weekly ? "week(s)" :
+                            recurrenceRule == .monthly ? "month(s)" :
+                            recurrenceRule == .yearly ? "year(s)" : "weekday(s)"
+
+                        Stepper("Every \(recurrenceInterval) \(unit)", value: $recurrenceInterval, in: 1...52)
+                    } else {
+                        Text("Upgrade to edit recurrence settings.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Custom Fields") {
+                if customFieldsFeatureEnabled {
+                    HStack {
+                        Text("Budget")
+                        Spacer()
+                        TextField("Amount", value: $budget, format: .currency(code: currencyCode))
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 140)
+                    }
+
+                    HStack {
+                        Text("Client")
+                        Spacer()
+                        TextField("Client name", text: $client)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 180)
+                    }
+
+                    HStack {
+                        Text("Effort")
+                        Spacer()
+                        TextField("Hours", value: $effortHours, format: .number)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
+                        Text("hours")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("Premium feature")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Attachments") {
                 HStack {
                     Button {

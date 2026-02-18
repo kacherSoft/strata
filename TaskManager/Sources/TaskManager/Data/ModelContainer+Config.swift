@@ -34,6 +34,8 @@ func seedDefaultData(container: ModelContainer) throws {
     let context = ModelContext(container)
 
     try seedDefaultAIModes(context: context)
+    try removeDeprecatedBuiltInModesIfNeeded(context: context)
+    try seedExplainModeIfNeeded(context: context)
     try seedDefaultSettings(context: context)
 
     try context.save()
@@ -48,6 +50,43 @@ private func seedDefaultAIModes(context: ModelContext) throws {
         mode.sortOrder = index
         context.insert(mode)
     }
+}
+
+@MainActor
+private func removeDeprecatedBuiltInModesIfNeeded(context: ModelContext) throws {
+    let modesToRemove: Set<String> = ["Simplify", "Break Down"]
+    let builtInModes = try context.fetch(FetchDescriptor<AIModeModel>(predicate: #Predicate { $0.isBuiltIn }))
+    for mode in builtInModes where modesToRemove.contains(mode.name) {
+        context.delete(mode)
+    }
+}
+
+@MainActor
+private func seedExplainModeIfNeeded(context: ModelContext) throws {
+    let descriptor = FetchDescriptor<AIModeModel>(
+        predicate: #Predicate { $0.isBuiltIn && $0.name == "Explain" }
+    )
+    let explainModes = try context.fetch(descriptor)
+
+    if let explainMode = explainModes.first {
+        if !explainMode.supportsAttachments {
+            explainMode.supportsAttachments = true
+        }
+        return
+    }
+
+    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
+    let maxOrder = allModes.map(\.sortOrder).max() ?? -1
+
+    let explainMode = AIModeModel(
+        name: "Explain",
+        systemPrompt: "You are an expert explainer. If an image or document is attached, analyze and explain it clearly and concisely. Otherwise, analyze the provided text. Break down complex concepts into understandable language. Only output the explanation, nothing else.",
+        provider: .gemini,
+        isBuiltIn: true,
+        supportsAttachments: true
+    )
+    explainMode.sortOrder = maxOrder + 1
+    context.insert(explainMode)
 }
 
 @MainActor

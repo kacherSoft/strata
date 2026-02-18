@@ -16,7 +16,13 @@ extension TaskModel {
             dueDate: dueDate,
             tags: tags,
             photos: photos.map { URL(fileURLWithPath: $0) },
-            createdAt: createdAt
+            createdAt: createdAt,
+            isRecurring: isRecurring,
+            recurrenceRule: recurrenceRule.flatMap { TaskManagerUIComponents.RecurrenceRule(rawValue: $0.rawValue) },
+            recurrenceInterval: recurrenceInterval,
+            budget: budget,
+            client: client,
+            effort: effort
         )
     }
 }

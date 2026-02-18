@@ -11,17 +11,20 @@ public struct QuickEntryContent: View {
     @State private var selectedPriority: TaskItem.Priority = .none
     @State private var tags: [String] = []
     @State private var photos: [URL] = []
+    @State private var budget: Decimal?
+    @State private var client = ""
+    @State private var effortHours: Double?
     @State private var showValidationError = false
     @State private var showCreateConfirmation = false
     
     public var onCancel: () -> Void
-    public var onCreate: (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void
+    public var onCreate: (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void
     public var onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)?
     public var onDeletePhoto: ((URL) -> Void)?
 
     public init(
         onCancel: @escaping () -> Void,
-        onCreate: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
+        onCreate: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void,
         onPickPhotos: ((@escaping ([URL]) -> Void) -> Void)? = nil,
         onDeletePhoto: ((URL) -> Void)? = nil
     ) {
@@ -48,7 +51,13 @@ public struct QuickEntryContent: View {
             reminderDuration,
             selectedPriority,
             tags,
-            photos
+            photos,
+            false,
+            .weekly,
+            1,
+            nil,
+            nil,
+            nil
         )
     }
 
@@ -66,6 +75,9 @@ public struct QuickEntryContent: View {
                 tags: $tags,
                 showValidationError: $showValidationError,
                 photos: $photos,
+                budget: $budget,
+                client: $client,
+                effortHours: $effortHours,
                 onPickPhotos: onPickPhotos,
                 onDeletePhoto: onDeletePhoto
             )

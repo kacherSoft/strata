@@ -9,6 +9,8 @@ public struct SidebarView: View {
     @Binding var dateFilterMode: CalendarFilterMode
     @Binding var selectedPriority: TaskItem.Priority?
     let tasks: [TaskItem]
+    @Binding var isKanbanMode: Bool
+    let showsKanbanPremiumBadge: Bool
 
     public init(
         selectedItem: Binding<SidebarItem?>,
@@ -17,7 +19,9 @@ public struct SidebarView: View {
         selectedDate: Binding<Date?> = .constant(nil),
         dateFilterMode: Binding<CalendarFilterMode> = .constant(.all),
         selectedPriority: Binding<TaskItem.Priority?> = .constant(nil),
-        tasks: [TaskItem] = []
+        tasks: [TaskItem] = [],
+        isKanbanMode: Binding<Bool> = .constant(false),
+        showsKanbanPremiumBadge: Bool = false
     ) {
         self._selectedItem = selectedItem
         self.tags = tags
@@ -26,10 +30,47 @@ public struct SidebarView: View {
         self._dateFilterMode = dateFilterMode
         self._selectedPriority = selectedPriority
         self.tasks = tasks
+        self._isKanbanMode = isKanbanMode
+        self.showsKanbanPremiumBadge = showsKanbanPremiumBadge
     }
 
     public var body: some View {
         VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button {
+                    isKanbanMode = false
+                } label: {
+                    Image(systemName: "list.bullet")
+                        .frame(width: 28, height: 28)
+                        .background(!isKanbanMode ? Color.accentColor.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .help("List View")
+
+                Button {
+                    isKanbanMode = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.grid.3x3")
+                        if showsKanbanPremiumBadge {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.yellow)
+                        }
+                    }
+                    .frame(height: 28)
+                    .padding(.horizontal, 8)
+                    .background(isKanbanMode ? Color.accentColor.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .help("Kanban View")
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+
             List(selection: $selectedItem) {
                 Section("My Work") {
                     ForEach(SidebarItem.mainItems) { item in

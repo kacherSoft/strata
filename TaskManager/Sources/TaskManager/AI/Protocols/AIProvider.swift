@@ -3,9 +3,15 @@ import Foundation
 protocol AIProviderProtocol: Sendable {
     var name: String { get }
     var isConfigured: Bool { get }
-    
-    func enhance(text: String, mode: AIModeData) async throws -> AIEnhancementResult
+
+    func enhance(text: String, attachments: [AIAttachment], mode: AIModeData) async throws -> AIEnhancementResult
     func testConnection() async throws -> Bool
+}
+
+extension AIProviderProtocol {
+    func enhance(text: String, mode: AIModeData) async throws -> AIEnhancementResult {
+        try await enhance(text: text, attachments: [], mode: mode)
+    }
 }
 
 enum AIError: LocalizedError, Sendable {

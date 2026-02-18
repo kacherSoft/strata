@@ -3,8 +3,9 @@ import SwiftData
 
 struct GeneralSettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var subscriptionService: SubscriptionService
     @Query private var settings: [SettingsModel]
-    
+
     private var currentSettings: SettingsModel? { settings.first }
     
     var body: some View {
@@ -101,7 +102,7 @@ struct GeneralSettingsView: View {
                         Image(systemName: "bell.badge")
                             .foregroundStyle(.secondary)
                             .frame(width: 24)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Reminder Sound")
                                 .font(.body)
@@ -109,9 +110,9 @@ struct GeneralSettingsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         Picker("", selection: Binding(
                             get: { currentSettings?.reminderSoundId ?? "default" },
                             set: { newValue in
@@ -124,7 +125,7 @@ struct GeneralSettingsView: View {
                             }
                         }
                         .frame(width: 120)
-                        
+
                         Button {
                             NotificationService.previewSound(
                                 for: currentSettings?.reminderSoundId ?? "default"
@@ -139,6 +140,49 @@ struct GeneralSettingsView: View {
                         .buttonStyle(.plain)
                         .help("Preview sound")
                     }
+
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "person.badge.key")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+
+                        Text("Access Level")
+                            .font(.body)
+
+                        Spacer()
+
+                        Text(subscriptionService.accessLabel)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    #if DEBUG
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "ladybug")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("VIP Admin Grant")
+                                .font(.body)
+                            Text("Debug-only local entitlement override")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: Binding(
+                            get: { subscriptionService.isVIPAdminGrantActive },
+                            set: { _ in subscriptionService.toggleVIPAdminGrant() }
+                        ))
+                        .toggleStyle(.switch)
+                    }
+                    #endif
                 }
                 .padding(20)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))

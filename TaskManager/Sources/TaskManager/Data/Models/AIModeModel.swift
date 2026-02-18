@@ -22,6 +22,24 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var defaultModel: String {
         availableModels.first ?? ""
     }
+
+    var supportsImageAttachments: Bool {
+        switch self {
+        case .gemini: return true
+        case .zai: return false
+        }
+    }
+
+    var supportsPDFAttachments: Bool {
+        switch self {
+        case .gemini: return true
+        case .zai: return false
+        }
+    }
+
+    var supportsAnyAttachments: Bool {
+        supportsImageAttachments || supportsPDFAttachments
+    }
 }
 
 @Model
@@ -33,6 +51,7 @@ final class AIModeModel: Identifiable {
     var modelName: String
     var sortOrder: Int
     var isBuiltIn: Bool
+    var supportsAttachments: Bool = false
     var createdAt: Date
     
     var provider: AIProviderType {
@@ -40,7 +59,7 @@ final class AIModeModel: Identifiable {
         set { providerRaw = newValue.rawValue }
     }
     
-    init(name: String, systemPrompt: String, provider: AIProviderType = .gemini, modelName: String? = nil, isBuiltIn: Bool = false) {
+    init(name: String, systemPrompt: String, provider: AIProviderType = .gemini, modelName: String? = nil, isBuiltIn: Bool = false, supportsAttachments: Bool = false) {
         self.id = UUID()
         self.name = name
         self.systemPrompt = systemPrompt
@@ -48,6 +67,7 @@ final class AIModeModel: Identifiable {
         self.modelName = modelName ?? provider.defaultModel
         self.sortOrder = 0
         self.isBuiltIn = isBuiltIn
+        self.supportsAttachments = supportsAttachments
         self.createdAt = Date()
     }
     
@@ -66,16 +86,11 @@ final class AIModeModel: Identifiable {
                 isBuiltIn: true
             ),
             AIModeModel(
-                name: "Simplify",
-                systemPrompt: "You are an expert at concise communication. Rewrite this text to be shorter and clearer while keeping the essential meaning. Remove unnecessary words. Only output the simplified text, nothing else.",
+                name: "Explain",
+                systemPrompt: "You are an expert explainer. If an image or document is attached, analyze and explain it clearly and concisely. Otherwise, analyze the provided text. Break down complex concepts into understandable language. Only output the explanation, nothing else.",
                 provider: .gemini,
-                isBuiltIn: true
-            ),
-            AIModeModel(
-                name: "Break Down",
-                systemPrompt: "You are a project manager expert. Break this task into smaller, actionable subtasks. Format as a numbered list. Only output the subtask list, nothing else.",
-                provider: .gemini,
-                isBuiltIn: true
+                isBuiltIn: true,
+                supportsAttachments: true
             )
         ]
     }

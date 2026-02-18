@@ -17,6 +17,12 @@ final class TaskModel {
     var isToday: Bool
     var hasReminder: Bool
     var photos: [String]
+    var isRecurring: Bool = false
+    var recurrenceRuleRaw: String?
+    var recurrenceInterval: Int = 1
+    var budget: Decimal?
+    var client: String?
+    var effort: Double?
     var createdAt: Date
     var updatedAt: Date
     var sortOrder: Int
@@ -28,6 +34,11 @@ final class TaskModel {
     
     var isCompleted: Bool { status == .completed }
     var isInProgress: Bool { status == .inProgress }
+
+    var recurrenceRule: RecurrenceRule? {
+        get { recurrenceRuleRaw.flatMap { RecurrenceRule(rawValue: $0) } }
+        set { recurrenceRuleRaw = newValue?.rawValue }
+    }
     
     init(
         id: UUID = UUID(),
@@ -41,7 +52,13 @@ final class TaskModel {
         status: TaskStatus = .todo,
         isToday: Bool = false,
         hasReminder: Bool = false,
-        photos: [String] = []
+        photos: [String] = [],
+        isRecurring: Bool = false,
+        recurrenceRule: RecurrenceRule? = nil,
+        recurrenceInterval: Int = 1,
+        budget: Decimal? = nil,
+        client: String? = nil,
+        effort: Double? = nil
     ) {
         self.id = id
         self.title = title
@@ -56,6 +73,12 @@ final class TaskModel {
         self.isToday = isToday
         self.hasReminder = hasReminder
         self.photos = photos
+        self.isRecurring = isRecurring
+        self.recurrenceRuleRaw = recurrenceRule?.rawValue
+        self.recurrenceInterval = max(1, recurrenceInterval)
+        self.budget = budget
+        self.client = client?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : client?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.effort = effort
         self.createdAt = Date()
         self.updatedAt = Date()
         self.sortOrder = 0

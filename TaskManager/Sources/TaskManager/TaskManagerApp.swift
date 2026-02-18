@@ -10,7 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        
+        clearStaleAttachmentFiles()
+
         // Apply saved settings on launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.applySettingsOnLaunch()
@@ -26,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func applySettingsOnLaunch() {
         guard let container = modelContainer else { return }
         let context = container.mainContext
-        
+
         do {
             let descriptor = FetchDescriptor<SettingsModel>()
             if let settings = try context.fetch(descriptor).first {
@@ -36,11 +37,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
     }
+
+    private func clearStaleAttachmentFiles() {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("EnhanceMeAttachments", isDirectory: true)
+        try? FileManager.default.removeItem(at: tempDir)
+    }
 }
 
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var subscriptionService = SubscriptionService.shared
     let container: ModelContainer?
     private let menuBarController = MenuBarController()
 
@@ -74,7 +82,7 @@ struct TaskManagerApp: App {
         WindowGroup("Task Manager", id: "main-window") {
             if let container {
                 ContentView()
-                    .modelContainer(container)
+                    .withAppEnvironment(container: container)
             } else {
                 Text("Unable to initialize local data store.")
                     .padding()
@@ -91,6 +99,7 @@ struct TaskManagerApp: App {
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var subscriptionService: SubscriptionService
     @Query(sort: \TaskModel.createdAt, order: .reverse) private var taskModels: [TaskModel]
     @Query private var settings: [SettingsModel]
     
@@ -104,6 +113,7 @@ struct ContentView: View {
     @State private var selectedDate: Date?
     @State private var dateFilterMode: CalendarFilterMode = .all
     @State private var selectedPriority: TaskItem.Priority?
+    @State private var viewMode: ViewMode = .list
     @State private var persistenceErrorMessage: String?
     private let reminderWatchTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -118,7 +128,12 @@ struct ContentView: View {
                 selectedDate: $selectedDate,
                 dateFilterMode: $dateFilterMode,
                 selectedPriority: $selectedPriority,
-                tasks: taskItems
+                tasks: taskItems,
+                isKanbanMode: Binding(
+                    get: { viewMode == .kanban },
+                    set: { viewMode = $0 ? .kanban : .list }
+                ),
+                showsKanbanPremiumBadge: !subscriptionService.canUse(.kanban)
             )
             .frame(minWidth: 220, idealWidth: 260)
             .onChange(of: selectedTag) { _, newValue in
@@ -151,60 +166,99 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            DetailPanelView(
-                selectedSidebarItem: selectedSidebarItem,
-                selectedTask: $selectedTask,
-                tasks: taskItems,
-                searchText: $searchText,
-                showNewTaskSheet: $showNewTaskSheet,
-                selectedTag: selectedTag,
-                selectedDate: selectedDate,
-                dateFilterMode: dateFilterMode,
-                selectedPriority: selectedPriority,
-                onToggleComplete: { taskItem in
-                    toggleComplete(taskItem: taskItem)
-                },
-                onEdit: { taskItem, title, notes, dueDate, hasReminder, duration, priority, tags, photos in
-                    updateTask(taskItem: taskItem, title: title, notes: notes, dueDate: dueDate, hasReminder: hasReminder, reminderDuration: duration, priority: priority, tags: tags, photos: photos)
-                },
-                onDelete: { taskItem in
-                    deleteTask(taskItem: taskItem)
-                },
-                onPriorityChange: { taskItem, priority in
-                    updatePriority(taskItem: taskItem, priority: priority)
-                },
-                onAddPhotos: { taskItem, urls in
-                    addPhotos(taskItem: taskItem, urls: urls)
-                },
-                onPickPhotos: { completion in
-                    PhotoStorageService.shared.pickPhotos(completion: completion)
-                },
-                onDeletePhoto: { url in
-                    PhotoStorageService.shared.deletePhoto(at: url.path)
-                },
-                onCreateReminder: { taskItem, duration in
-                    createReminder(taskItem: taskItem, duration: duration)
-                },
-                onEditReminder: { taskItem, duration in
-                    editReminder(taskItem: taskItem, newDuration: duration)
-                },
-                onRemoveReminder: { taskItem in
-                    removeReminder(taskItem: taskItem)
-                },
-                onStopAlarm: { taskItem in
-                    stopAlarm(taskItem: taskItem)
+            if viewMode == .list {
+                DetailPanelView(
+                    selectedSidebarItem: selectedSidebarItem,
+                    selectedTask: $selectedTask,
+                    tasks: taskItems,
+                    searchText: $searchText,
+                    showNewTaskSheet: $showNewTaskSheet,
+                    selectedTag: selectedTag,
+                    selectedDate: selectedDate,
+                    dateFilterMode: dateFilterMode,
+                    selectedPriority: selectedPriority,
+                    recurringFeatureEnabled: subscriptionService.canUse(.recurringTasks),
+                    customFieldsFeatureEnabled: subscriptionService.canUse(.customFields),
+                    onToggleComplete: { taskItem in
+                        toggleComplete(taskItem: taskItem)
+                    },
+                    onEdit: { taskItem, title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, budget, client, effort in
+                        updateTask(
+                            taskItem: taskItem,
+                            title: title,
+                            notes: notes,
+                            dueDate: dueDate,
+                            hasReminder: hasReminder,
+                            reminderDuration: duration,
+                            priority: priority,
+                            tags: tags,
+                            photos: photos,
+                            isRecurring: isRecurring,
+                            recurrenceRule: recurrenceRule,
+                            recurrenceInterval: recurrenceInterval,
+                            budget: budget,
+                            client: client,
+                            effort: effort
+                        )
+                    },
+                    onDelete: { taskItem in
+                        deleteTask(taskItem: taskItem)
+                    },
+                    onPriorityChange: { taskItem, priority in
+                        updatePriority(taskItem: taskItem, priority: priority)
+                    },
+                    onAddPhotos: { taskItem, urls in
+                        addPhotos(taskItem: taskItem, urls: urls)
+                    },
+                    onPickPhotos: { completion in
+                        PhotoStorageService.shared.pickPhotos(completion: completion)
+                    },
+                    onDeletePhoto: { url in
+                        PhotoStorageService.shared.deletePhoto(at: url.path)
+                    },
+                    onCreateReminder: { taskItem, duration in
+                        createReminder(taskItem: taskItem, duration: duration)
+                    },
+                    onEditReminder: { taskItem, duration in
+                        editReminder(taskItem: taskItem, newDuration: duration)
+                    },
+                    onRemoveReminder: { taskItem in
+                        removeReminder(taskItem: taskItem)
+                    },
+                    onStopAlarm: { taskItem in
+                        stopAlarm(taskItem: taskItem)
+                    }
+                )
+            } else {
+                if subscriptionService.canUse(.kanban) {
+                    KanbanBoardView(
+                        tasks: filteredTaskItems,
+                        onStatusChange: { taskID, newStatus in
+                            updateStatus(taskID: taskID, newStatus: newStatus)
+                        },
+                        onTaskSelect: { task in
+                            selectedTask = task
+                        }
+                    )
+                } else {
+                    PremiumUpsellView(
+                        featureName: "Kanban View",
+                        featureDescription: "Visualize your tasks in To Do, In Progress, and Done columns."
+                    )
                 }
-            )
+            }
         }
         .navigationSplitViewStyle(.balanced)
         .background(WindowActivator())
         .sheet(isPresented: $showNewTaskSheet) {
             NewTaskSheet(
                 isPresented: $showNewTaskSheet,
+                recurringFeatureEnabled: subscriptionService.canUse(.recurringTasks),
+                customFieldsFeatureEnabled: subscriptionService.canUse(.customFields),
                 onPickPhotos: { completion in
                     PhotoStorageService.shared.pickPhotos(completion: completion)
                 }
-            ) { title, notes, dueDate, hasReminder, duration, priority, tags, photos in
+            ) { title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, budget, client, effort in
                 createTask(
                     title: title,
                     notes: notes,
@@ -213,7 +267,13 @@ struct ContentView: View {
                     reminderDuration: duration,
                     priority: priority,
                     tags: tags,
-                    photos: photos
+                    photos: photos,
+                    isRecurring: isRecurring,
+                    recurrenceRule: recurrenceRule,
+                    recurrenceInterval: recurrenceInterval,
+                    budget: budget,
+                    client: client,
+                    effort: effort
                 )
             }
         }
@@ -266,6 +326,55 @@ struct ContentView: View {
         Array(Set(taskModels.flatMap { $0.tags })).sorted()
     }
 
+    private var filteredTaskItems: [TaskItem] {
+        var result = taskItems
+
+        if let priority = selectedPriority {
+            result = result.filter { $0.priority == priority }
+        } else if let tag = selectedTag {
+            result = result.filter { $0.tags.contains(tag) }
+        } else if let date = selectedDate {
+            let calendar = Calendar.current
+            switch dateFilterMode {
+            case .all:
+                result = result.filter {
+                    let matchesDue = $0.dueDate.map { calendar.isDate($0, inSameDayAs: date) } ?? false
+                    let matchesCreated = $0.createdAt.map { calendar.isDate($0, inSameDayAs: date) } ?? false
+                    return matchesDue || matchesCreated
+                }
+            case .deadline:
+                result = result.filter {
+                    guard let dueDate = $0.dueDate else { return false }
+                    return calendar.isDate(dueDate, inSameDayAs: date)
+                }
+            case .created:
+                result = result.filter {
+                    guard let createdAt = $0.createdAt else { return false }
+                    return calendar.isDate(createdAt, inSameDayAs: date)
+                }
+            }
+        } else if let selectedItem = selectedSidebarItem {
+            switch selectedItem {
+            case .allTasks: break
+            case .today: result = result.filter { $0.isToday }
+            case .upcoming: result = result.filter { !$0.isToday && !$0.isCompleted }
+            case .inProgress: result = result.filter { $0.isInProgress }
+            case .completed: result = result.filter { $0.isCompleted }
+            default: break
+            }
+        }
+
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.notes.localizedCaseInsensitiveContains(searchText) ||
+                $0.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
+            }
+        }
+
+        return result
+    }
+
     private func saveContext() {
         do {
             try modelContext.save()
@@ -289,7 +398,13 @@ struct ContentView: View {
         reminderDuration: TimeInterval = 1800,
         priority: TaskItem.Priority,
         tags: [String],
-        photos: [URL] = []
+        photos: [URL] = [],
+        isRecurring: Bool = false,
+        recurrenceRule: TaskManagerUIComponents.RecurrenceRule = .weekly,
+        recurrenceInterval: Int = 1,
+        budget: Decimal? = nil,
+        client: String? = nil,
+        effort: Double? = nil
     ) {
         let storedPaths = photos.isEmpty ? [] : PhotoStorageService.shared.storePhotos(photos)
         let task = TaskModel(
@@ -300,7 +415,13 @@ struct ContentView: View {
             priority: resolvedPriority(priority),
             tags: tags,
             hasReminder: hasReminder,
-            photos: storedPaths
+            photos: storedPaths,
+            isRecurring: isRecurring,
+            recurrenceRule: isRecurring ? RecurrenceRule(rawValue: recurrenceRule.rawValue) : nil,
+            recurrenceInterval: recurrenceInterval,
+            budget: budget,
+            client: client,
+            effort: effort
         )
         
         // Auto-start reminder timer when creating a task with a reminder
@@ -322,16 +443,60 @@ struct ContentView: View {
     private func findTaskModel(for taskItem: TaskItem) -> TaskModel? {
         taskModels.first { $0.id == taskItem.id }
     }
+
+    private func createRecurringNextTask(from task: TaskModel) {
+        guard let rule = task.recurrenceRule else { return }
+
+        let baseDate = task.dueDate ?? Date()
+        let nextDueDate = rule.nextDate(from: baseDate, interval: max(1, task.recurrenceInterval))
+
+        let nextTask = TaskModel(
+            title: task.title,
+            taskDescription: task.taskDescription,
+            dueDate: nextDueDate,
+            reminderDuration: task.reminderDuration,
+            priority: task.priority,
+            tags: task.tags,
+            hasReminder: false,
+            photos: task.photos,
+            isRecurring: true,
+            recurrenceRule: rule,
+            recurrenceInterval: task.recurrenceInterval
+        )
+
+        modelContext.insert(nextTask)
+    }
     
     private func toggleComplete(taskItem: TaskItem) {
         guard let task = findTaskModel(for: taskItem) else { return }
+
+        let willComplete = task.status == .inProgress
+        if willComplete, task.isRecurring {
+            createRecurringNextTask(from: task)
+        }
+
         task.cycleStatus()
         if task.isCompleted {
             cancelReminder(for: task)
         }
         saveContext()
     }
-    
+
+    private func updateStatus(taskID: UUID, newStatus: TaskStatus) {
+        guard let task = taskModels.first(where: { $0.id == taskID }) else { return }
+
+        if task.status != .completed,
+           newStatus == .completed,
+           task.isRecurring {
+            createRecurringNextTask(from: task)
+        }
+
+        task.setStatus(newStatus)
+        if newStatus == .completed {
+            cancelReminder(for: task)
+        }
+        saveContext()
+    }
     
     private func updateTask(
         taskItem: TaskItem,
@@ -342,7 +507,13 @@ struct ContentView: View {
         reminderDuration: TimeInterval = 1800,
         priority: TaskItem.Priority,
         tags: [String],
-        photos: [URL] = []
+        photos: [URL] = [],
+        isRecurring: Bool,
+        recurrenceRule: TaskManagerUIComponents.RecurrenceRule,
+        recurrenceInterval: Int,
+        budget: Decimal?,
+        client: String?,
+        effort: Double?
     ) {
         guard let task = findTaskModel(for: taskItem) else { return }
         task.title = title
@@ -354,6 +525,12 @@ struct ContentView: View {
         task.priority = TaskPriority.from(priority)
         task.tags = tags
         task.photos = PhotoStorageService.shared.normalizeToStoredPaths(photos)
+        task.isRecurring = isRecurring
+        task.recurrenceRule = isRecurring ? RecurrenceRule(rawValue: recurrenceRule.rawValue) : nil
+        task.recurrenceInterval = max(1, recurrenceInterval)
+        task.budget = budget
+        task.client = client?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : client?.trimmingCharacters(in: .whitespacesAndNewlines)
+        task.effort = effort
         
         // Auto-start/restart reminder when enabled or duration changed via edit
         if hasReminder && reminderChanged {
@@ -452,6 +629,11 @@ struct ContentView: View {
     private func handleTaskCompletedFromNotification(taskId: String) {
         guard let uuid = UUID(uuidString: taskId),
               let task = taskModels.first(where: { $0.id == uuid }) else { return }
+
+        if task.status != .completed, task.isRecurring {
+            createRecurringNextTask(from: task)
+        }
+
         task.setStatus(.completed)
         cancelReminder(for: task)
         saveContext()

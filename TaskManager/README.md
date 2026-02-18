@@ -1,6 +1,15 @@
 # TaskManager
 
-A macOS productivity app built with Liquid Glass UI components.
+TaskManager is a macOS task management app with AI enhancement, premium entitlements (Pro + VIP), global shortcuts, and floating productivity panels.
+
+## Current Status
+
+- ✅ Core task management: tags, priority, due dates, reminders, photos
+- ✅ Pro features: Kanban, recurring tasks, custom fields
+- ✅ AI modes + Enhance Me panel
+- ✅ AI attachments (image/PDF) for supported premium modes/providers
+- ✅ StoreKit 2 subscriptions + VIP lifetime purchase
+- ✅ Unified entitlement gating (`hasFullAccess`)
 
 ## Quick Start
 
@@ -11,22 +20,32 @@ cd TaskManager
 open TaskManagerApp.xcodeproj
 ```
 
-### Build archive with .app output (unsigned/local test)
-```bash
-cd TaskManager
-./scripts/archive_macos_app.sh
-```
-
-### Build signed archive (for Organizer upload)
+### Build signed archive (default)
 ```bash
 cd TaskManager
 xcodebuild -project TaskManagerApp.xcodeproj -scheme TaskManager -configuration Release -destination "generic/platform=macOS" -archivePath ../build/TaskManager-signed.xcarchive archive
 ```
 
 Archive output:
+- `../build/TaskManager-signed.xcarchive`
+- `../build/TaskManager-signed.xcarchive/Products/Applications/TaskManager.app`
+
+Install to Applications:
+```bash
+cd TaskManager
+ditto ../build/TaskManager-signed.xcarchive/Products/Applications/TaskManager.app /Applications/TaskManager.app
+open /Applications/TaskManager.app
+```
+
+### Build unsigned archive (local test only)
+```bash
+cd TaskManager
+./scripts/archive_macos_app.sh
+```
+
+Archive output:
 - `../build/TaskManager.xcarchive`
 - `../build/TaskManager.xcarchive/Products/Applications/TaskManager.app`
-- `../build/TaskManager-signed.xcarchive`
 
 See full release flow: `../docs/macos-release-workflow.md`
 
@@ -38,58 +57,32 @@ swift run
 
 ## Architecture
 
-```
-TaskManager/                    # Main App (your code)
-├── Package.swift              # Depends on TaskManagerUIComponents
-└── Sources/TaskManager/
-    └── TaskManagerApp.swift   # App entry (60 lines)
-
-TaskManagerUIComponents/       # UI Component Library (reusable)
-├── 24 modular component files
-└── All Liquid Glass UI
-```
-
-## How It Works
-
-1. **Import Components** from `TaskManagerUIComponents`
-2. **Compose Views** using modular components
-3. **Add Logic** as you build features
-
-## Main App Code
-
-Only ~60 lines - all UI comes from components:
-
-```swift
-import SwiftUI
-import TaskManagerUIComponents
-
-@main
-struct TaskManagerApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .windowToolbarStyle(.unified)
-    }
-}
-
-struct ContentView: View {
-    var body: some View {
-        NavigationSplitView {
-            SidebarView(selectedItem: $selectedItem)
-        } detail: {
-            DetailPanelView(...)  // All components!
-        }
-    }
-}
+```text
+TaskManager/
+├── Sources/TaskManager/
+│   ├── TaskManagerApp.swift          # app entry + window scene
+│   ├── Data/                         # SwiftData models, config, repositories
+│   ├── Services/                     # subscription, notifications, export, storage
+│   ├── AI/                           # providers (Gemini/z.ai), protocol, service, models
+│   ├── Views/                        # main UI + settings + premium UI
+│   ├── Windows/                      # Enhance Me / Quick Entry / Settings windows
+│   └── Shortcuts/                    # keyboard shortcut integration
+└── Package.swift
 ```
 
-## Next Steps
+## Entitlements
 
-1. **Add Data Layer** - Persistence, networking
-2. **Add Business Logic** - Task CRUD, filtering
-3. **Add State Management** - Observable models
-4. **Add Tests** - Unit tests, UI tests
+- `Free`: core task features
+- `Pro (subscription)`: premium feature set
+- `VIP (lifetime)`: same feature access as Pro, one-time purchase model
+
+App gating uses `SubscriptionService.hasFullAccess`.
+
+## AI Attachments
+
+- Attachments are handled in the Enhance Me flow and passed to the selected provider.
+- Availability is mode + provider capability + entitlement dependent.
+- Attachment size/count limits are enforced in-app.
 
 ## Requirements
 
@@ -99,4 +92,4 @@ struct ContentView: View {
 
 ## Component Library
 
-See [TaskManagerUIComponents/README.md](../TaskManagerUIComponents/README.md) for full component reference.
+See [TaskManagerUIComponents/README.md](../TaskManagerUIComponents/README.md) for UI component references.

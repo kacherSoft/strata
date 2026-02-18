@@ -87,21 +87,21 @@ final class AIService {
         }
     }
     
-    func enhance(text: String, mode: AIModeModel) async throws -> AIEnhancementResult {
+    func enhance(text: String, attachments: [AIAttachment] = [], mode: AIModeModel) async throws -> AIEnhancementResult {
         let modeData = AIModeData(from: mode)
         let provider = providerFor(modeData.provider)
-        
+
         guard provider.isConfigured else {
             throw AIError.notConfigured
         }
-        
+
         isProcessing = true
         lastError = nil
-        
+
         defer { isProcessing = false }
-        
+
         do {
-            let result = try await provider.enhance(text: text, mode: modeData)
+            let result = try await provider.enhance(text: text, attachments: attachments, mode: modeData)
             return result
         } catch let error as AIError {
             lastError = error

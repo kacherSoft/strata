@@ -62,14 +62,14 @@ struct AIModesSettingsView: View {
             .background(.bar)
         }
         .sheet(isPresented: $showAddSheet) {
-            ModeEditorSheet(mode: nil) { name, prompt, provider, model in
-                addMode(name: name, prompt: prompt, provider: provider, model: model)
+            ModeEditorSheet(mode: nil) { name, prompt, provider, model, supportsAttachments in
+                addMode(name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments)
             }
         }
         .sheet(item: $editingItem) { item in
             if let mode = modes.first(where: { $0.id == item.id }) {
-                ModeEditorSheet(mode: mode) { name, prompt, provider, model in
-                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model)
+                ModeEditorSheet(mode: mode) { name, prompt, provider, model, supportsAttachments in
+                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments)
                 }
             }
         }
@@ -85,18 +85,20 @@ struct AIModesSettingsView: View {
         }
     }
     
-    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String) {
-        let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false)
+    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool) {
+        let canSupportAttachments = provider.supportsAnyAttachments
+        let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false, supportsAttachments: supportsAttachments && canSupportAttachments)
         mode.sortOrder = modes.count
         modelContext.insert(mode)
         saveModes()
     }
     
-    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String) {
+    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool) {
         mode.name = name
         mode.systemPrompt = prompt
         mode.provider = provider
         mode.modelName = model
+        mode.supportsAttachments = supportsAttachments && provider.supportsAnyAttachments
         saveModes()
     }
     
@@ -179,16 +181,18 @@ private struct ModeRow: View {
 
 private struct ModeEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+    @EnvironmentObject private var subscriptionService: SubscriptionService
+
     let mode: AIModeModel?
-    let onSave: (String, String, AIProviderType, String) -> Void
-    
+    let onSave: (String, String, AIProviderType, String, Bool) -> Void
+
     @State private var name = ""
     @State private var systemPrompt = ""
     @State private var selectedProvider: AIProviderType = .gemini
     @State private var selectedModel: String
-    
-    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String) -> Void) {
+    @State private var supportsAttachments = false
+
+    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String, Bool) -> Void) {
         self.mode = mode
         self.onSave = onSave
         let provider: AIProviderType = mode?.provider ?? .gemini
@@ -220,7 +224,7 @@ private struct ModeEditorSheet: View {
             
             Form {
                 TextField("Name", text: $name)
-                
+
                 Section("AI Provider") {
                     Picker("Provider", selection: $selectedProvider) {
                         ForEach(AIProviderType.allCases, id: \.self) { provider in
@@ -231,15 +235,30 @@ private struct ModeEditorSheet: View {
                         if !newValue.availableModels.contains(selectedModel) {
                             selectedModel = newValue.defaultModel
                         }
+                        if !newValue.supportsAnyAttachments {
+                            supportsAttachments = false
+                        }
                     }
-                    
+
                     Picker("Model", selection: $selectedModel) {
                         ForEach(selectedProvider.availableModels, id: \.self) { model in
                             Text(model).tag(model)
                         }
                     }
                 }
-                
+
+                if subscriptionService.hasFullAccess {
+                    Section("Input") {
+                        Toggle("Allow Attachments (Images & PDF)", isOn: $supportsAttachments)
+                            .disabled(!selectedProvider.supportsAnyAttachments)
+                        if !selectedProvider.supportsAnyAttachments {
+                            Label("Attachments are currently not supported for this provider.", systemImage: "info.circle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 Section("System Prompt") {
                     TextEditor(text: $systemPrompt)
                         .font(.body)
@@ -261,7 +280,7 @@ private struct ModeEditorSheet: View {
             HStack {
                 Spacer()
                 Button("Save") {
-                    onSave(name, systemPrompt, selectedProvider, selectedModel)
+                    onSave(name, systemPrompt, selectedProvider, selectedModel, supportsAttachments)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -275,10 +294,12 @@ private struct ModeEditorSheet: View {
                 name = mode.name
                 systemPrompt = mode.systemPrompt
                 selectedProvider = mode.provider
+                supportsAttachments = mode.supportsAttachments && selectedProvider.supportsAnyAttachments
                 let valid = selectedProvider.availableModels.contains(mode.modelName)
                 selectedModel = valid ? mode.modelName : selectedProvider.defaultModel
             } else {
                 selectedModel = selectedProvider.defaultModel
+                supportsAttachments = false
             }
         }
     }

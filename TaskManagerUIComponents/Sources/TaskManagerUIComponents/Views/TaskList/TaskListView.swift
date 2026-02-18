@@ -6,7 +6,7 @@ public struct TaskListView: View {
     @Binding var selectedTask: TaskItem?
     
     let onToggleComplete: ((TaskItem) -> Void)?
-    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void)?
+    let onEdit: ((TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void)?
     let onDelete: ((TaskItem) -> Void)?
     let onPriorityChange: ((TaskItem, TaskItem.Priority) -> Void)?
     let onAddPhotos: ((TaskItem, [URL]) -> Void)?
@@ -18,17 +18,23 @@ public struct TaskListView: View {
     let onStopAlarm: ((TaskItem) -> Void)?
     let calendarFilterDate: Date?
     let calendarFilterMode: CalendarFilterMode
+    let recurringFeatureEnabled: Bool
+    let customFieldsFeatureEnabled: Bool
 
     public init(
         tasks: [TaskItem],
         selectedTask: Binding<TaskItem?>,
         calendarFilterDate: Date? = nil,
-        calendarFilterMode: CalendarFilterMode = .all
+        calendarFilterMode: CalendarFilterMode = .all,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false
     ) {
         self.tasks = tasks
         self._selectedTask = selectedTask
         self.calendarFilterDate = calendarFilterDate
         self.calendarFilterMode = calendarFilterMode
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self.onToggleComplete = nil
         self.onEdit = nil
         self.onDelete = nil
@@ -47,8 +53,10 @@ public struct TaskListView: View {
         selectedTask: Binding<TaskItem?>,
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
+        recurringFeatureEnabled: Bool = false,
+        customFieldsFeatureEnabled: Bool = false,
         onToggleComplete: @escaping (TaskItem) -> Void,
-        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL]) -> Void,
+        onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, Decimal?, String?, Double?) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
         onPriorityChange: @escaping (TaskItem, TaskItem.Priority) -> Void,
         onAddPhotos: @escaping (TaskItem, [URL]) -> Void = { _, _ in },
@@ -63,6 +71,8 @@ public struct TaskListView: View {
         self._selectedTask = selectedTask
         self.calendarFilterDate = calendarFilterDate
         self.calendarFilterMode = calendarFilterMode
+        self.recurringFeatureEnabled = recurringFeatureEnabled
+        self.customFieldsFeatureEnabled = customFieldsFeatureEnabled
         self.onToggleComplete = onToggleComplete
         self.onEdit = onEdit
         self.onDelete = onDelete
@@ -86,9 +96,11 @@ public struct TaskListView: View {
                             isSelected: selectedTask?.id == task.id,
                             calendarFilterDate: calendarFilterDate,
                             calendarFilterMode: calendarFilterMode,
+                            recurringFeatureEnabled: recurringFeatureEnabled,
+                            customFieldsFeatureEnabled: customFieldsFeatureEnabled,
                             onStatusChange: { _ in onToggleComplete(task) },
-                            onEdit: { title, notes, dueDate, hasReminder, duration, priority, tags, photos in
-                                onEdit(task, title, notes, dueDate, hasReminder, duration, priority, tags, photos)
+                            onEdit: { title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, budget, client, effort in
+                                onEdit(task, title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, budget, client, effort)
                             },
                             onDelete: { onDelete(task) },
                             onPriorityChange: { priority in onPriorityChange(task, priority) },
@@ -102,7 +114,7 @@ public struct TaskListView: View {
                         )
                         .onTapGesture { selectedTask = task }
                     } else {
-                        TaskRow(task: task, isSelected: selectedTask?.id == task.id, calendarFilterDate: calendarFilterDate, calendarFilterMode: calendarFilterMode)
+                        TaskRow(task: task, isSelected: selectedTask?.id == task.id, calendarFilterDate: calendarFilterDate, calendarFilterMode: calendarFilterMode, recurringFeatureEnabled: recurringFeatureEnabled, customFieldsFeatureEnabled: customFieldsFeatureEnabled)
                             .onTapGesture { selectedTask = task }
                     }
                 }

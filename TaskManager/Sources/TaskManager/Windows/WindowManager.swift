@@ -57,15 +57,30 @@ final class WindowManager: ObservableObject {
         
         let view = QuickEntryWrapper(
             onDismiss: { [weak self] in self?.hideQuickEntry() },
-            onCreate: { [weak self] title, notes, dueDate, hasReminder, duration, priority, tags, photos in
-                self?.createTask(title: title, notes: notes, dueDate: dueDate, hasReminder: hasReminder, reminderDuration: duration, priority: priority, tags: tags, photos: photos)
+            onCreate: { [weak self] title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, budget, client, effort in
+                self?.createTask(
+                    title: title,
+                    notes: notes,
+                    dueDate: dueDate,
+                    hasReminder: hasReminder,
+                    reminderDuration: duration,
+                    priority: priority,
+                    tags: tags,
+                    photos: photos,
+                    isRecurring: isRecurring,
+                    recurrenceRule: recurrenceRule,
+                    recurrenceInterval: recurrenceInterval,
+                    budget: budget,
+                    client: client,
+                    effort: effort
+                )
                 self?.hideQuickEntry()
             },
             onPickPhotos: { completion in
                 PhotoStorageService.shared.pickPhotos(completion: completion)
             }
         )
-        .modelContainer(container)
+        .withAppEnvironment(container: container)
         
         panel.setContent(view)
         panel.center()
@@ -77,7 +92,22 @@ final class WindowManager: ObservableObject {
         quickEntryPanel?.orderOut(nil)
     }
     
-    private func createTask(title: String, notes: String, dueDate: Date?, hasReminder: Bool, reminderDuration: TimeInterval = 1800, priority: TaskItem.Priority, tags: [String], photos: [URL] = []) {
+    private func createTask(
+        title: String,
+        notes: String,
+        dueDate: Date?,
+        hasReminder: Bool,
+        reminderDuration: TimeInterval = 1800,
+        priority: TaskItem.Priority,
+        tags: [String],
+        photos: [URL] = [],
+        isRecurring: Bool = false,
+        recurrenceRule: TaskManagerUIComponents.RecurrenceRule = .weekly,
+        recurrenceInterval: Int = 1,
+        budget: Decimal? = nil,
+        client: String? = nil,
+        effort: Double? = nil
+    ) {
         guard let container = modelContainer else { return }
         let context = container.mainContext
 
@@ -102,7 +132,13 @@ final class WindowManager: ObservableObject {
             priority: resolvedPriority,
             tags: tags,
             hasReminder: hasReminder,
-            photos: storedPaths
+            photos: storedPaths,
+            isRecurring: isRecurring,
+            recurrenceRule: isRecurring ? RecurrenceRule(rawValue: recurrenceRule.rawValue) : nil,
+            recurrenceInterval: recurrenceInterval,
+            budget: budget,
+            client: client,
+            effort: effort
         )
         context.insert(task)
         do {
@@ -178,7 +214,7 @@ final class WindowManager: ObservableObject {
             initialText: text,
             onDismiss: { [weak self] in self?.hideEnhanceMe() }
         )
-        .modelContainer(container)
+        .withAppEnvironment(container: container)
         
         panel.setContent(view)
         panel.center()
