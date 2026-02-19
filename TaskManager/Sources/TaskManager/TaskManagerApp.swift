@@ -181,6 +181,7 @@ struct ContentView: View {
                     selectedPriority: selectedPriority,
                     recurringFeatureEnabled: subscriptionService.canUse(.recurringTasks),
                     activeCustomFieldDefinitions: activeCustomFieldDefinitions,
+                    availableTags: allTags,
                     onToggleComplete: { taskItem in
                         toggleComplete(taskItem: taskItem)
                     },
@@ -500,6 +501,10 @@ struct ContentView: View {
         )
 
         modelContext.insert(nextTask)
+
+        // Mark original task as no longer recurring to prevent duplicate spawns
+        // if user moves it back and forth between columns
+        task.isRecurring = false
     }
     
     private func toggleComplete(taskItem: TaskItem) {

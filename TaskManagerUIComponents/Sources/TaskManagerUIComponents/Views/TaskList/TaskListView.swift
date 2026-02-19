@@ -20,6 +20,7 @@ public struct TaskListView: View {
     let calendarFilterMode: CalendarFilterMode
     let recurringFeatureEnabled: Bool
     let activeCustomFieldDefinitions: [CustomFieldDefinition]
+    let availableTags: [String]
 
     public init(
         tasks: [TaskItem],
@@ -27,7 +28,8 @@ public struct TaskListView: View {
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
         recurringFeatureEnabled: Bool = false,
-        activeCustomFieldDefinitions: [CustomFieldDefinition] = []
+        activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = []
     ) {
         self.tasks = tasks
         self._selectedTask = selectedTask
@@ -35,6 +37,7 @@ public struct TaskListView: View {
         self.calendarFilterMode = calendarFilterMode
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
         self.onToggleComplete = nil
         self.onEdit = nil
         self.onDelete = nil
@@ -55,6 +58,7 @@ public struct TaskListView: View {
         calendarFilterMode: CalendarFilterMode = .all,
         recurringFeatureEnabled: Bool = false,
         activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = [],
         onToggleComplete: @escaping (TaskItem) -> Void,
         onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, [UUID: CustomFieldEditValue]) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
@@ -73,6 +77,7 @@ public struct TaskListView: View {
         self.calendarFilterMode = calendarFilterMode
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
         self.onToggleComplete = onToggleComplete
         self.onEdit = onEdit
         self.onDelete = onDelete
@@ -98,6 +103,7 @@ public struct TaskListView: View {
                             calendarFilterMode: calendarFilterMode,
                             recurringFeatureEnabled: recurringFeatureEnabled,
                             activeCustomFieldDefinitions: activeCustomFieldDefinitions,
+                            availableTags: availableTags,
                             onStatusChange: { _ in onToggleComplete(task) },
                             onEdit: { title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, customFieldValues in
                                 onEdit(task, title, notes, dueDate, hasReminder, duration, priority, tags, photos, isRecurring, recurrenceRule, recurrenceInterval, customFieldValues)
@@ -120,7 +126,8 @@ public struct TaskListView: View {
                             calendarFilterDate: calendarFilterDate,
                             calendarFilterMode: calendarFilterMode,
                             recurringFeatureEnabled: recurringFeatureEnabled,
-                            activeCustomFieldDefinitions: activeCustomFieldDefinitions
+                            activeCustomFieldDefinitions: activeCustomFieldDefinitions,
+                            availableTags: availableTags
                         )
                         .onTapGesture { selectedTask = task }
                     }

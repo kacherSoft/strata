@@ -40,10 +40,16 @@ struct KanbanColumnView: View {
                             KanbanCardView(task: task) {
                                 onTaskSelect(task)
                             }
+                            .transition(.asymmetric(
+                                insertion: .scale(scale: 0.9).combined(with: .opacity),
+                                removal: .scale(scale: 0.9).combined(with: .opacity)
+                            ))
+                            .id("\(task.id.uuidString)-\(task.status.rawValue)")
                         }
                     }
                 }
                 .padding(.vertical, 4)
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: tasks.map(\.id))
             }
         }
         .padding(12)

@@ -25,6 +25,7 @@ public struct DetailPanelView: View {
     let onStopAlarm: ((TaskItem) -> Void)?
     let recurringFeatureEnabled: Bool
     let activeCustomFieldDefinitions: [CustomFieldDefinition]
+    let availableTags: [String]
 
     public init(
         selectedSidebarItem: SidebarItem?,
@@ -37,7 +38,8 @@ public struct DetailPanelView: View {
         dateFilterMode: CalendarFilterMode = .all,
         selectedPriority: TaskItem.Priority? = nil,
         recurringFeatureEnabled: Bool = false,
-        activeCustomFieldDefinitions: [CustomFieldDefinition] = []
+        activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = []
     ) {
         self.selectedSidebarItem = selectedSidebarItem
         self._selectedTask = selectedTask
@@ -61,6 +63,7 @@ public struct DetailPanelView: View {
         self.onStopAlarm = nil
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
     }
     
     public init(
@@ -75,6 +78,7 @@ public struct DetailPanelView: View {
         selectedPriority: TaskItem.Priority? = nil,
         recurringFeatureEnabled: Bool = false,
         activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = [],
         onToggleComplete: @escaping (TaskItem) -> Void,
         onEdit: @escaping (TaskItem, String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, [UUID: CustomFieldEditValue]) -> Void,
         onDelete: @escaping (TaskItem) -> Void,
@@ -109,6 +113,7 @@ public struct DetailPanelView: View {
         self.onStopAlarm = onStopAlarm
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
     }
 
     public var body: some View {
@@ -130,6 +135,7 @@ public struct DetailPanelView: View {
                             calendarFilterMode: dateFilterMode,
                             recurringFeatureEnabled: recurringFeatureEnabled,
                             activeCustomFieldDefinitions: activeCustomFieldDefinitions,
+                            availableTags: availableTags,
                             onToggleComplete: onToggleComplete,
                             onEdit: onEdit,
                             onDelete: onDelete,
@@ -149,7 +155,8 @@ public struct DetailPanelView: View {
                             calendarFilterDate: selectedDate,
                             calendarFilterMode: dateFilterMode,
                             recurringFeatureEnabled: recurringFeatureEnabled,
-                            activeCustomFieldDefinitions: activeCustomFieldDefinitions
+                            activeCustomFieldDefinitions: activeCustomFieldDefinitions,
+                            availableTags: availableTags
                         )
                     }
 

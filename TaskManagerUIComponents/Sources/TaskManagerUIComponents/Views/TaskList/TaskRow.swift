@@ -20,6 +20,7 @@ public struct TaskRow: View {
     let calendarFilterMode: CalendarFilterMode
     let recurringFeatureEnabled: Bool
     let activeCustomFieldDefinitions: [CustomFieldDefinition]
+    let availableTags: [String]
     
     @State private var isExpanded = false
     @State private var showEditSheet = false
@@ -36,7 +37,8 @@ public struct TaskRow: View {
         calendarFilterDate: Date? = nil,
         calendarFilterMode: CalendarFilterMode = .all,
         recurringFeatureEnabled: Bool = false,
-        activeCustomFieldDefinitions: [CustomFieldDefinition] = []
+        activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = []
     ) {
         self.task = task
         self.isSelected = isSelected
@@ -44,6 +46,7 @@ public struct TaskRow: View {
         self.calendarFilterMode = calendarFilterMode
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = nil
@@ -67,6 +70,7 @@ public struct TaskRow: View {
         calendarFilterMode: CalendarFilterMode = .all,
         recurringFeatureEnabled: Bool = false,
         activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = [],
         onToggleComplete: @escaping () -> Void,
         onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, [UUID: CustomFieldEditValue]) -> Void,
         onDelete: @escaping () -> Void,
@@ -78,6 +82,7 @@ public struct TaskRow: View {
         self.calendarFilterMode = calendarFilterMode
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = onToggleComplete
@@ -101,6 +106,7 @@ public struct TaskRow: View {
         calendarFilterMode: CalendarFilterMode = .all,
         recurringFeatureEnabled: Bool = false,
         activeCustomFieldDefinitions: [CustomFieldDefinition] = [],
+        availableTags: [String] = [],
         onStatusChange: @escaping (TaskItem.Status) -> Void,
         onEdit: @escaping (String, String, Date?, Bool, TimeInterval, TaskItem.Priority, [String], [URL], Bool, RecurrenceRule, Int, [UUID: CustomFieldEditValue]) -> Void,
         onDelete: @escaping () -> Void,
@@ -119,6 +125,7 @@ public struct TaskRow: View {
         self.calendarFilterMode = calendarFilterMode
         self.recurringFeatureEnabled = recurringFeatureEnabled
         self.activeCustomFieldDefinitions = activeCustomFieldDefinitions
+        self.availableTags = availableTags
         self._currentPriority = State(initialValue: task.priority)
         self._currentStatus = State(initialValue: task.status)
         self.onToggleComplete = nil
@@ -429,6 +436,7 @@ public struct TaskRow: View {
                     recurringFeatureEnabled: recurringFeatureEnabled,
                     activeCustomFieldDefinitions: activeCustomFieldDefinitions,
                     initialCustomFieldValues: Dictionary(uniqueKeysWithValues: task.customFieldEntries.map { ($0.id, $0.toEditValue()) }),
+                    availableTags: availableTags,
                     onSave: onEdit,
                     onDelete: onDelete,
                     onPickPhotos: onPickPhotos,

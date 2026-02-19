@@ -11,6 +11,7 @@ struct EnhanceMeView: View {
     @State private var aiService = AIService.shared
     @State private var originalText: String
     @State private var enhancedText = ""
+    @State private var displayedText = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showCopiedIndicator = false
@@ -18,6 +19,7 @@ struct EnhanceMeView: View {
     @State private var attachments: [AIAttachment] = []
     @State private var toastMessage: String?
     @State private var toastStyle: ToastStyle = .info
+    @State private var typewriterTimer: Timer?
     
     let initialText: String
     var onDismiss: () -> Void
@@ -44,6 +46,8 @@ struct EnhanceMeView: View {
         }
         .onDisappear {
             cleanupAttachments()
+            typewriterTimer?.invalidate()
+            typewriterTimer = nil
         }
         .onChange(of: subscriptionService.hasFullAccess) { _, hasAccess in
             if !hasAccess {
@@ -271,12 +275,13 @@ struct EnhanceMeView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    TextEditor(text: $enhancedText)
+                    TextEditor(text: displayedText.isEmpty ? $enhancedText : $displayedText)
                         .scrollContentBackground(.hidden)
                         .font(.body)
                         .padding(8)
                         .background(.background.opacity(0.5))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .disabled(!displayedText.isEmpty)
                 }
             }
         }
@@ -365,11 +370,13 @@ struct EnhanceMeView: View {
         isLoading = true
         errorMessage = nil
         showCopiedIndicator = false
+        displayedText = ""
 
         Task {
             do {
                 let result = try await aiService.enhance(text: originalText, attachments: sendAttachments, mode: mode)
                 enhancedText = result.enhancedText
+                startTypewriterAnimation(for: result.enhancedText)
                 copyToClipboard(result.enhancedText)
             } catch let error as AIError {
                 errorMessage = error.localizedDescription
@@ -377,6 +384,32 @@ struct EnhanceMeView: View {
                 errorMessage = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+    
+    private func startTypewriterAnimation(for text: String) {
+        typewriterTimer?.invalidate()
+        typewriterTimer = nil
+        displayedText = ""
+        
+        Task { @MainActor in
+            let characters = Array(text)
+            var index = 0
+            let batchSize = 5 // Characters per update for smoother rendering
+
+            while index < characters.count {
+                let endIndex = min(index + batchSize, characters.count)
+                let chunk = characters[index..<endIndex]
+                displayedText += String(chunk)
+                index = endIndex
+
+                // Allow UI to update before continuing
+                try? await Task.sleep(nanoseconds: 8_000_000) // 8ms
+            }
+            
+            // Animation complete - sync back to enhancedText for editing
+            enhancedText = displayedText
+            displayedText = ""
         }
     }
     
