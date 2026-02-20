@@ -428,6 +428,9 @@ public struct TaskRow: View {
         .onReceive(countdownTimer) { date in
             now = date
         }
+        .onDisappear {
+            countdownTimer.upstream.connect().cancel()
+        }
         .sheet(isPresented: $showEditSheet) {
             if let onEdit, let onDelete {
                 EditTaskSheet(

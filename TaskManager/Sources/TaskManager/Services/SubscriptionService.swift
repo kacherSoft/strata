@@ -34,7 +34,7 @@ final class SubscriptionService: ObservableObject {
 
     private var isVIPAdminGranted: Bool {
         #if DEBUG
-        UserDefaults.standard.bool(forKey: "debug_vip_granted")
+        UserDefaults.standard.debugVIPGranted
         #else
         false
         #endif
@@ -151,13 +151,12 @@ final class SubscriptionService: ObservableObject {
 
     #if DEBUG
     func toggleVIPAdminGrant() {
-        let current = UserDefaults.standard.bool(forKey: "debug_vip_granted")
-        UserDefaults.standard.set(!current, forKey: "debug_vip_granted")
+        UserDefaults.standard.debugVIPGranted.toggle()
         objectWillChange.send()
     }
 
     var isVIPAdminGrantActive: Bool {
-        UserDefaults.standard.bool(forKey: "debug_vip_granted")
+        UserDefaults.standard.debugVIPGranted
     }
     #endif
 

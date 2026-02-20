@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func applyAppearanceFromStorage() {
-        let modeRaw = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
+        let modeRaw = UserDefaults.standard.appearanceMode
         guard let mode = AppearanceMode(rawValue: modeRaw) else { return }
         
         DispatchQueue.main.async {
@@ -129,7 +129,7 @@ struct ContentView: View {
     @State private var showNewTaskSheet = false
     @State private var searchText = ""
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+    @State private var showOnboarding = !UserDefaults.standard.hasCompletedOnboarding
     @State private var selectedTag: String?
     @State private var selectedDate: Date?
     @State private var dateFilterMode: CalendarFilterMode = .all

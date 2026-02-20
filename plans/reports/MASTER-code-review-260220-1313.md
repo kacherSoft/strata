@@ -14,12 +14,14 @@ The TaskManager codebase demonstrates **solid SwiftUI/SwiftData architecture** w
 | Category | Score |
 |----------|-------|
 | Architecture | 8/10 |
-| Code Quality | 6.5/10 |
-| Security | 7.5/10 |
-| Performance | 6/10 |
-| Testability | 4/10 |
-| Accessibility | 3/10 |
-| **Overall** | **6.5/10** |
+| Code Quality | 6/10 |
+| Security | 7/10 |
+| Performance | 5.5/10 |
+| Testability | 2/10 |
+| Accessibility | 2/10 |
+| **Overall** | **5.5/10** |
+
+*Validated by Oracle review - scores adjusted for accuracy.*
 
 ---
 
@@ -94,10 +96,10 @@ var descriptor = FetchDescriptor<TaskModel>(
 ### 6. Timer/Task Memory Leaks
 
 **Files:**
-- `EnhanceMeView.swift:22` - Typewriter timer Task continues after view disappears
+- `TaskRow.swift:32` - `countdownTimer` autoconnects but has no `onDisappear` cleanup
 - `WindowManager.swift:10-12` - NSPanels retained indefinitely
 
-**Fix:** Add cancellation tokens and NSWindowDelegate.
+**Fix:** Add `.onDisappear { }` to cancel timers and add NSWindowDelegate.
 
 ### 7. Zero Test Coverage
 
@@ -124,12 +126,17 @@ var descriptor = FetchDescriptor<TaskModel>(
 ```swift
 func deletePhoto(at path: String) {
     // No validation that path is within photos directory
+    // Note: isStoredPhoto() method exists but is NOT called here
 }
 ```
 
 **Fix:**
 ```swift
-guard url.standardizedFileURL.path.hasPrefix(photosDirectory.path) else { return }
+func deletePhoto(at path: String) {
+    let url = URL(fileURLWithPath: path)
+    guard isStoredPhoto(url) else { return }  // One-line fix
+    try? fileManager.removeItem(at: url)
+}
 ```
 
 ### 10. Missing Input Validation
@@ -160,7 +167,8 @@ No proactive throttling for AI API calls - only reactive 429 handling.
 | Unused ViewModel | `TaskDetailViewModel.swift` |
 | Dead code | `GeminiProvider.swift:122-141` (extractPDFText) |
 | Singleton deinit unreachable | `SubscriptionService.swift:61-63` |
-| Missing accessibility labels | 2 labels across 33 UI files |
+| Missing accessibility labels | 5 labels across 33 UI files (still critical) |
+| Hardcoded UserDefaults keys | `appearanceMode`, `hasCompletedOnboarding`, `debug_vip_granted` |
 
 ---
 
@@ -180,10 +188,13 @@ No proactive throttling for AI API calls - only reactive 429 handling.
 ## Recommended Actions
 
 ### Immediate (This Sprint)
-1. [ ] Refactor `EnhanceMeView.swift` (921 → 200 lines)
-2. [ ] Refactor `TaskManagerApp.swift` ContentView (646 → separate components)
+1. [x] Refactor `EnhanceMeView.swift` (921 → 200 lines) ✅ DONE
+2. [x] Refactor `TaskManagerApp.swift` ContentView (646 → separate components) ✅ DONE
 3. [ ] Expose repository save errors to callers
 4. [ ] Consolidate `AIProvider`/`AIProviderType` enums
+5. [ ] Add path validation to `PhotoStorageService.deletePhoto()`
+6. [ ] Add timer cleanup to `TaskRow.swift`
+7. [ ] Extract UserDefaults keys to constants
 
 ### Short-term (Next Sprint)
 5. [ ] Add predicates for database-level filtering
@@ -246,8 +257,9 @@ The TaskManager codebase shows **competent SwiftUI/SwiftData development** with 
 
 1. **File size violations** - Several files severely exceed 200-line guideline
 2. **Silent error handling** - Risk of data loss without user awareness
-3. **Zero test coverage** - No automated quality gates
-4. **Limited accessibility** - 2 labels across entire UI package
+3. **Zero test coverage** - No automated quality gates (score: 2/10)
+4. **Limited accessibility** - 5 labels across entire UI package (score: 2/10)
+5. **Security gaps** - Path traversal risk, hardcoded keys
 
 Priority should be given to refactoring large files and fixing silent error handling before adding new features.
 

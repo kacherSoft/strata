@@ -95,6 +95,7 @@ final class PhotoStorageService {
     /// Delete a photo from app storage
     func deletePhoto(at path: String) {
         let url = URL(fileURLWithPath: path)
+        guard isStoredPhoto(url) else { return }
         do {
             try fileManager.removeItem(at: url)
         } catch {
