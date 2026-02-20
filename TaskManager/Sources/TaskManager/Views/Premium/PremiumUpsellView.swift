@@ -76,7 +76,7 @@ struct PremiumUpsellView: View {
                                     .foregroundStyle(.blue)
                             }
                             .padding(12)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            .liquidGlass(.init(thickness: .ultraThin, variant: .default, cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                     }
@@ -112,7 +112,7 @@ struct PremiumUpsellView: View {
                                     .foregroundStyle(.blue)
                             }
                             .padding(12)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            .liquidGlass(.init(thickness: .ultraThin, variant: .default, cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                     }

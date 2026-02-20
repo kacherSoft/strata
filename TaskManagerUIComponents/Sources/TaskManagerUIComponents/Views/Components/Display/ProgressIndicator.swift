@@ -31,7 +31,7 @@ public struct ProgressIndicator: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(.ultraThinMaterial)
+                        .fill(.quaternary)
 
                     RoundedRectangle(cornerRadius: 3)
                         .fill(.blue)
@@ -41,7 +41,6 @@ public struct ProgressIndicator: View {
             .frame(height: 6)
         }
         .padding(12)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .liquidGlass(.settingsCard)
     }
 }

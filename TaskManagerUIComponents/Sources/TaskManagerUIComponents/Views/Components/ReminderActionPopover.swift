@@ -71,12 +71,7 @@ public struct ReminderActionPopover: View {
                             .font(.system(size: 11, weight: .medium))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
-                            )
+                            .modifier(LiquidGlassModifier(style: .badge))
                     }
                     .buttonStyle(.plain)
                 }

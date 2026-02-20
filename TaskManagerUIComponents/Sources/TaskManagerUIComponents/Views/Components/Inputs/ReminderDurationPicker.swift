@@ -51,14 +51,13 @@ public struct ReminderDurationPicker: View {
                                         ? Color.accentColor.opacity(0.2)
                                         : Color.clear
                                 )
-                                .background(.ultraThinMaterial)
-                                .clipShape(Capsule())
+                                .modifier(LiquidGlassModifier(style: .badge))
                                 .overlay(
                                     Capsule()
                                         .strokeBorder(
                                             duration == value
                                                 ? Color.accentColor.opacity(0.5)
-                                                : Color.white.opacity(0.1),
+                                                : Color.clear,
                                             lineWidth: 1
                                         )
                                 )

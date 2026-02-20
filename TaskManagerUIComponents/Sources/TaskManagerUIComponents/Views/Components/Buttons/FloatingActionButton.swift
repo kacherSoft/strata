@@ -25,13 +25,7 @@ public struct FloatingActionButton: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.regularMaterial)
-            .clipShape(Capsule())
-            .overlay {
-                Capsule()
-                    .strokeBorder(.white.opacity(0.2), lineWidth: 0.5)
-            }
-            .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+            .liquidGlass(.fabButton)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

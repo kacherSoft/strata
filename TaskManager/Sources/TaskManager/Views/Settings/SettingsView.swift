@@ -40,7 +40,7 @@ struct SettingsView: View {
             }
             .padding(12)
             .frame(width: 200)
-            .background(.ultraThinMaterial)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             
             // Content
             Group {

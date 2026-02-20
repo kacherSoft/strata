@@ -36,6 +36,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             return
         }
+        
+        // Apply saved appearance mode
+        applyAppearanceFromStorage()
+    }
+    
+    private func applyAppearanceFromStorage() {
+        let modeRaw = UserDefaults.standard.string(forKey: "appearanceMode") ?? "system"
+        guard let mode = AppearanceMode(rawValue: modeRaw) else { return }
+        
+        DispatchQueue.main.async {
+            switch mode {
+            case .system:
+                NSApp.appearance = nil
+            case .light:
+                NSApp.appearance = NSAppearance(named: .aqua)
+            case .dark:
+                NSApp.appearance = NSAppearance(named: .darkAqua)
+            }
+        }
     }
 
     private func clearStaleAttachmentFiles() {

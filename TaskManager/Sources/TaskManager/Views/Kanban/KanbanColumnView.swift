@@ -22,7 +22,7 @@ struct KanbanColumnView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .liquidGlass(.badge)
 
                 Spacer()
             }
@@ -53,18 +53,7 @@ struct KanbanColumnView: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    isTargeted ? Color.accentColor : Color.white.opacity(0.06),
-                    lineWidth: isTargeted ? 2 : 1
-                )
-                .allowsHitTesting(false)
-        )
+        .liquidGlass(.kanbanColumn, isHighlighted: isTargeted)
         .contentShape(Rectangle())
         .onDrop(of: [.plainText], isTargeted: $isTargeted) { providers in
             guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {

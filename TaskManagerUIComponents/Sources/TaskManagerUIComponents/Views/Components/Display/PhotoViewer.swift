@@ -58,8 +58,7 @@ public struct PhotoViewer: View {
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                                .liquidGlass(.circleButton)
                         }
                         .buttonStyle(.plain)
                     }
@@ -76,8 +75,7 @@ public struct PhotoViewer: View {
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                                .liquidGlass(.circleButton)
                         }
                         .buttonStyle(.plain)
                     }
@@ -95,8 +93,7 @@ public struct PhotoViewer: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
+                        .liquidGlass(.badge)
 
                     Spacer()
 
@@ -108,8 +105,7 @@ public struct PhotoViewer: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
+                            .liquidGlass(.circleButton)
                     }
                     .buttonStyle(.plain)
                 }
@@ -161,7 +157,7 @@ public struct PhotoThumbnail: View {
                     .font(.system(size: 20))
                     .foregroundStyle(.secondary)
                     .frame(width: 60, height: 60)
-                    .background(.ultraThinMaterial)
+                    .liquidGlass(.init(thickness: .ultraThin, variant: .default, cornerRadius: 8))
             @unknown default:
                 EmptyView()
             }

@@ -16,7 +16,7 @@ public struct ActionButton: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(width: 28, height: 28)
-                .background(.ultraThinMaterial, in: Circle())
+                .liquidGlass(.circleButton)
         }
         .buttonStyle(.plain)
     }

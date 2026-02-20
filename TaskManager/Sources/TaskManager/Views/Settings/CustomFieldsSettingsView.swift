@@ -69,7 +69,7 @@ struct CustomFieldsSettingsView: View {
                     }
                 }
                 .padding(20)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .liquidGlass(.settingsCard)
 
                 // MARK: - Add New Field
 
@@ -120,7 +120,7 @@ struct CustomFieldsSettingsView: View {
                     }
                 }
                 .padding(20)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .liquidGlass(.settingsCard)
 
                 Spacer()
             }

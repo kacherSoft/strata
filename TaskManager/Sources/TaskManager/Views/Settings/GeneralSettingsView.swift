@@ -1,10 +1,34 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Appearance Mode
+enum AppearanceMode: String, CaseIterable {
+    case system = "system"
+    case light = "light"
+    case dark = "dark"
+    
+    var displayName: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .system: "circle.lefthalf.filled"
+        case .light: "sun.max"
+        case .dark: "moon"
+        }
+    }
+}
+
 struct GeneralSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var subscriptionService: SubscriptionService
     @Query private var settings: [SettingsModel]
+    @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
 
     private var currentSettings: SettingsModel? { settings.first }
     
@@ -16,6 +40,36 @@ struct GeneralSettingsView: View {
                     .fontWeight(.semibold)
                 
                 VStack(alignment: .leading, spacing: 20) {
+                    // Appearance Mode
+                    HStack {
+                        Image(systemName: "circle.lefthalf.filled")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Appearance")
+                                .font(.body)
+                            Text("Choose light or dark mode")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $appearanceMode) {
+                            ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                                Label(mode.displayName, systemImage: mode.icon)
+                                    .tag(mode)
+                            }
+                        }
+                        .frame(width: 140)
+                        .onChange(of: appearanceMode) { _, newValue in
+                            applyAppearanceMode(newValue)
+                        }
+                    }
+                    
+                    Divider()
+                    
                     // Always on Top
                     SettingsToggleRow(
                         title: "Always on Top",
@@ -135,7 +189,7 @@ struct GeneralSettingsView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 28, height: 28)
-                                .background(.ultraThinMaterial, in: Circle())
+                                .liquidGlass(.circleButton)
                         }
                         .buttonStyle(.plain)
                         .help("Preview sound")
@@ -187,8 +241,8 @@ struct GeneralSettingsView: View {
                     #endif
                 }
                 .padding(20)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                
+                .liquidGlass(.settingsCard)
+
                 // Data Section
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Data")
@@ -237,8 +291,8 @@ struct GeneralSettingsView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)
                 }
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                
+                .liquidGlass(.settingsCard)
+
                 Spacer()
             }
             .padding(24)
@@ -272,6 +326,17 @@ struct GeneralSettingsView: View {
             try modelContext.save()
         } catch {
             dataErrorMessage = error.localizedDescription
+        }
+    }
+    
+    private func applyAppearanceMode(_ mode: AppearanceMode) {
+        switch mode {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
         }
     }
 }

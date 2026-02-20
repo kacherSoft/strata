@@ -50,13 +50,6 @@ struct KanbanCardView: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.white.opacity(0.08))
-        )
+        .liquidGlass(.kanbanCard, isHighlighted: isHovered)
     }
 }

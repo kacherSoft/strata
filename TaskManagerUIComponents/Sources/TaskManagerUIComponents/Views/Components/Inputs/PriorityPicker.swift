@@ -1,5 +1,19 @@
 import SwiftUI
 
+// MARK: - Conditional Liquid Glass Modifier
+private struct ConditionalLiquidGlassModifier: ViewModifier {
+    let apply: Bool
+    let style: LiquidGlassStyle
+
+    func body(content: Content) -> some View {
+        if apply {
+            content.modifier(LiquidGlassModifier(style: style))
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Priority Picker Component
 public struct PriorityPicker: View {
     @Binding var selectedPriority: TaskItem.Priority
@@ -84,10 +98,10 @@ struct PriorityOption: View {
                 if isSelected {
                     color.opacity(0.15)
                 } else {
-                    RoundedRectangle(cornerRadius: 8).fill(.ultraThinMaterial)
+                    Color.clear
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .modifier(ConditionalLiquidGlassModifier(apply: !isSelected, style: .searchBar))
             .overlay {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8)

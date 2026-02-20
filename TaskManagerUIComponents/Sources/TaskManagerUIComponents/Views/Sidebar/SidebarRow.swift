@@ -25,7 +25,7 @@ public struct SidebarRow: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .liquidGlass(.badge)
             }
 
             Spacer()

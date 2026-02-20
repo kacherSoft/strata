@@ -33,11 +33,12 @@ public struct SearchBar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .liquidGlass(.searchBar)
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isFocused ? .blue.opacity(0.5) : .white.opacity(0.1), lineWidth: 1)
+            if isFocused {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.blue.opacity(0.5), lineWidth: 1)
+            }
         }
         .onAppear { isFocused = false }
     }

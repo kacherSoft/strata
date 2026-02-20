@@ -319,7 +319,7 @@ public struct TaskRow: View {
                         .font(.system(size: 13))
                         .foregroundStyle(priorityColor(currentPriority))
                         .frame(width: 28, height: 28)
-                        .background(.ultraThinMaterial, in: Circle())
+                        .liquidGlass(.circleButton)
                 }
                 .buttonStyle(.plain)
             }
@@ -381,10 +381,10 @@ public struct TaskRow: View {
                         .foregroundStyle(reminderColor)
                         .padding(.horizontal, isReminderActiveNow || isReminderOverdueNow ? 8 : 0)
                         .padding(.vertical, isReminderActiveNow || isReminderOverdueNow ? 4 : 0)
+                        .liquidGlass(.badge)
                         .background(
                             (isReminderActiveNow || isReminderOverdueNow)
-                                ? AnyShapeStyle(reminderColor.opacity(0.15))
-                                : AnyShapeStyle(.ultraThinMaterial)
+                                ? reminderColor.opacity(0.15) : .clear
                         , in: Capsule())
                         .frame(minWidth: 28, minHeight: 28)
                     }
@@ -407,13 +407,13 @@ public struct TaskRow: View {
             }
         }
         .padding(16)
-        .background(isSelected ? .thinMaterial : .ultraThinMaterial)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.white.opacity(0.1), lineWidth: isSelected ? 2 : 0)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+        .liquidGlass(isSelected ? .taskRowSelected : .taskRow)
+        .overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 2)
+            }
+        }
         .onChange(of: isSelected) { _, newValue in
             withAnimation(.spring(response: 0.3)) {
                 isExpanded = newValue

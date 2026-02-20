@@ -94,7 +94,7 @@ struct ShortcutsSettingsView: View {
                         Spacer()
                     }
                 }
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .liquidGlass(.settingsCard)
                 
                 Spacer()
             }

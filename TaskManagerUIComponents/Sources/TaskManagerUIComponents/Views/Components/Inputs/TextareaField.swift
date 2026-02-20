@@ -29,11 +29,6 @@ public struct TextareaField: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(.white.opacity(0.1), lineWidth: 1)
-        }
+        .liquidGlass(.searchBar)
     }
 }
