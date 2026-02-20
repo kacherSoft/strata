@@ -94,30 +94,30 @@ public struct LiquidGlassStyle: Sendable {
         }
     }
 
-    /// Base shadow opacity (adapted: light=full, dark=60%)
+    /// Base shadow opacity (amplified in light mode for card separation)
     var shadowOpacity: Double {
         switch variant {
-        case .subtle: return 0.03
-        case .default: return 0.05
-        case .elevated: return 0.08
+        case .subtle: return 0.04
+        case .default: return 0.06
+        case .elevated: return 0.10
         }
     }
 
     /// Shadow radius
     var shadowRadius: CGFloat {
         switch thickness {
-        case .ultraThin: return 3
-        case .thin: return 5
-        case .regular: return 8
+        case .ultraThin: return 4
+        case .thin: return 6
+        case .regular: return 10
         }
     }
 
     /// Shadow Y offset
     var shadowY: CGFloat {
         switch thickness {
-        case .ultraThin: return 1
-        case .thin: return 2
-        case .regular: return 4
+        case .ultraThin: return 2
+        case .thin: return 3
+        case .regular: return 5
         }
     }
 
@@ -139,7 +139,9 @@ public struct LiquidGlassStyle: Sendable {
 // MARK: - Liquid Glass Modifier
 
 /// View modifier that applies liquid glass styling with OS 26 native support
-/// Automatically adapts to light/dark color scheme
+/// Automatically adapts to light/dark color scheme:
+/// - Light mode: Clean, solid backgrounds with subtle gray borders (native macOS style)
+/// - Dark mode: Glassmorphism with materials and edge lighting
 public struct LiquidGlassModifier: ViewModifier {
     let style: LiquidGlassStyle
 
@@ -150,39 +152,122 @@ public struct LiquidGlassModifier: ViewModifier {
     }
 
     public func body(content: Content) -> some View {
-        content
-            .background(glassBackground)
-            .clipShape(style.shape)
-            .overlay(glassBorder)
-            .shadow(color: .black.opacity(shadowOpacity), radius: style.shadowRadius, y: style.shadowY)
+        if colorScheme == .light {
+            // Light mode: Layered depth effect with reflection
+            content
+                .background(lightModeBackground)
+                .clipShape(style.shape)
+                .overlay(lightModeInnerHighlight)
+                .overlay(lightModeBorder)
+                .shadow(color: .black.opacity(shadowOpacity), radius: style.shadowRadius, y: style.shadowY)
+        } else {
+            // Dark mode: Glassmorphism
+            content
+                .background(darkModeBackground)
+                .clipShape(style.shape)
+                .overlay(darkModeBorder)
+                .shadow(color: .black.opacity(shadowOpacity), radius: style.shadowRadius, y: style.shadowY)
+        }
     }
 
     // MARK: - Adaptive Values
 
-    /// Adaptive shadow opacity (darker in light mode, subtler in dark)
+    /// Adaptive shadow opacity (more prominent in light mode for depth)
     private var shadowOpacity: Double {
-        colorScheme == .light ? style.shadowOpacity : style.shadowOpacity * 0.75
+        switch colorScheme {
+        case .light:
+            // Cards need visible shadows to pop in light mode
+            style.shadowOpacity * 2.0
+        default:
+            style.shadowOpacity * 0.75
+        }
     }
 
-    /// Adaptive overlay opacity (NO overlay in light - materials already adapt; subtle lift in dark)
+    /// Adaptive overlay opacity (only used in dark mode)
     private var overlayOpacity: Double {
-        colorScheme == .light ? 0 : style.whiteOverlayOpacity * 0.3
+        style.whiteOverlayOpacity * 0.3
     }
 
-    /// Adaptive border top opacity (edge lighting - preserve definition in dark)
-    private var borderTopOpacity: Double {
-        colorScheme == .light ? style.borderTopOpacity : style.borderTopOpacity * 0.6
-    }
+    // MARK: - Light Mode Components
 
-    /// Adaptive border bottom opacity
-    private var borderBottomOpacity: Double {
-        colorScheme == .light ? style.borderBottomOpacity : style.borderBottomOpacity * 0.7
-    }
-
-    // MARK: - Glass Background
-
+    /// Light mode: Bright card backgrounds that pop above the window
+    /// Cards are whiter than window background to create visual separation
     @ViewBuilder
-    private var glassBackground: some View {
+    private var lightModeBackground: some View {
+        // Bright white-ish card background (lighter than window)
+        let topColor = Color.white.opacity(lightModeCardOpacity + 0.05)
+        let bottomColor = Color(nsColor: .windowBackgroundColor).opacity(lightModeCardOpacity)
+
+        LinearGradient(
+            colors: [topColor, bottomColor],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    /// Card background opacity based on thickness (thicker = more opaque/elevated)
+    private var lightModeCardOpacity: Double {
+        switch style.thickness {
+        case .ultraThin:
+            return 0.85 // Subtle but still visible
+        case .thin:
+            return 0.92 // Cards - clearly visible
+        case .regular:
+            return 0.98 // FAB/buttons - almost solid white
+        }
+    }
+
+    /// Light mode: Inner highlight (top-left reflection simulating light source)
+    @ViewBuilder
+    private var lightModeInnerHighlight: some View {
+        let highlightOpacity: Double = {
+            switch style.variant {
+            case .subtle: return 0.3
+            case .default: return 0.5
+            case .elevated: return 0.7
+            }
+        }()
+
+        RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(highlightOpacity),
+                        Color.white.opacity(highlightOpacity * 0.3),
+                        Color.clear,
+                        Color.clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 1
+            )
+    }
+
+    /// Light mode: Outer subtle gray border
+    @ViewBuilder
+    private var lightModeBorder: some View {
+        RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+            .strokeBorder(
+                Color(nsColor: .separatorColor).opacity(borderOpacityLight),
+                lineWidth: 0.5
+            )
+    }
+
+    /// Border opacity for light mode based on variant
+    private var borderOpacityLight: Double {
+        switch style.variant {
+        case .subtle: return 0.5
+        case .default: return 0.7
+        case .elevated: return 0.9
+        }
+    }
+
+    // MARK: - Dark Mode Components
+
+    /// Dark mode: Full glassmorphism with materials and edge lighting
+    @ViewBuilder
+    private var darkModeBackground: some View {
         if #available(macOS 26.0, *) {
             nativeGlassBackground
         } else {
@@ -201,7 +286,7 @@ public struct LiquidGlassModifier: ViewModifier {
     private var fallbackGlassBackground: some View {
         // Material base
         materialBase
-        // Adaptive tint overlay (white for light, subtle for dark)
+        // Subtle white overlay for lift
             .overlay(Color.white.opacity(overlayOpacity))
         // Saturation boost (makes glass feel "alive")
             .saturation(style.saturationBoost)
@@ -219,16 +304,15 @@ public struct LiquidGlassModifier: ViewModifier {
         }
     }
 
-    // MARK: - Glass Border (Edge Lighting)
-
+    /// Dark mode: Gradient edge lighting
     @ViewBuilder
-    private var glassBorder: some View {
+    private var darkModeBorder: some View {
         RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
             .strokeBorder(
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(borderTopOpacity),
-                        Color.white.opacity(borderBottomOpacity)
+                        Color.white.opacity(style.borderTopOpacity * 0.6),
+                        Color.white.opacity(style.borderBottomOpacity * 0.7)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing

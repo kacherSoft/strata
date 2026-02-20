@@ -417,9 +417,6 @@ struct ContentView: View {
     }
 
     private func resolvedPriority(_ priority: TaskItem.Priority) -> TaskPriority {
-        if priority == .none {
-            return currentSettings?.defaultPriority ?? .medium
-        }
         return TaskPriority.from(priority)
     }
     

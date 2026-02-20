@@ -872,10 +872,11 @@ struct EnhanceTextEditor: NSViewRepresentable {
 
     private func applyBaseTextAttributes(to textView: EnhanceNSTextView) {
         let baseFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
-        let baseColor = NSColor.white
+        let baseColor = NSColor.labelColor // Adapts to light/dark mode
         textView.typingAttributes[.font] = baseFont
         textView.typingAttributes[.foregroundColor] = baseColor
         textView.textColor = baseColor
+        textView.insertionPointColor = NSColor.labelColor
         let fullRange = NSRange(location: 0, length: textView.string.utf16.count)
         if fullRange.length > 0 {
             textView.textStorage?.setAttributes([
