@@ -13,41 +13,34 @@ TaskManager is a macOS task management app with AI enhancement, premium entitlem
 
 ## Quick Start
 
-### Using Xcode (recommended for app submission)
+### Using Xcode (development)
 ```bash
 cd TaskManager
 ./scripts/generate_xcodeproj.sh
 open TaskManagerApp.xcodeproj
 ```
 
-### Build signed archive (default)
+### Build Debug (for testing)
 ```bash
 cd TaskManager
-xcodebuild -project TaskManagerApp.xcodeproj -scheme TaskManager -configuration Release -destination "generic/platform=macOS" -archivePath ../build/TaskManager-signed.xcarchive archive
+./scripts/build-debug.sh
 ```
 
-Archive output:
-- `../build/TaskManager-signed.xcarchive`
-- `../build/TaskManager-signed.xcarchive/Products/Applications/TaskManager.app`
+Output: `../build/Debug/TaskManager.app`
+
+### Build Release (for production/distribution)
+```bash
+cd TaskManager
+./scripts/build-release.sh
+```
+
+Output: `../build/Release/TaskManager.app`
 
 Install to Applications:
 ```bash
-cd TaskManager
-ditto ../build/TaskManager-signed.xcarchive/Products/Applications/TaskManager.app /Applications/TaskManager.app
+ditto ../build/Release/TaskManager.app /Applications/TaskManager.app
 open /Applications/TaskManager.app
 ```
-
-### Build unsigned archive (local test only)
-```bash
-cd TaskManager
-./scripts/archive_macos_app.sh
-```
-
-Archive output:
-- `../build/TaskManager.xcarchive`
-- `../build/TaskManager.xcarchive/Products/Applications/TaskManager.app`
-
-See full release flow: `../docs/macos-release-workflow.md`
 
 ### Using Command Line (SPM run)
 ```bash

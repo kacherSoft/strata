@@ -596,6 +596,48 @@ final class EnhanceNSTextView: NSTextView {
         ])
     }
 
+    override var readablePasteboardTypes: [NSPasteboard.PasteboardType] {
+        let superTypes = super.readablePasteboardTypes
+        let imageTypes: [NSPasteboard.PasteboardType] = [
+            .png,
+            .tiff,
+            NSPasteboard.PasteboardType("public.jpeg"),
+            NSPasteboard.PasteboardType("public.jpeg-2000"),
+            NSPasteboard.PasteboardType("public.heic"),
+            .pdf,
+            .fileURL,
+            .URL
+        ]
+        return superTypes + imageTypes
+    }
+
+    override func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+        if item.action == #selector(paste(_:)) {
+            if attachmentsEnabled {
+                let pasteboard = NSPasteboard.general
+                
+                // Check for raw image data types
+                if let types = pasteboard.types {
+                    let imageTypes: Set<NSPasteboard.PasteboardType> = [
+                        .png, .tiff, .pdf,
+                        NSPasteboard.PasteboardType("public.jpeg"),
+                        NSPasteboard.PasteboardType("public.jpeg-2000"),
+                        NSPasteboard.PasteboardType("public.heic")
+                    ]
+                    if types.contains(where: { imageTypes.contains($0) }) {
+                        return true
+                    }
+                }
+                
+                // Check for file URLs (including images)
+                if !supportedAttachmentFileURLs(from: pasteboard).isEmpty {
+                    return true
+                }
+            }
+        }
+        return super.validateUserInterfaceItem(item)
+    }
+
     override func paste(_ sender: Any?) {
         guard attachmentsEnabled else {
             super.paste(sender)
@@ -664,8 +706,8 @@ final class EnhanceNSTextView: NSTextView {
             return true
         }
 
-        if pasteboardImageData(from: pasteboard) != nil {
-            handleUnsupportedImagePaste()
+        if let (imageData, mimeType) = pasteboardImageData(from: pasteboard) {
+            handleImagePaste(imageData, mimeType: mimeType)
             return true
         }
 
@@ -699,25 +741,32 @@ final class EnhanceNSTextView: NSTextView {
     }
 
     private func pasteboardImageData(from pasteboard: NSPasteboard) -> (Data, String)? {
+        // Try PNG directly
         if let data = pasteboard.data(forType: .png) {
             return (data, "image/png")
         }
+        // Try JPEG
         if let data = pasteboard.data(forType: NSPasteboard.PasteboardType("public.jpeg")) {
             return (data, "image/jpeg")
         }
-        if let data = pasteboard.data(forType: .tiff),
-           let image = NSImage(data: data),
-           let tiffData = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: tiffData),
-           let pngData = bitmap.representation(using: .png, properties: [:]) {
-            return (pngData, "image/png")
+        // Try TIFF (common for screenshots) - convert to PNG
+        if let data = pasteboard.data(forType: .tiff) {
+            if let image = NSImage(data: data),
+               let tiffData = image.tiffRepresentation,
+               let bitmap = NSBitmapImageRep(data: tiffData),
+               let pngData = bitmap.representation(using: .png, properties: [:]) {
+                return (pngData, "image/png")
+            }
+        }
+        // Fallback: read as NSImage from pasteboard (handles various formats)
+        if let image = NSImage(pasteboard: pasteboard) {
+            if let tiffData = image.tiffRepresentation,
+               let bitmap = NSBitmapImageRep(data: tiffData),
+               let pngData = bitmap.representation(using: .png, properties: [:]) {
+                return (pngData, "image/png")
+            }
         }
         return nil
-    }
-
-    private func handleUnsupportedImagePaste() {
-        onUnsupportedAttachment?("Image pasting from clipboard is disabled. Please paste supported files only: PNG, JPG, JPEG, TIFF, HEIC, or PDF.")
-        NSSound.beep()
     }
 
     private func handlePDFPaste(_ data: Data) {
@@ -728,6 +777,21 @@ final class EnhanceNSTextView: NSTextView {
 
         let fileName = "pasted-document-\(UUID().uuidString.prefix(8)).pdf"
         guard let attachment = saveToTemp(data: data, fileName: fileName, kind: .pdf, mimeType: "application/pdf") else {
+            NSSound.beep()
+            return
+        }
+        onPasteAttachment?(attachment)
+    }
+
+    private func handleImagePaste(_ data: Data, mimeType: String) {
+        guard data.count <= AIAttachment.maxFileSizeBytes else {
+            NSSound.beep()
+            return
+        }
+
+        let ext = mimeType == "image/png" ? "png" : "jpg"
+        let fileName = "pasted-image-\(UUID().uuidString.prefix(8)).\(ext)"
+        guard let attachment = saveToTemp(data: data, fileName: fileName, kind: .image, mimeType: mimeType) else {
             NSSound.beep()
             return
         }
