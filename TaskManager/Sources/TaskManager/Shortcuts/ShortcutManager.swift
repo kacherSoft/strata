@@ -32,6 +32,9 @@ final class ShortcutManager: ObservableObject {
         if KeyboardShortcuts.getShortcut(for: .mainWindow) == nil {
             KeyboardShortcuts.setShortcut(.init(.t, modifiers: [.command, .shift]), for: .mainWindow)
         }
+        if KeyboardShortcuts.getShortcut(for: .inlineEnhanceMe) == nil {
+            KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .option]), for: .inlineEnhanceMe)
+        }
         // Local (stored for customization)
         if KeyboardShortcuts.getShortcut(for: .settings) == nil {
             KeyboardShortcuts.setShortcut(.init(.comma, modifiers: [.command]), for: .settings)
@@ -52,6 +55,10 @@ final class ShortcutManager: ObservableObject {
         
         KeyboardShortcuts.onKeyUp(for: .mainWindow) { [weak self] in
             self?.showMainWindow()
+        }
+        
+        KeyboardShortcuts.onKeyUp(for: .inlineEnhanceMe) { [weak self] in
+            self?.performInlineEnhance()
         }
     }
     
@@ -134,6 +141,10 @@ final class ShortcutManager: ObservableObject {
         NotificationCenter.default.post(name: .showNewTaskSheet, object: nil)
     }
     
+    func performInlineEnhance() {
+        InlineEnhanceCoordinator.shared.performInlineEnhance()
+    }
+    
     func cycleAIMode() {
         guard let container = modelContainer else { return }
         let context = container.mainContext
@@ -141,10 +152,11 @@ final class ShortcutManager: ObservableObject {
     }
     
     static func resetAllToDefaults() {
-        KeyboardShortcuts.reset(.quickEntry, .enhanceMe, .mainWindow, .settings, .newTask)
+        KeyboardShortcuts.reset(.quickEntry, .enhanceMe, .mainWindow, .settings, .newTask, .inlineEnhanceMe)
         KeyboardShortcuts.setShortcut(.init(.n, modifiers: [.command, .shift]), for: .quickEntry)
         KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .shift]), for: .enhanceMe)
         KeyboardShortcuts.setShortcut(.init(.t, modifiers: [.command, .shift]), for: .mainWindow)
+        KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .option]), for: .inlineEnhanceMe)
         KeyboardShortcuts.setShortcut(.init(.comma, modifiers: [.command]), for: .settings)
         KeyboardShortcuts.setShortcut(.init(.n, modifiers: [.command]), for: .newTask)
     }

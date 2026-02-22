@@ -5,6 +5,7 @@ extension KeyboardShortcuts.Name {
     static let quickEntry = Self("quickEntry")
     static let enhanceMe = Self("enhanceMe")
     static let mainWindow = Self("mainWindow")
+    static let inlineEnhanceMe = Self("inlineEnhanceMe")
     
     // Local shortcuts (work only when app is focused)
     static let settings = Self("settings")

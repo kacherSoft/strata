@@ -77,6 +77,36 @@ App gating uses `SubscriptionService.hasFullAccess`.
 - Availability is mode + provider capability + entitlement dependent.
 - Attachment size/count limits are enforced in-app.
 
+## Inline Enhance (System-Wide) — Developer ID Branch
+
+The `feature/inline-enhance-system-wide` branch adds **system-wide inline AI text enhancement** — press ⌘⌥E in any app's text field to enhance text in-place (like Grammarly).
+
+> ⚠️ This version disables App Sandbox (required for Accessibility API) and is distributed via **Developer ID only**, not the App Store.
+
+### What it does
+- **⌘⌥E** in any app → captures text (selected or full field) → AI enhances → replaces inline
+- Floating HUD shows progress without stealing focus
+- Falls back to Enhance Me panel (⌘⇧E) when no text field is focused
+- Requires macOS Accessibility permission (prompted on first use)
+
+### Build & Test
+```bash
+git checkout feature/inline-enhance-system-wide
+cd TaskManager
+./scripts/build-debug.sh
+open ../build/Debug/TaskManager.app
+```
+
+### First Run
+1. Launch the app → go to **Settings → General** → click **"Grant Access"** under System-Wide Enhancement
+2. Toggle the app ON in **System Settings → Privacy & Security → Accessibility**
+3. Open any app (TextEdit, Notes, Safari), type text, press **⌘⌥E**
+
+### Coexistence with App Store version
+- `main` branch = App Store version (sandboxed, no Accessibility API)
+- `feature/inline-enhance-system-wide` = Developer ID version (unsandboxed, with inline enhance)
+- Both share the same ⌘⇧E panel workflow
+
 ## Requirements
 
 - macOS 15+ (Sequoia)

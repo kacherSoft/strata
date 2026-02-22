@@ -27,6 +27,7 @@ enum AppearanceMode: String, CaseIterable {
 struct GeneralSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var subscriptionService: SubscriptionService
+    @ObservedObject private var accessibilityManager = AccessibilityManager.shared
     @Query private var settings: [SettingsModel]
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
 
@@ -241,6 +242,43 @@ struct GeneralSettingsView: View {
                     #endif
                 }
                 .padding(20)
+                .liquidGlass(.settingsCard)
+
+                // System-Wide Enhancement
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("System-Wide Enhancement")
+                        .font(.headline)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
+                    
+                    HStack {
+                        Image(systemName: accessibilityManager.isAccessibilityEnabled
+                              ? "checkmark.shield.fill" : "exclamationmark.shield")
+                            .foregroundStyle(accessibilityManager.isAccessibilityEnabled ? .green : .orange)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accessibilityManager.isAccessibilityEnabled
+                                 ? "Accessibility Enabled" : "Accessibility Required")
+                                .font(.body)
+                            Text("Required to enhance text in other applications")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        if !accessibilityManager.isAccessibilityEnabled {
+                            Button("Grant Access") {
+                                accessibilityManager.requestPermission()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                }
                 .liquidGlass(.settingsCard)
 
                 // Data Section

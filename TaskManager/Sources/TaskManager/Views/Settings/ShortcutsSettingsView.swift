@@ -35,6 +35,16 @@ struct ShortcutsSettingsView: View {
                         .padding(.horizontal, 20)
                     
                     ShortcutRow(
+                        name: .inlineEnhanceMe,
+                        title: "Inline Enhance",
+                        description: "Enhance text in any app's text field",
+                        icon: "sparkles"
+                    )
+                    
+                    Divider()
+                        .padding(.horizontal, 20)
+                    
+                    ShortcutRow(
                         name: .quickEntry,
                         title: "Quick Entry",
                         description: "Open quick task entry panel",
