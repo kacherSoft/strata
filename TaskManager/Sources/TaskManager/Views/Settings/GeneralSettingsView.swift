@@ -277,6 +277,22 @@ struct GeneralSettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    
+                    Divider()
+                        .padding(.horizontal, 20)
+                    
+                    // Debug Mode Toggle
+                    SettingsToggleRow(
+                        title: "Debug Logging",
+                        description: "Show detailed logs for text capture and replacement",
+                        icon: "ladybug",
+                        isOn: Binding(
+                            get: { InlineEnhanceCoordinator.shared.enableDebugMode },
+                            set: { InlineEnhanceCoordinator.shared.enableDebugMode = $0 }
+                        )
+                    )
+                    .padding(.horizontal, 20)
                     .padding(.bottom, 16)
                 }
                 .liquidGlass(.settingsCard)

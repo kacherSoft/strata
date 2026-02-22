@@ -1,3 +1,45 @@
+# Phase 5: Integration
+
+**Goal**: Integrate new engines into InlineEnhanceCoordinator, deprecate TextFocusManager.
+
+**Time**: ~1 hour
+
+---
+
+## Overview
+
+Replace the existing `TextFocusManager` with the new `TextCaptureEngine` and `TextReplacementEngine` in the coordinator.
+
+## Changes to InlineEnhanceCoordinator
+
+### Before (Current)
+
+```swift
+func performInlineEnhance() {
+    // ...
+    guard let text = focusManager.captureText(), !text.isEmpty else { ... }
+    // ...
+    if focusManager.replaceText(result.enhancedText) { ... }
+}
+```
+
+### After (New)
+
+```swift
+func performInlineEnhance() {
+    // ...
+    guard let captured = captureEngine.capture(), !captured.content.isEmpty else { ... }
+    // ...
+    let result = replaceEngine.replace(captured: captured, newText: enhancedText)
+    // ...
+}
+```
+
+## Implementation
+
+### File: `InlineEnhanceCoordinator.swift` (Updated)
+
+```swift
 import AppKit
 import SwiftUI
 
@@ -19,7 +61,6 @@ final class InlineEnhanceCoordinator: ObservableObject {
             captureEngine.enableDebugLogging = enableDebugMode
             replaceEngine.enableDebugLogging = enableDebugMode
             ElectronSpecialist.shared.enableDebugLogging = enableDebugMode
-            AppCategoryDetector.shared.enableDebugLogging = enableDebugMode
         }
     }
     
@@ -75,7 +116,7 @@ final class InlineEnhanceCoordinator: ObservableObject {
                 let replaceResult = replaceEngine.replace(captured: captured, newText: result.enhancedText)
                 
                 if replaceResult.success {
-                    log("Replacement succeeded via \(replaceResult.strategy.rawValue), verified=\(replaceResult.verified)")
+                    log("Replacement succeeded via \(replaceResult.strategy.rawValue)")
                     updateHUD(modeName: mode.name, state: .success)
                     scheduleDismiss(after: 1.0)
                 } else {
@@ -126,15 +167,8 @@ final class InlineEnhanceCoordinator: ObservableObject {
         var position = CGPoint.zero
         var size = CGSize.zero
         
-        guard CFGetTypeID(posRef) == AXValueGetTypeID(),
-              CFGetTypeID(sizeRef) == AXValueGetTypeID() else {
-            return nil
-        }
-
-        let posAX = unsafeDowncast(posRef, to: AXValue.self)
-        let sizeAX = unsafeDowncast(sizeRef, to: AXValue.self)
-        guard AXValueGetValue(posAX, .cgPoint, &position),
-              AXValueGetValue(sizeAX, .cgSize, &size) else {
+        guard AXValueGetValue(posRef as! AXValue, .cgPoint, &position),
+              AXValueGetValue(sizeRef as! AXValue, .cgSize, &size) else {
             return nil
         }
         
@@ -193,3 +227,50 @@ final class InlineEnhanceCoordinator: ObservableObject {
         }
     }
 }
+```
+
+## Deprecation
+
+### TextFocusManager.swift
+
+Mark as deprecated, keep for reference but remove from build:
+
+```swift
+@available(*, deprecated, message: "Use TextCaptureEngine and TextReplacementEngine instead")
+final class TextFocusManager { ... }
+```
+
+Or simply delete the file and remove from Xcode project.
+
+## Settings Update
+
+Add debug toggle in GeneralSettingsView:
+
+```swift
+// In GeneralSettingsView
+Section("Debug") {
+    Toggle("Enable Debug Logging", isOn: Binding(
+        get: { InlineEnhanceCoordinator.shared.enableDebugMode },
+        set: { InlineEnhanceCoordinator.shared.enableDebugMode = $0 }
+    ))
+}
+```
+
+## Acceptance Criteria
+
+- [ ] Coordinator uses new capture engine
+- [ ] Coordinator uses new replacement engine
+- [ ] TextFocusManager deprecated/removed
+- [ ] Debug toggle in settings
+- [ ] All existing functionality preserved
+- [ ] Error messages show capture/replace method used
+
+## Dependencies
+
+- [Phase 2: Text Capture Engine](phase-02-text-capture-engine.md)
+- [Phase 3: Text Replacement Engine](phase-03-text-replacement-engine.md)
+- [Phase 4: Electron Support](phase-04-electron-support.md)
+
+## Next Phase
+
+[Phase 6: Testing Matrix](phase-06-testing-matrix.md)
