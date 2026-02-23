@@ -27,6 +27,7 @@ final class AppCategoryDetector {
         "com.apple.SafariTechnologyPreview",
         "com.google.Chrome.canary",
         "org.mozilla.firefoxdeveloperedition",
+        "company.thebrowser.Browser",
     ]
     
     // Known Electron app bundle IDs

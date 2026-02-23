@@ -1,5 +1,36 @@
 import AppKit
 
+struct ClipboardSnapshot {
+    private let items: [[String: Data]]
+
+    static func capture(from pasteboard: NSPasteboard = .general) -> ClipboardSnapshot {
+        let serialized = (pasteboard.pasteboardItems ?? []).map { item in
+            var entry: [String: Data] = [:]
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    entry[type.rawValue] = data
+                }
+            }
+            return entry
+        }
+        return ClipboardSnapshot(items: serialized)
+    }
+
+    func restore(to pasteboard: NSPasteboard = .general) {
+        pasteboard.clearContents()
+        guard !items.isEmpty else { return }
+
+        let restoredItems: [NSPasteboardItem] = items.map { item in
+            let pasteboardItem = NSPasteboardItem()
+            for (type, data) in item {
+                pasteboardItem.setData(data, forType: NSPasteboard.PasteboardType(type))
+            }
+            return pasteboardItem
+        }
+        pasteboard.writeObjects(restoredItems)
+    }
+}
+
 struct CapturedText {
     let content: String
     let sourceElement: AXUIElement
@@ -8,7 +39,7 @@ struct CapturedText {
     let selectedRange: CFRange?
     let captureMethod: CaptureMethod
     let appCategory: AppCategory
-    let previousClipboard: String?
+    let previousClipboard: ClipboardSnapshot?
 }
 
 enum CaptureMethod: String {
@@ -28,6 +59,7 @@ final class TextCaptureEngine: ObservableObject {
     @Published var lastAppCategory: AppCategory?
     
     var enableDebugLogging: Bool = false
+    private var browserAccessibilityEnabledPIDs: Set<pid_t> = []
     
     private init() {}
     
@@ -38,25 +70,29 @@ final class TextCaptureEngine: ObservableObject {
             log("Accessibility not enabled")
             return nil
         }
+
+        if let frontmost = NSWorkspace.shared.frontmostApplication {
+            let frontmostCategory = AppCategoryDetector.shared.detect(pid: frontmost.processIdentifier)
+            if frontmostCategory == .browser {
+                ensureBrowserAccessibility(for: frontmost.processIdentifier)
+            }
+        }
         
         let systemWide = AXUIElementCreateSystemWide()
 
         // Get focused element and PID
         if let (initialElement, pid) = getFocusedElement(systemWide) {
-            // Detect app category
             let appCategory = AppCategoryDetector.shared.detect(pid: pid)
             let isWebview = AppCategoryDetector.shared.detectWebview(in: initialElement)
-            let effectiveCategory = isWebview ? .webview : appCategory
+            let effectiveCategory: AppCategory = isWebview && appCategory != .electron ? .webview : appCategory
 
             log("App category: \(effectiveCategory.rawValue), PID: \(pid)")
 
-            // Handle Electron specially
-            if effectiveCategory == .electron {
+            if appCategory == .electron {
                 ElectronSpecialist.shared.ensureAccessibility(for: pid)
 
-                // Refresh element after Electron accessibility setup
                 if let (refreshed, _) = getFocusedElement(systemWide) {
-                    return tryCaptureWith(element: refreshed, pid: pid, category: effectiveCategory)
+                    return tryCaptureWith(element: refreshed, pid: pid, category: appCategory)
                 }
             }
 
@@ -445,7 +481,7 @@ final class TextCaptureEngine: ObservableObject {
         log("Layer 5: Using clipboard fallback")
         
         let pasteboard = NSPasteboard.general
-        let previousContents = pasteboard.string(forType: .string)
+        let previousSnapshot = ClipboardSnapshot.capture(from: pasteboard)
         
         // Clear and copy
         pasteboard.clearContents()
@@ -457,18 +493,12 @@ final class TextCaptureEngine: ObservableObject {
         guard let copiedText = pasteboard.string(forType: .string),
               !copiedText.isEmpty else {
             // Restore clipboard synchronously
-            if let prev = previousContents {
-                pasteboard.clearContents()
-                pasteboard.setString(prev, forType: .string)
-            }
+            previousSnapshot.restore(to: pasteboard)
             return nil
         }
 
         // Restore user clipboard immediately to avoid data loss.
-        if let prev = previousContents {
-            pasteboard.clearContents()
-            pasteboard.setString(prev, forType: .string)
-        }
+        previousSnapshot.restore(to: pasteboard)
         
         log("Layer 5: Captured \(copiedText.count) chars via clipboard")
         return CapturedText(
@@ -479,7 +509,7 @@ final class TextCaptureEngine: ObservableObject {
             selectedRange: nil,
             captureMethod: .clipboardFallback,
             appCategory: category,
-            previousClipboard: previousContents
+            previousClipboard: previousSnapshot
         )
     }
     
@@ -571,6 +601,31 @@ final class TextCaptureEngine: ObservableObject {
         let result = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
         guard result == .success else { return nil }
         return value as? String
+    }
+
+    private func ensureBrowserAccessibility(for pid: pid_t) {
+        guard !browserAccessibilityEnabledPIDs.contains(pid) else {
+            log("Browser accessibility bootstrap cache hit for pid=\(pid)")
+            return
+        }
+
+        log("Browser accessibility bootstrap cache miss for pid=\(pid)")
+        let appElement = AXUIElementCreateApplication(pid)
+        let enhancedResult = AXUIElementSetAttributeValue(
+            appElement,
+            "AXEnhancedUserInterface" as CFString,
+            kCFBooleanTrue
+        )
+        let manualResult = AXUIElementSetAttributeValue(
+            appElement,
+            "AXManualAccessibility" as CFString,
+            kCFBooleanTrue
+        )
+        log("Browser accessibility flags for pid=\(pid): AXEnhancedUserInterface=\(enhancedResult.rawValue), AXManualAccessibility=\(manualResult.rawValue)")
+
+        browserAccessibilityEnabledPIDs.insert(pid)
+        log("Waiting 120ms for browser AX tree stabilization (pid=\(pid))")
+        usleep(120_000)
     }
     
     private func simulateKeyCombo(key: CGKeyCode, flags: CGEventFlags) {
