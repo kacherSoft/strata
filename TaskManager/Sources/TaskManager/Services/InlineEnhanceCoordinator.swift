@@ -6,6 +6,7 @@ final class InlineEnhanceCoordinator: ObservableObject {
     static let shared = InlineEnhanceCoordinator()
     
     private var hudPanel: InlineEnhanceHUDPanel?
+    private var hudViewModel: HUDViewModel?
     private var autoDismissTask: Task<Void, Never>?
     private var enhanceTask: Task<Void, Never>?
     
@@ -101,15 +102,26 @@ final class InlineEnhanceCoordinator: ObservableObject {
             hudPanel = InlineEnhanceHUDPanel()
         }
         
-        let view = InlineEnhanceHUD(modeName: modeName, state: state)
+        if hudViewModel == nil {
+            hudViewModel = HUDViewModel()
+        }
+        
+        let vm = hudViewModel!
+        vm.modeName = modeName
+        vm.state = state
+        
+        let view = InlineEnhanceHUD(viewModel: vm)
         hudPanel?.setContent(view)
         positionHUD(nearRect: nearRect)
         hudPanel?.orderFrontRegardless()
     }
     
     private func updateHUD(modeName: String, state: InlineEnhanceHUD.HUDState) {
-        let view = InlineEnhanceHUD(modeName: modeName, state: state)
-        hudPanel?.setContent(view)
+        guard let vm = hudViewModel else { return }
+        withAnimation(.easeInOut(duration: 0.35)) {
+            vm.modeName = modeName
+            vm.state = state
+        }
     }
     
     private func getFieldRect(for captured: CapturedText) -> NSRect? {
@@ -182,7 +194,16 @@ final class InlineEnhanceCoordinator: ObservableObject {
     }
     
     private func dismissHUD() {
-        hudPanel?.orderOut(nil)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
+            hudPanel?.animator().alphaValue = 0.0
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                self?.hudPanel?.orderOut(nil)
+                self?.hudPanel?.alphaValue = 1.0
+                self?.hudViewModel = nil
+            }
+        }
     }
     
     // MARK: - Debug

@@ -1,6 +1,6 @@
 # App Store Description - Strata
 
-> **App Name:** Strata
+> **App Name:** Strata - Personal Task Manager
 > **Tagline:** Your Projects. Your Control. Your Privacy.
 > **Date:** February 22, 2026
 
@@ -31,7 +31,7 @@ AI-Enhanced Task Management
 ## Keywords (100 char max)
 
 ```
-task,multi-project,tag,filter,freelance,privacy,local,AI,kanban,iCloud,sync,productivity
+task,multi-project,tag,filter,freelance,privacy,local,AI,kanban,iCloud,sync,productivity,inline
 ```
 
 ---
@@ -90,6 +90,8 @@ Rough notes become clear action items:
 • **Enhance Prompt** - Transform rough ideas into detailed, prompt-ready descriptions. Perfect for AI power users who craft prompts for a living.
 • **Explain** - Analyze images and documents
 • **Custom Modes** - Create your own enhancement styles for your unique workflow
+
+**⌨️ Inline Enhance (Premium)** - Press ⌘⌥E in ANY app to enhance text in-place. Like Grammarly, but with your AI models. Select text in Mail, Notes, Safari, or any app → enhance instantly → replaced inline. No copy-paste, no context switching.
 
 **BYOK (Bring Your Own Key)** - Use your own API key from Gemini, z.ai, or any compatible provider. You control costs, you choose models, you own your data. Nothing sent to us.
 
@@ -193,6 +195,7 @@ Welcome to Strata - the personal task manager for multi-project professionals!
 • Built-in modes: Correct Me, Enhance Prompt, Explain
 • Custom AI modes for your workflow
 • BYOK (Bring Your Own Key) - use Gemini, z.ai, or any provider
+• ⌨️ **Inline Enhance (Premium)** - ⌘⌥E enhances text in ANY app instantly
 
 **Local-First Privacy:**
 • 100% local storage on YOUR Mac
@@ -218,8 +221,9 @@ Prepare these screenshots for App Store submission:
 2. **Multi-Project View** - Demonstrate filtering by client/project
 3. **Quick Capture** - Show global shortcut capturing task from another app
 4. **AI Enhancement** - Before/after text enhancement comparison
-5. **Kanban Board** - Visual workflow with project-colored cards
-6. **Privacy Focus** - Settings showing local storage / iCloud options
+5. **Inline Enhance** - Show ⌘⌥E enhancing text in Mail/Notes/Safari
+6. **Kanban Board** - Visual workflow with project-colored cards
+7. **Privacy Focus** - Settings showing local storage / iCloud options
 
 ---
 
@@ -248,7 +252,7 @@ Prepare these screenshots for App Store submission:
 
 **Free with Premium Features:**
 • Free: Core task management, list view, basic tags, local storage
-• Premium (In-App Purchase): AI enhancement, Kanban view, recurring tasks, custom fields, iCloud sync (iOS app included!)
+• Premium (In-App Purchase): AI enhancement, **Inline Enhance (⌘⌥E system-wide)**, Kanban view, recurring tasks, custom fields, iCloud sync (iOS app included!)
 
 Suggested pricing:
 • Monthly: $4.99
@@ -280,6 +284,7 @@ Suggested pricing:
 
 **Strata's AI Advantage:**
 - **BYOK (Bring Your Own Key)** - Your API key, your cost control
+- **Inline Enhance** - ⌘⌥E enhances text in ANY app (like Grammarly, but with your AI)
 - Nothing sent to us—complete privacy
 - Custom AI modes for your workflow
 - Supports multiple providers (Gemini, z.ai)
@@ -287,4 +292,4 @@ Suggested pricing:
 
 ---
 
-*Document updated: February 22, 2026*
+*Document updated: February 23, 2026*

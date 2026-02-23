@@ -15,13 +15,15 @@ final class InlineEnhanceHUDPanel: NSPanel {
         hidesOnDeactivate = false
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        hasShadow = false  // SwiftUI glow layers provide the visual shadow
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         ignoresMouseEvents = true
     }
     
     func setContent<V: View>(_ view: V) {
-        let hostingView = NSHostingView(rootView: view)
+        // Add padding to allow glow halo to extend beyond the pill without clipping
+        let paddedView = view.padding(30)
+        let hostingView = NSHostingView(rootView: paddedView)
         let fittingSize = hostingView.fittingSize
         contentView = hostingView
         setContentSize(fittingSize)
