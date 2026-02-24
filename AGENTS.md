@@ -1,7 +1,8 @@
 # AGENTS.md
 
 ## Project Context
-- Repository: `TaskManager` (macOS app)
+- App Name: **Strata** — Personal AI Task Manager
+- Repository: `strata` (macOS app)
 - Primary app module: `TaskManager/`
 - Inline enhancement work is actively developed and tested across native apps, Electron apps, and browsers.
 
