@@ -22,8 +22,8 @@ xcodebuild \
   -configuration Debug \
   -destination "generic/platform=macOS" \
   -archivePath "$OUTPUT_DIR/TaskManager.xcarchive" \
-  CODE_SIGNING_ALLOWED=NO \
-  CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGN_IDENTITY="Developer ID Application: KACHERSOFT APPLIED SOLUTIONS CO.,LTD (4QZFT5Q76A)" \
+  CODE_SIGN_STYLE=Manual \
   archive \
   | xcpretty --color 2>/dev/null || cat
 

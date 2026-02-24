@@ -7,6 +7,7 @@ TaskManager is a macOS task management app with AI enhancement, premium entitlem
 - ✅ Core task management: tags, priority, due dates, reminders, photos
 - ✅ Pro features: Kanban, recurring tasks, custom fields
 - ✅ AI modes + Enhance Me panel
+- ✅ **Inline Enhance** (system-wide text enhancement via customizable global shortcut) — *Premium feature*
 - ✅ AI attachments (image/PDF) for supported premium modes/providers
 - ✅ StoreKit 2 subscriptions + VIP lifetime purchase
 - ✅ Unified entitlement gating (`hasFullAccess`)
@@ -76,6 +77,37 @@ App gating uses `SubscriptionService.hasFullAccess`.
 - Attachments are handled in the Enhance Me flow and passed to the selected provider.
 - Availability is mode + provider capability + entitlement dependent.
 - Attachment size/count limits are enforced in-app.
+
+## Inline Enhance (System-Wide) — Developer ID Branch
+
+The `feature/inline-enhance-system-wide` branch adds **system-wide inline AI text enhancement** — press ⌘⌥E in any app's text field to enhance text in-place (like Grammarly).
+
+> ⚠️ This version disables App Sandbox (required for Accessibility API) and is distributed via **Developer ID only**, not the App Store.
+
+### What it does
+- Press your configured global shortcut in any app → captures text (selected or full field) → AI enhances → replaces inline
+- Floating HUD shows progress without stealing focus
+- Falls back to Enhance Me panel when no text field is focused
+- Requires macOS Accessibility permission (prompted on first use)
+- Shortcut is customizable in Settings → General
+
+### Build & Test
+```bash
+git checkout feature/inline-enhance-system-wide
+cd TaskManager
+./scripts/build-debug.sh
+open ../build/Debug/TaskManager.app
+```
+
+### First Run
+1. Launch the app → go to **Settings → General** → click **"Grant Access"** under System-Wide Enhancement
+2. Toggle the app ON in **System Settings → Privacy & Security → Accessibility**
+3. Open any app (TextEdit, Notes, Safari), type text, press your configured shortcut
+
+### Coexistence with App Store version
+- `main` branch = App Store version (sandboxed, no Accessibility API)
+- `feature/inline-enhance-system-wide` = Developer ID version (unsandboxed, with inline enhance)
+- Both share the same ⌘⇧E panel workflow
 
 ## Requirements
 

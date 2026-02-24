@@ -30,10 +30,11 @@ Always use commands aligned with `TaskManager/README.md`:
   - `cd TaskManager`
   - `swift run TaskManager`
 
-## Branch / Distribution Model
-- `main`: App Store-oriented, sandboxed constraints.
-- `feature/inline-enhance-system-wide`: Developer ID flow for system-wide Accessibility-based inline enhancement.
-- Do not assume sandbox-compatible behavior for system-wide AX features.
+## Distribution Model
+- Developer ID only (notarized, distributed via website).
+- App Sandbox is disabled (required for Accessibility API).
+- Payments via external provider (migration from StoreKit pending).
+- All features (including inline enhance) ship in one build.
 
 ## Inline Enhancement Guardrails
 - Preserve currently working behavior for:

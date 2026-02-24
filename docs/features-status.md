@@ -1,6 +1,6 @@
-# TaskManager — Feature Status
+# Strata — Feature Status
 
-_Last updated: 2026-02-23_
+_Last updated: 2026-02-24_
 
 ## Implementation Status
 
@@ -40,7 +40,8 @@ All currently scoped product features are implemented and considered **DONE**.
 | **Task Management** | Recurring tasks | Daily/weekly/monthly/yearly/weekdays + intervals |
 | | Custom fields | Text, number, currency, date, toggle |
 | | Budget/client/effort | Extended task metadata |
-| **AI** | AI attachments | Image/PDF support in AI modes |
+| **AI** | Inline Enhance | System-wide text enhancement in ANY app |
+| | AI attachments | Image/PDF support in AI modes |
 | | Attachments in custom modes | Enable attachments for user-created modes |
 
 ---
@@ -50,8 +51,8 @@ All currently scoped product features are implemented and considered **DONE**.
 | Tier | Price | What You Get |
 |---|---|---|
 | **Free** | $0 | Full task management, list + calendar views, basic AI modes, local storage |
-| **Pro** | $4.99/mo or $39.99/yr | Everything in Free + Kanban, recurring tasks, custom fields, AI attachments |
-| **VIP** | $79.99 (one-time) | Same as Pro, lifetime access |
+| **Pro** | TBD | Everything in Free + Kanban, recurring tasks, custom fields, Inline Enhance, AI attachments |
+| **VIP** | TBD (one-time) | Same as Pro, lifetime access |
 
 ### Entitlement Gating
 
@@ -59,6 +60,8 @@ All premium features use unified `hasFullAccess` check:
 - `isPremium` (active Pro subscription) **OR**
 - `isVIPPurchased` (lifetime purchase) **OR**
 - `isVIPAdminGranted` (debug override)
+
+> ⚠️ Payment system migration from StoreKit to external provider is pending.
 
 ---
 
@@ -69,6 +72,7 @@ All premium features use unified `hasFullAccess` check:
 | Quick Entry | Capture task from anywhere | ✅ Yes |
 | Enhance Me | Open AI enhancement panel | ✅ Yes |
 | Main Window | Toggle main app window | ✅ Yes |
+| Inline Enhance | Enhance text in any app | ✅ Yes (Premium) |
 | ⌘N | New task in app | ❌ Fixed |
 | ⌘, | Open settings | ❌ Fixed |
 
@@ -82,6 +86,7 @@ All premium features use unified `hasFullAccess` check:
 | Custom AI modes | ✅ | ✅ | Create your own modes |
 | Enhance Me panel | ✅ | ✅ | Floating AI window |
 | AI attachments (image/PDF) | ❌ | ✅ | Requires premium |
+| Inline Enhance (system-wide) | ❌ | ✅ | Works in any app |
 
 ---
 
@@ -91,15 +96,18 @@ All premium features use unified `hasFullAccess` check:
 - **Data Layer**: SwiftData with model containers
 - **AI Integration**: Protocol-based provider system (Gemini, z.ai)
 - **Shortcuts**: System-wide keyboard shortcuts via Carbon API
+- **Inline Enhance**: Accessibility API for system-wide text capture
 
 ---
 
 ## Distribution
 
-| Branch | Sandbox | Inline Enhance | Distribution |
-|---|---|---|---|
-| `main` | ✅ Enabled | ❌ Not available | App Store |
-| `developer-id` | ❌ Disabled | ✅ Available | Developer ID |
+| Model | Details |
+|---|---|
+| **Distribution** | Developer ID (notarized) |
+| **Download** | Website (kachersoft.com) |
+| **Payments** | External provider (TBD) |
+| **Sandbox** | Disabled (required for Accessibility API) |
 
 ---
 
@@ -110,9 +118,9 @@ All premium features use unified `hasFullAccess` check:
 | Feature | Status | Notes |
 |---|---|---|
 | Unified access gate | ✅ Done | `hasFullAccess` property |
-| Pro subscription | ✅ Done | Monthly/yearly via StoreKit 2 |
-| VIP lifetime | ✅ Done | One-time purchase |
-| Restore purchases | ✅ Done | Full restore flow |
+| Pro subscription | 🔄 Migrating | Moving from StoreKit to external provider |
+| VIP lifetime | 🔄 Migrating | Moving from StoreKit to external provider |
+| Restore purchases | 🔄 Migrating | Will depend on new payment provider |
 | Debug VIP grant | ✅ Done | `#if DEBUG` admin override |
 
 ### Settings & Configuration
@@ -123,7 +131,7 @@ All premium features use unified `hasFullAccess` check:
 | General settings | ✅ Done | Appearance, window behavior |
 | Shortcut customization | ✅ Done | All global shortcuts configurable |
 | Custom field management | ✅ Done | Create/edit/delete fields |
-
+| Inline Enhance settings | ✅ Done | Toggle, permission grant, shortcut config |
 
 ### Data Persistence
 
