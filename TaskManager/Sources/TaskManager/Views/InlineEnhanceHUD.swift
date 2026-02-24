@@ -68,7 +68,7 @@ struct InlineEnhanceHUD: View {
             stateIcon
             stateText
         }
-        .font(.system(size: 13, weight: .medium, design: .monospaced))
+        .font(.system(size: 13, weight: .medium, design: .monospaced).italic())
         .modifier(ShimmerMask(active: viewModel.state == .enhancing))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
