@@ -2,6 +2,15 @@
   "amp.mcpServers": {
     "serena": {
       "url": "http://127.0.0.1:24280/sse"
+    },
+    "appstore-connect": {
+      "command": "node",
+      "args": ["/Volumes/OCW-2TB/MCP/app-store-connect-mcp-server/dist/src/index.js"],
+      "env": {
+        "APP_STORE_CONNECT_KEY_ID": "WMV746Z4ZZ",
+        "APP_STORE_CONNECT_ISSUER_ID": "ce9d8c08-c99a-4757-9294-24d3016ac904",
+        "APP_STORE_CONNECT_P8_PATH": "/Volumes/OCW-2TB/MCP/Apple/AuthKey_WMV746Z4ZZ.p8"
+      }
     }
   }
 }
