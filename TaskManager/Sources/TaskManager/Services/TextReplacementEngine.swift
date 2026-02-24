@@ -298,11 +298,22 @@ final class TextReplacementEngine: ObservableObject {
         usleep(80_000)  // Wait for paste to complete
 
         // Arc/Chromium can occasionally ignore first paste after focus restoration.
-        // Retry only for full-field replacements; with selection replacements this can duplicate output.
+        // Retry only for browser/webview/electron full-field replacements.
+        // Native apps (e.g. Warp) consume the selection on first paste, so retrying
+        // without re-selecting would append and duplicate text.
+        let shouldRetryPaste = captured.appCategory == .browser
+            || captured.appCategory == .webview
+            || captured.appCategory == .electron
+
         if !captured.hadSelection,
-           !verifyClipboardPasteApplied(captured: captured, expectedText: newText) {
+           shouldRetryPaste,
+           !verifyClipboardPasteApplied(captured: captured, expectedText: newText),
+           isFocusedElementStillCaptured(captured) {
             log("Clipboard paste verification failed on first attempt (full-field mode); retrying once")
-            simulateKeyCombo(key: 0x09, flags: .maskCommand, toPID: targetPID)
+            // Re-select all so the retry replaces rather than appends
+            simulateKeyCombo(key: 0x00, flags: .maskCommand, toPID: targetPID) // ⌘A
+            usleep(50_000)
+            simulateKeyCombo(key: 0x09, flags: .maskCommand, toPID: targetPID) // ⌘V
             usleep(80_000)
         }
         
