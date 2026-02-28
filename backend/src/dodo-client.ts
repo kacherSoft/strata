@@ -23,6 +23,13 @@ interface DodoCustomerByIdResponse {
     email?: string;
 }
 
+export interface CheckoutSessionLookupResult {
+    customerEmail: string | null;
+    customerId: string | null;
+    paymentId: string | null;
+    paymentStatus: string | null;
+}
+
 /**
  * Server-side client for Dodo Payments API.
  * Uses the secret API key stored in Worker secrets.
@@ -106,6 +113,55 @@ export class DodoClient {
     }
 
     /**
+     * Resolve checkout session details needed for install-email linkage.
+     */
+    async getCheckoutSession(sessionId: string): Promise<CheckoutSessionLookupResult | null> {
+        const normalizedSessionId = sessionId.trim();
+        if (!normalizedSessionId) return null;
+
+        const url = `${this.baseURL}/checkouts/${encodeURIComponent(normalizedSessionId)}`;
+
+        try {
+            const data = await this.get<Record<string, unknown>>(url);
+            const checkout = this.asRecord(data.checkout);
+            const customer = this.asRecord(data.customer);
+
+            const customerEmail = this.normalizeEmail(
+                this.readString(data.customer_email) ??
+                this.readString(checkout?.customer_email) ??
+                this.readString(customer?.email) ??
+                "",
+            );
+
+            const customerId = this.normalizeString(
+                this.readString(data.customer_id) ??
+                this.readString(checkout?.customer_id) ??
+                this.readString(customer?.customer_id) ??
+                "",
+            );
+
+            const paymentId = this.normalizeString(
+                this.readString(data.payment_id) ??
+                this.readString(checkout?.payment_id) ??
+                "",
+            );
+
+            const paymentStatus = this.normalizeLowercaseString(
+                this.readString(data.payment_status) ??
+                this.readString(checkout?.payment_status) ??
+                "",
+            );
+
+            return { customerEmail, customerId, paymentId, paymentStatus };
+        } catch (error) {
+            if (error instanceof AppError && error.statusCode === 404) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
+    /**
      * Create a customer portal session and return the portal URL.
      */
     async createPortalSession(email: string): Promise<string> {
@@ -158,5 +214,31 @@ export class DodoClient {
         }
 
         return (await response.json()) as T;
+    }
+
+    private readString(value: unknown): string | null {
+        if (typeof value !== "string") return null;
+        const trimmed = value.trim();
+        return trimmed || null;
+    }
+
+    private asRecord(value: unknown): Record<string, unknown> | null {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+        return value as Record<string, unknown>;
+    }
+
+    private normalizeString(value: string): string | null {
+        const trimmed = value.trim();
+        return trimmed || null;
+    }
+
+    private normalizeLowercaseString(value: string): string | null {
+        const trimmed = value.trim().toLowerCase();
+        return trimmed || null;
+    }
+
+    private normalizeEmail(value: string): string | null {
+        const trimmed = value.trim().toLowerCase();
+        return trimmed || null;
     }
 }

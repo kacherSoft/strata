@@ -60,26 +60,117 @@ function parseLicenseActivationStatus(response: Record<string, unknown>): string
     return null;
 }
 
-async function inferEmailForInstall(env: Env, installId: string): Promise<string | null> {
+const SUCCESSFUL_CHECKOUT_PAYMENT_STATUSES: ReadonlySet<string> = new Set<string>([
+    "succeeded",
+    "paid",
+    "completed",
+    "active",
+]);
+
+function normalizeEmailCandidate(value: string | null | undefined): string | null {
+    if (!value) return null;
+    try {
+        return requireEmail(value);
+    } catch {
+        return null;
+    }
+}
+
+async function persistLinkedCustomer(
+    env: Env,
+    installId: string,
+    email: string | null,
+    customerId: string | null,
+): Promise<void> {
+    await env.STRATA_DB.prepare(
+        `UPDATE purchase_links
+         SET customer_email = COALESCE(?, customer_email),
+             customer_id = COALESCE(?, customer_id),
+             updated_at = datetime('now')
+         WHERE install_id = ?`,
+    )
+        .bind(email, customerId, installId)
+        .run();
+}
+
+async function inferEmailForInstall(
+    env: Env,
+    installId: string,
+    dodo: DodoClient,
+    requestId: string,
+): Promise<string | null> {
     const row = await env.STRATA_DB.prepare(
-        `SELECT customer_email
+        `SELECT customer_email, checkout_session_id
          FROM purchase_links
-         WHERE install_id = ? AND customer_email IS NOT NULL
+         WHERE install_id = ?
          ORDER BY updated_at DESC, id DESC
          LIMIT 1`,
     )
         .bind(installId)
-        .first<{ customer_email: string }>();
+        .first<{ customer_email: string | null; checkout_session_id: string | null }>();
 
-    if (!row?.customer_email) {
+    if (!row) {
         return null;
     }
 
+    const linkedEmail = normalizeEmailCandidate(row.customer_email);
+    if (linkedEmail) {
+        return linkedEmail;
+    }
+
+    const checkoutSessionId = readString(row.checkout_session_id);
+    if (!checkoutSessionId) {
+        return null;
+    }
+
+    let checkout = null;
     try {
-        return requireEmail(row.customer_email);
-    } catch {
+        checkout = await dodo.getCheckoutSession(checkoutSessionId);
+    } catch (error) {
+        console.error(
+            `[${requestId}] checkout session lookup failed checkout_session_id=${checkoutSessionId}:`,
+            error,
+        );
         return null;
     }
+
+    if (!checkout) {
+        return null;
+    }
+
+    const paymentStatus = checkout.paymentStatus || "";
+    if (!SUCCESSFUL_CHECKOUT_PAYMENT_STATUSES.has(paymentStatus)) {
+        return null;
+    }
+
+    const checkoutEmail = normalizeEmailCandidate(checkout.customerEmail);
+    const checkoutCustomerId = readString(checkout.customerId);
+
+    if (checkoutEmail) {
+        await persistLinkedCustomer(env, installId, checkoutEmail, checkoutCustomerId).catch(() => { });
+        return checkoutEmail;
+    }
+
+    if (checkoutCustomerId) {
+        try {
+            const customerEmail = normalizeEmailCandidate(
+                await dodo.findCustomerEmailById(checkoutCustomerId),
+            );
+            if (customerEmail) {
+                await persistLinkedCustomer(env, installId, customerEmail, checkoutCustomerId).catch(
+                    () => { },
+                );
+                return customerEmail;
+            }
+        } catch (error) {
+            console.error(
+                `[${requestId}] checkout customer lookup failed customer_id=${checkoutCustomerId}:`,
+                error,
+            );
+        }
+    }
+
+    return null;
 }
 
 export async function handleRestore(
@@ -110,11 +201,12 @@ export async function handleRestore(
 
         const proof = await verifyInstallProof(env, installId, challengeId, nonceSignature);
 
+        const dodo = new DodoClient(env);
         let email: string | null = null;
         if (typeof body.email === "string" && body.email.trim()) {
             email = requireEmail(body.email);
         } else {
-            email = await inferEmailForInstall(env, installId);
+            email = await inferEmailForInstall(env, installId, dodo, requestId);
         }
 
         if (!email) {
@@ -143,8 +235,6 @@ export async function handleRestore(
 
         // Step 2: If not found locally, check via Dodo API
         if (tier === "free") {
-            const dodo = new DodoClient(env);
-
             // Check for active subscription
             const subscription = await dodo.findActiveSubscription(email);
             if (subscription) {

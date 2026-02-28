@@ -33,12 +33,6 @@ final class EntitlementService {
 
     func canUse(_ feature: PremiumFeature) -> Bool { hasFullAccess }
 
-    var linkedCustomerEmail: String? {
-        keychain.get(.customerEmail)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-    }
-
     var accessLabel: String {
         if isIntegrityCompromised { return "Free" }
         if isLicenseValid { return "VIP (Lifetime)" }
@@ -193,24 +187,14 @@ final class EntitlementService {
         }
     }
 
-    func beginCheckout(productId: String, email: String?) async throws -> URL {
+    func beginCheckout(productId: String) async throws -> URL {
         try await ensureInstallIdentityRegistered()
-        let normalizedEmail = email?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        let checkoutEmail = (normalizedEmail?.isEmpty == false) ? normalizedEmail : nil
-        var returnURL = "strata://checkout-complete"
-        if let checkoutEmail,
-           var components = URLComponents(string: returnURL) {
-            components.queryItems = [URLQueryItem(name: "email", value: checkoutEmail)]
-            returnURL = components.string ?? returnURL
-        }
 
         let response = try await backendClient.createCheckoutSession(
             productId: productId,
             installId: installId,
-            email: checkoutEmail,
-            returnURL: returnURL
+            email: nil,
+            returnURL: "strata://checkout-complete"
         )
 
         guard let url = URL(string: response.checkout_url),

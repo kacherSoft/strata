@@ -16,6 +16,7 @@ const TEST_PRIVATE_KEY_HEX = "9d61b19deffd5a60ba844af492ec2cc44449c5697b32691970
 
 let mockLocalEntitlement: { tier: string; state: string } | null = null;
 let mockInstallLinkedEmail: string | null = null;
+let mockInstallLinkedCheckoutId: string | null = null;
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
     return {
@@ -28,9 +29,13 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
                             return mockLocalEntitlement;
                         }
                         if (sql.includes("FROM purchase_links")) {
-                            return mockInstallLinkedEmail
-                                ? { customer_email: mockInstallLinkedEmail }
-                                : null;
+                            if (!mockInstallLinkedEmail && !mockInstallLinkedCheckoutId) {
+                                return null;
+                            }
+                            return {
+                                customer_email: mockInstallLinkedEmail,
+                                checkout_session_id: mockInstallLinkedCheckoutId,
+                            };
                         }
                         return null;
                     },
@@ -70,6 +75,7 @@ describe("POST /v1/purchases/restore", () => {
         vi.clearAllMocks();
         mockLocalEntitlement = null;
         mockInstallLinkedEmail = null;
+        mockInstallLinkedCheckoutId = null;
         vi.mocked(verifyInstallProof).mockResolvedValue({
             installPubkeyHash: "test_install_pubkey_hash",
         });
@@ -214,5 +220,36 @@ describe("POST /v1/purchases/restore", () => {
         const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
         const claims = await verifyToken(body.token, pubKey);
         expect(claims.sub).toBe("linked@example.com");
+    });
+
+    it("should infer email from successful checkout session when request email is omitted", async () => {
+        mockInstallLinkedCheckoutId = "cks_123";
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    checkout_id: "cks_123",
+                    customer_email: "checkout@example.com",
+                    payment_status: "succeeded",
+                }),
+                { status: 200 },
+            ),
+        );
+        mockFetch.mockResolvedValueOnce(
+            new Response(JSON.stringify({ items: [] }), { status: 200 }),
+        );
+
+        const req = makeRequest({
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+            email: undefined,
+        });
+        const res = await handleRestore(req, makeEnv());
+        expect(res.status).toBe(200);
+
+        const body: any = await res.json();
+        expect(body.resolved_email).toBe("checkout@example.com");
+
+        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
+        const claims = await verifyToken(body.token, pubKey);
+        expect(claims.sub).toBe("checkout@example.com");
     });
 });

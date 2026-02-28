@@ -7,9 +7,6 @@ struct PremiumUpsellView: View {
     @Environment(EntitlementService.self) var entitlementService
     @State private var showLicenseActivation = false
     @State private var showSubscriptionLinking = false
-    @State private var showCheckoutEmailSheet = false
-    @State private var pendingCheckoutProductId: String?
-    @State private var checkoutEmailInput = ""
     @State private var checkoutInFlight = false
     @State private var checkoutError: String?
 
@@ -31,7 +28,7 @@ struct PremiumUpsellView: View {
 
             VStack(spacing: 10) {
                 Button {
-                    prepareCheckout(for: DodoPaymentsClient.proMonthlyProductId)
+                    startCheckout(for: DodoPaymentsClient.proMonthlyProductId)
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -53,7 +50,7 @@ struct PremiumUpsellView: View {
                 .disabled(checkoutInFlight)
 
                 Button {
-                    prepareCheckout(for: DodoPaymentsClient.proYearlyProductId)
+                    startCheckout(for: DodoPaymentsClient.proYearlyProductId)
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -78,7 +75,7 @@ struct PremiumUpsellView: View {
                     .padding(.vertical, 4)
 
                 Button {
-                    prepareCheckout(for: DodoPaymentsClient.vipLifetimeProductId)
+                    startCheckout(for: DodoPaymentsClient.vipLifetimeProductId)
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -145,60 +142,15 @@ struct PremiumUpsellView: View {
         .sheet(isPresented: $showSubscriptionLinking) {
             SubscriptionLinkingView()
         }
-        .sheet(isPresented: $showCheckoutEmailSheet) {
-            checkoutEmailSheet
-        }
     }
 
-    private var checkoutEmailSheet: some View {
-        VStack(spacing: 16) {
-            Text("Checkout Email")
-                .font(.title3)
-                .fontWeight(.semibold)
-            Text("Use this purchase email for checkout and automatic restore.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            TextField("you@example.com", text: $checkoutEmailInput)
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.emailAddress)
-                .disabled(checkoutInFlight)
-            HStack(spacing: 12) {
-                Button("Cancel") {
-                    showCheckoutEmailSheet = false
-                }
-                .keyboardShortcut(.escape)
-
-                Button("Continue") {
-                    guard let productId = pendingCheckoutProductId else { return }
-                    showCheckoutEmailSheet = false
-                    startCheckout(for: productId, email: checkoutEmailInput)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(checkoutInFlight)
-                .keyboardShortcut(.return)
-            }
-        }
-        .padding(22)
-        .frame(width: 420)
-    }
-
-    private func prepareCheckout(for productId: String) {
-        pendingCheckoutProductId = productId
-        checkoutEmailInput = entitlementService.linkedCustomerEmail ?? ""
-        showCheckoutEmailSheet = true
-    }
-
-    private func startCheckout(for productId: String, email: String) {
+    private func startCheckout(for productId: String) {
         checkoutInFlight = true
         checkoutError = nil
 
         Task {
             do {
-                let checkoutURL = try await entitlementService.beginCheckout(
-                    productId: productId,
-                    email: email
-                )
+                let checkoutURL = try await entitlementService.beginCheckout(productId: productId)
                 NSWorkspace.shared.open(checkoutURL)
             } catch {
                 checkoutError = error.localizedDescription
