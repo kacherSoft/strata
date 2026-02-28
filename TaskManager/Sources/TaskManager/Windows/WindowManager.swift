@@ -207,6 +207,13 @@ final class WindowManager: ObservableObject {
     
     // MARK: - Main Window
     
+    func focusMainWindowIfPresent() {
+        guard let window = getMainWindow() else { return }
+        window.collectionBehavior.insert(.moveToActiveSpace)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func showMainWindow() {
         if let window = getMainWindow() {
             // Ensure the window moves to the current space/desktop

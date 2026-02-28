@@ -26,7 +26,7 @@ enum AppearanceMode: String, CaseIterable {
 
 struct GeneralSettingsView: View {
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @Environment(EntitlementService.self) var entitlementService
     @ObservedObject private var accessibilityManager = AccessibilityManager.shared
     @Query private var settings: [SettingsModel]
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = .system
@@ -198,19 +198,141 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
+                    // Current Plan
                     HStack {
                         Image(systemName: "person.badge.key")
                             .foregroundStyle(.secondary)
                             .frame(width: 24)
 
-                        Text("Access Level")
+                        Text("Current Plan")
                             .font(.body)
 
                         Spacer()
 
-                        Text(subscriptionService.accessLabel)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Text(entitlementService.accessLabel)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                            if entitlementService.hasFullAccess {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.caption)
+                            }
+                        }
+                    }
+
+                    // License key (VIP only)
+                    if entitlementService.isLicenseValid,
+                       let key = KeychainService.shared.get(.licenseKey) {
+                        HStack {
+                            Image(systemName: "key")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24)
+
+                            Text("License Key")
+                                .font(.body)
+
+                            Spacer()
+
+                            Text(maskedKey(key))
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    // Linked email (subscription only)
+                    if entitlementService.isSubscriptionActive,
+                       let email = KeychainService.shared.get(.customerEmail) {
+                        HStack {
+                            Image(systemName: "envelope")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24)
+
+                            Text("Linked Email")
+                                .font(.body)
+
+                            Spacer()
+
+                            Text(email)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if entitlementService.isSubscriptionActive,
+                       let renewalISO = entitlementService.subscriptionRenewalDateISO8601 {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24)
+
+                            Text("Renews")
+                                .font(.body)
+
+                            Spacer()
+
+                            Text(formattedValidationDate(renewalISO))
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    // Last validated
+                    if let timestamp = KeychainService.shared.get(.entitlementLastValidatedAt) {
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 24)
+
+                            Text("Last Validated")
+                                .font(.body)
+
+                            Spacer()
+
+                            Text(formattedValidationDate(timestamp))
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    // Actions
+                    if entitlementService.isLicenseValid {
+                        Divider()
+                        HStack(spacing: 12) {
+                            Button("Deactivate License", role: .destructive) {
+                                showDeactivateConfirmation = true
+                            }
+
+                            Button("Re-validate") {
+                                Task { await entitlementService.revalidate() }
+                            }
+                            .disabled(entitlementService.validationState == .validating)
+                        }
+                    } else if entitlementService.isSubscriptionActive {
+                        Divider()
+                        HStack(spacing: 12) {
+                            Button("Manage Subscription") {
+                                Task {
+                                    do {
+                                        let url = try await entitlementService.subscriptionManagementURL()
+                                        NSWorkspace.shared.open(url)
+                                    } catch {
+                                        subscriptionManagementError = error.localizedDescription
+                                    }
+                                }
+                            }
+
+                            Button("Re-validate") {
+                                Task { await entitlementService.revalidate() }
+                            }
+                            .disabled(entitlementService.validationState == .validating)
+                        }
+                    }
+
+                    if entitlementService.validationState == .offline {
+                        Label("Offline — using cached status", systemImage: "wifi.slash")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
                     }
 
                     #if DEBUG
@@ -232,8 +354,8 @@ struct GeneralSettingsView: View {
                         Spacer()
 
                         Toggle("", isOn: Binding(
-                            get: { subscriptionService.isVIPAdminGrantActive },
-                            set: { _ in subscriptionService.toggleVIPAdminGrant() }
+                            get: { entitlementService.isVIPAdminGrantActive },
+                            set: { _ in entitlementService.toggleVIPAdminGrant() }
                         ))
                         .toggleStyle(.switch)
                         .controlSize(.small)
@@ -359,6 +481,28 @@ struct GeneralSettingsView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+        .alert("Deactivate License?", isPresented: $showDeactivateConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Deactivate", role: .destructive) {
+                Task {
+                    do {
+                        try await entitlementService.deactivateLicense()
+                    } catch {
+                        deactivationError = error.localizedDescription
+                    }
+                }
+            }
+        } message: {
+            Text("This will deactivate your license on this device. You can reactivate later if activation slots are available.")
+        }
+        .alert("Deactivation Failed", isPresented: Binding(
+            get: { deactivationError != nil },
+            set: { if !$0 { deactivationError = nil } }
+        )) {
+            Button("OK", role: .cancel) { deactivationError = nil }
+        } message: {
+            Text(deactivationError ?? "")
+        }
         .alert("Data Operation Failed", isPresented: Binding(
             get: { dataErrorMessage != nil },
             set: { if !$0 { dataErrorMessage = nil } }
@@ -369,10 +513,23 @@ struct GeneralSettingsView: View {
         } message: {
             Text(dataErrorMessage ?? "")
         }
+        .alert("Subscription Portal Unavailable", isPresented: Binding(
+            get: { subscriptionManagementError != nil },
+            set: { if !$0 { subscriptionManagementError = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                subscriptionManagementError = nil
+            }
+        } message: {
+            Text(subscriptionManagementError ?? "")
+        }
     }
     
     @State private var showDeleteConfirmation = false
+    @State private var showDeactivateConfirmation = false
+    @State private var deactivationError: String?
     @State private var dataErrorMessage: String?
+    @State private var subscriptionManagementError: String?
 
     private func deleteAllTasks() {
         do {
@@ -383,6 +540,20 @@ struct GeneralSettingsView: View {
         }
     }
     
+    private func maskedKey(_ key: String) -> String {
+        guard key.count > 4 else { return key }
+        let suffix = String(key.suffix(4))
+        return "XXXX-XXXX-...-\(suffix)"
+    }
+
+    private func formattedValidationDate(_ isoString: String) -> String {
+        guard let date = ISO8601DateFormatter().date(from: isoString) else { return isoString }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
     private func applyAppearanceMode(_ mode: AppearanceMode) {
         switch mode {
         case .system:

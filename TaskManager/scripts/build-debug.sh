@@ -16,20 +16,33 @@ rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 # Build archive
-xcodebuild \
-  -project "$PROJECT_DIR/TaskManagerApp.xcodeproj" \
-  -scheme "TaskManager" \
-  -configuration Debug \
-  -destination "generic/platform=macOS" \
-  -archivePath "$OUTPUT_DIR/TaskManager.xcarchive" \
-  CODE_SIGN_IDENTITY="Developer ID Application: KACHERSOFT APPLIED SOLUTIONS CO.,LTD (4QZFT5Q76A)" \
-  CODE_SIGN_STYLE=Manual \
-  archive \
-  | xcpretty --color 2>/dev/null || cat
+if command -v xcpretty >/dev/null 2>&1; then
+  xcodebuild \
+    -project "$PROJECT_DIR/TaskManagerApp.xcodeproj" \
+    -scheme "TaskManager" \
+    -configuration Debug \
+    -destination "generic/platform=macOS" \
+    -archivePath "$OUTPUT_DIR/TaskManager.xcarchive" \
+    CODE_SIGN_IDENTITY="Developer ID Application: KACHERSOFT APPLIED SOLUTIONS CO.,LTD (4QZFT5Q76A)" \
+    CODE_SIGN_STYLE=Manual \
+    archive \
+    | xcpretty --color
+else
+  xcodebuild \
+    -project "$PROJECT_DIR/TaskManagerApp.xcodeproj" \
+    -scheme "TaskManager" \
+    -configuration Debug \
+    -destination "generic/platform=macOS" \
+    -archivePath "$OUTPUT_DIR/TaskManager.xcarchive" \
+    CODE_SIGN_IDENTITY="Developer ID Application: KACHERSOFT APPLIED SOLUTIONS CO.,LTD (4QZFT5Q76A)" \
+    CODE_SIGN_STYLE=Manual \
+    archive
+fi
 
 # Copy app to output directory
 APP_PATH="$OUTPUT_DIR/TaskManager.xcarchive/Products/Applications/TaskManager.app"
-cp -R "$APP_PATH" "$OUTPUT_DIR/"
+rm -rf "$OUTPUT_DIR/TaskManager.app"
+ditto "$APP_PATH" "$OUTPUT_DIR/TaskManager.app"
 
 # Remove archive, keep only .app
 rm -rf "$OUTPUT_DIR/TaskManager.xcarchive"

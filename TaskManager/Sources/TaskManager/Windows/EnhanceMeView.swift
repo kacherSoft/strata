@@ -5,7 +5,7 @@ import TaskManagerUIComponents
 
 struct EnhanceMeView: View {
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @Environment(EntitlementService.self) var entitlementService
     @Query(sort: \AIModeModel.sortOrder) private var modes: [AIModeModel]
 
     @State private var aiService = AIService.shared
@@ -49,7 +49,7 @@ struct EnhanceMeView: View {
             typewriterTimer?.invalidate()
             typewriterTimer = nil
         }
-        .onChange(of: subscriptionService.hasFullAccess) { _, hasAccess in
+        .onChange(of: entitlementService.hasFullAccess) { _, hasAccess in
             if !hasAccess {
                 cleanupAttachments()
             }
@@ -95,7 +95,7 @@ struct EnhanceMeView: View {
                 HStack(spacing: 6) {
                     Text(mode.name)
                         .fontWeight(.medium)
-                    if mode.supportsAttachments && mode.provider.supportsAnyAttachments && subscriptionService.hasFullAccess {
+                    if mode.supportsAttachments && mode.provider.supportsAnyAttachments && entitlementService.hasFullAccess {
                         Image(systemName: "paperclip")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -319,12 +319,12 @@ struct EnhanceMeView: View {
 
     private var currentModeSupportsAttachments: Bool {
         guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsAnyAttachments && subscriptionService.hasFullAccess
+        return mode.supportsAttachments && mode.provider.supportsAnyAttachments && entitlementService.hasFullAccess
     }
 
     private var attachmentSupportMessage: String {
         guard let mode = aiService.currentMode else { return "Select a mode to enable attachments" }
-        if !subscriptionService.hasFullAccess {
+        if !entitlementService.hasFullAccess {
             return "Upgrade to Premium to use attachments"
         }
         if !mode.supportsAttachments {
@@ -338,12 +338,12 @@ struct EnhanceMeView: View {
 
     private var currentModeSupportsImages: Bool {
         guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsImageAttachments && subscriptionService.hasFullAccess
+        return mode.supportsAttachments && mode.provider.supportsImageAttachments && entitlementService.hasFullAccess
     }
 
     private var currentModeSupportsPDFs: Bool {
         guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsPDFAttachments && subscriptionService.hasFullAccess
+        return mode.supportsAttachments && mode.provider.supportsPDFAttachments && entitlementService.hasFullAccess
     }
     
     // MARK: - Actions

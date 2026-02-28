@@ -11,9 +11,15 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_ENTITLEMENTS: Sources/TaskManager/TaskManager.entitlements
-    GENERATE_INFOPLIST_FILE: YES
-    INFOPLIST_KEY_CFBundleDisplayName: Strata
-    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+    GENERATE_INFOPLIST_FILE: NO
+    INFOPLIST_FILE: Sources/TaskManager/Info.plist
+  configs:
+    Debug:
+      CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    Release:
+      ENABLE_HARDENED_RUNTIME: YES
+      CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+      OTHER_CODE_SIGN_FLAGS: --timestamp --options runtime
 packages:
   TaskManagerUIComponents:
     path: ../TaskManagerUIComponents
@@ -41,6 +47,6 @@ schemes:
         TaskManager: all
     run:
       config: Debug
-      storeKitConfiguration: Sources/TaskManager/Configuration.storekit
+
     archive:
       config: Release

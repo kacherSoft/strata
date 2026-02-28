@@ -12,6 +12,8 @@ All currently scoped product features are implemented and considered **DONE**.
 
 ### 🆓 Free Tier
 
+> **No limits on free features!** All core features are fully available.
+
 | Category | Feature | Notes |
 |---|---|---|
 | **Task Management** | Task CRUD (title, description, status) | Todo/In Progress/Completed |
@@ -26,6 +28,7 @@ All currently scoped product features are implemented and considered **DONE**.
 | **AI** | Built-in AI modes | Correct Me, Enhance Prompt, Explain |
 | | Custom AI modes (basic) | Create modes with custom prompts |
 | | Enhance Me panel | Floating window via global shortcut |
+| | **UNLIMITED** in-app enhancements | No monthly cap |
 | **Shortcuts** | Quick Entry | Global shortcut for task capture |
 | | Enhance Me | Global shortcut for AI panel |
 | | Main Window | Global shortcut toggle |
@@ -50,9 +53,9 @@ All currently scoped product features are implemented and considered **DONE**.
 
 | Tier | Price | What You Get |
 |---|---|---|
-| **Free** | $0 | Full task management, list + calendar views, basic AI modes, local storage |
-| **Pro** | TBD | Everything in Free + Kanban, recurring tasks, custom fields, Inline Enhance, AI attachments |
-| **VIP** | TBD (one-time) | Same as Pro, lifetime access |
+| **Free** | $0 forever | Full task management, list + calendar views, AI modes (unlimited), local storage — **no limits** |
+| **Pro** | $4.99/month | Everything in Free + Kanban, recurring tasks, custom fields, Inline Enhance, AI attachments |
+| **VIP** | $99.99 (one-time) | Same as Pro, lifetime access + priority support + early features |
 
 ### Entitlement Gating
 
@@ -61,7 +64,7 @@ All premium features use unified `hasFullAccess` check:
 - `isVIPPurchased` (lifetime purchase) **OR**
 - `isVIPAdminGranted` (debug override)
 
-> ⚠️ Payment system migration from StoreKit to external provider is pending.
+Payment provider: DodoPayments (external MoR). License keys for VIP Lifetime, subscription linking for Pro.
 
 ---
 
@@ -106,7 +109,7 @@ All premium features use unified `hasFullAccess` check:
 |---|---|
 | **Distribution** | Developer ID (notarized) |
 | **Download** | Website (kachersoft.com) |
-| **Payments** | External provider (TBD) |
+| **Payments** | DodoPayments (Merchant of Record) |
 | **Sandbox** | Disabled (required for Accessibility API) |
 
 ---
@@ -118,9 +121,9 @@ All premium features use unified `hasFullAccess` check:
 | Feature | Status | Notes |
 |---|---|---|
 | Unified access gate | ✅ Done | `hasFullAccess` property |
-| Pro subscription | 🔄 Migrating | Moving from StoreKit to external provider |
-| VIP lifetime | 🔄 Migrating | Moving from StoreKit to external provider |
-| Restore purchases | 🔄 Migrating | Will depend on new payment provider |
+| Pro subscription | ✅ Done | DodoPayments subscription linking |
+| VIP lifetime | ✅ Done | DodoPayments license key activation |
+| License management | ✅ Done | Activate/deactivate/re-validate in Settings |
 | Debug VIP grant | ✅ Done | `#if DEBUG` admin override |
 
 ### Settings & Configuration

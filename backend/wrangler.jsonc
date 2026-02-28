@@ -1,0 +1,39 @@
+{
+    "name": "strata-backend",
+    "main": "src/index.ts",
+    "compatibility_date": "2025-02-20",
+    "vars": {
+        "ENVIRONMENT": "production",
+        "DODO_BASE_URL": "https://live.dodopayments.com",
+        "TOKEN_TTL_SECONDS": "259200"
+    },
+    // D1 database binding
+    "d1_databases": [
+        {
+            "binding": "STRATA_DB",
+            "database_name": "strata-db",
+            "database_id": "9a4bc136-5c5b-4333-94de-9dd31d2b9b42"
+        }
+    ],
+    // Secrets (set via `wrangler secret put`):
+    //   DODO_API_KEY
+    //   DODO_WEBHOOK_SECRET
+    //   ENTITLEMENT_SIGNING_PRIVATE_KEY
+    "env": {
+        "test": {
+            "name": "strata-backend-test",
+            "d1_databases": [
+                {
+                    "binding": "STRATA_DB",
+                    "database_name": "strata-db-test",
+                    "database_id": "38063b19-d21f-46e7-b6f4-a006d2c42f22"
+                }
+            ],
+            "vars": {
+                "ENVIRONMENT": "test",
+                "DODO_BASE_URL": "https://test.dodopayments.com",
+                "TOKEN_TTL_SECONDS": "259200"
+            }
+        }
+    }
+}

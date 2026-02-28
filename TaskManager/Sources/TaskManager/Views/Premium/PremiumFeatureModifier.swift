@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PremiumFeatureModifier: ViewModifier {
-    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @Environment(EntitlementService.self) var entitlementService
 
     let featureName: String
     let featureDescription: String
@@ -13,7 +13,7 @@ struct PremiumFeatureModifier: ViewModifier {
         switch presentationStyle {
         case .inline:
             Group {
-                if subscriptionService.hasFullAccess {
+                if entitlementService.hasFullAccess {
                     content
                 } else {
                     PremiumUpsellView(
@@ -24,9 +24,11 @@ struct PremiumFeatureModifier: ViewModifier {
             }
         case .sheet:
             content
-                .onTapGesture {
-                    if !subscriptionService.hasFullAccess {
-                        showUpsellSheet = true
+                .allowsHitTesting(entitlementService.hasFullAccess)
+                .overlay {
+                    if !entitlementService.hasFullAccess {
+                        Color.clear.contentShape(Rectangle())
+                            .onTapGesture { showUpsellSheet = true }
                     }
                 }
                 .sheet(isPresented: $showUpsellSheet) {

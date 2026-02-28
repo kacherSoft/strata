@@ -13,8 +13,14 @@ final class KeychainService: Sendable {
         case licenseKey = "strata.licenseKey"
         case licenseInstanceId = "strata.licenseInstanceId"
         case customerEmail = "strata.customerEmail"
-        case entitlementStatus = "strata.entitlementStatus"
-        case lastValidation = "strata.lastValidation"
+
+        // Backend-signed token keys (Phase 1+)
+        case entitlementToken = "strata.entitlementToken"
+        case clockCheckpoint = "strata.clockCheckpoint"
+        case installId = "strata.installId"
+        case installRegistrationPubkeyHash = "strata.installRegistrationPubkeyHash"
+        case entitlementLastValidatedAt = "strata.entitlementLastValidatedAt"
+        case licenseOfflineGraceUntil = "strata.licenseOfflineGraceUntil"
     }
     
     private init() {}

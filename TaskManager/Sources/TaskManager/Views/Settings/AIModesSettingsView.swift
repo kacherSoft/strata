@@ -181,7 +181,7 @@ private struct ModeRow: View {
 
 private struct ModeEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @Environment(EntitlementService.self) var entitlementService
 
     let mode: AIModeModel?
     let onSave: (String, String, AIProviderType, String, Bool) -> Void
@@ -247,7 +247,7 @@ private struct ModeEditorSheet: View {
                     }
                 }
 
-                if subscriptionService.hasFullAccess {
+                if entitlementService.hasFullAccess {
                     Section("Input") {
                         Toggle("Allow Attachments (Images & PDF)", isOn: $supportsAttachments)
                             .controlSize(.small)

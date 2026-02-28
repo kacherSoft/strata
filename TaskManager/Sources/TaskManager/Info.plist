@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Strata</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.kachersoft.strata</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>strata</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ENTITLEMENT_PUBLIC_KEY_HEX</key>
+	<string>ea8e6eb72fa8d6e4b44ea18001d4c0b2081cdef655e813cbff70807b61206b25</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>STRATA_BACKEND_LIVE_BASE_URL</key>
+	<string>https://strata-backend.kacher.workers.dev</string>
+	<key>STRATA_BACKEND_TEST_BASE_URL</key>
+	<string>https://strata-backend-test.kacher.workers.dev</string>
+	<key>STRATA_EXPECTED_TEAM_ID</key>
+	<string>4QZFT5Q76A</string>
+</dict>
+</plist>

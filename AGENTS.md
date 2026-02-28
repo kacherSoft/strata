@@ -13,6 +13,44 @@
 - Prefer incremental, verifiable fixes over broad refactors.
 - After each fix, report what changed and how to validate it.
 
+## Evidence-First Protocol (Mandatory)
+Apply this protocol for research, debugging, planning, and implementation tasks.
+Do **not** require this full protocol for simple operational requests (e.g. quick status checks, one-step commands).
+
+1. Validate with evidence before proposing a fix:
+   - Check local code and relevant logs first.
+   - Check official documentation (primary source) for APIs/platform behavior.
+   - Check community reports for similar real-world failures and resolutions.
+2. No silent assumptions:
+   - If an assumption is unavoidable, label it explicitly as `Assumption`.
+   - Keep assumptions minimal and replace them with evidence as soon as possible.
+3. If user asks for plan first, do not modify code before delivering:
+   - Findings
+   - Evidence links
+   - Root cause
+   - Fix plan
+   - Validation checklist
+4. Source quality order:
+   - Official vendor/platform docs first.
+   - Then high-signal community threads (issue trackers, maintainer discussions, Stack Overflow with reproducible context).
+5. Every non-trivial technical report must include:
+   - `Code Evidence`: concrete `file:line` references
+   - `Docs Evidence`: links to official docs used
+   - `Community Evidence`: links to similar cases
+   - `Assumptions`: explicit list or `none`
+6. If evidence is insufficient, stop and state what is missing instead of guessing.
+
+## Test Operations Shortcuts
+- Cancel active Dodo test subscriptions for an email:
+  - `cd backend`
+  - `npm run dodo:test:subscription:cancel -- --email <email>`
+- Check active Dodo test subscriptions for an email:
+  - `cd backend`
+  - `npm run dodo:test:subscription:check -- --email <email>`
+- Notes:
+  - Defaults to Dodo Test Mode base URL (`https://test.dodopayments.com`).
+  - Requires `DODO_API_KEY` in env, unless provided via `--api-key`.
+
 ## Build & Run (Source of Truth)
 Always use commands aligned with `TaskManager/README.md`:
 
@@ -33,7 +71,7 @@ Always use commands aligned with `TaskManager/README.md`:
 ## Distribution Model
 - Developer ID only (notarized, distributed via website).
 - App Sandbox is disabled (required for Accessibility API).
-- Payments via external provider (migration from StoreKit pending).
+- Payments via DodoPayments (Merchant of Record) — license keys for VIP, subscription linking for Pro.
 - All features (including inline enhance) ship in one build.
 
 ## Inline Enhancement Guardrails

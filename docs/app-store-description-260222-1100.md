@@ -1,15 +1,16 @@
 # App Store Description - Strata
 
-> **App Name:** Strata - Personal Task Manager
-> **Tagline:** Your Projects. Your Control. Your Privacy.
-> **Date:** February 22, 2026
+> **App Name:** Strata
+> **Tagline:** Your AI, Anywhere on Your Mac
+> **Category:** AI Productivity Utility
+> **Date:** February 25, 2026
 
 ---
 
 ## App Store Title (30 char max)
 
 ```
-Strata - Personal Task Manager
+Strata - AI Productivity
 ```
 
 ---
@@ -17,21 +18,21 @@ Strata - Personal Task Manager
 ## Subtitle (30 char max)
 
 ```
-AI-Enhanced Task Management
+Your AI, Anywhere on Mac
 ```
 
 ---
 
 ## Promotional Text (170 char max)
 
-> Juggling multiple clients? Strata organizes all your projects with tags, AI-enhanced clarity, and instant filtering. 100% local, 100% private. iOS coming soon!
+> Press ⌘⌥E to enhance text in ANY app. BYOK (Gemini, z.ai). 100% local, 100% private. Free tier has NO LIMITS. Perfect for freelancers & AI power users!
 
 ---
 
 ## Keywords (100 char max)
 
 ```
-task,multi-project,tag,filter,freelance,privacy,local,AI,kanban,iCloud,sync,productivity,inline
+AI,writing,text,inline,enhancement,shortcut,privacy,local,BYOK,productivity,task,mac
 ```
 
 ---
@@ -40,174 +41,145 @@ task,multi-project,tag,filter,freelance,privacy,local,AI,kanban,iCloud,sync,prod
 
 ---
 
-**Strata - Personal Task Manager for Multi-Project Professionals**
+**Strata - Your AI, Anywhere on Your Mac**
 
-One app. Multiple projects. Zero data leaks.
+Press ⌘⌥E. Enhance text. Done.
 
-**Strata** is the personal task manager built for professionals who juggle multiple projects across different companies. Freelancers, consultants, side-hustlers—this is your command center for managing everything without mixing company data.
-
----
-
-**WHY STRATA?**
-
-You work across Jira, Monday, Asana, Trello, and more. Each company has their system. But you need YOUR system—one place to see all your tasks, deadlines, and commitments across every project.
-
-Strata gives you that overview. Your personal layer above the corporate tools. Independent. Private. Yours.
+**Strata** brings AI enhancement to EVERY app on your Mac. Mail, Notes, Slack, Safari, VS Code—if you can select text, you can enhance it. Like Grammarly, but with YOUR AI models and complete privacy.
 
 ---
 
-**BUILT FOR MULTITASKERS**
+**THE KILLER FEATURE: INLINE ENHANCE**
 
-• **Track Multiple Projects** - Organize tasks by client, company, or project
-• **Smart Tags** - Create tags for each project (e.g., #ClientA, #SideProject, #Urgent). One tap filters all related tasks instantly.
-• **AI-Enhanced Capture** - Rough notes become clear tasks. BYOK support for Gemini, z.ai.
-• **Priority Across Projects** - See what's urgent across ALL your work
-• **Timeline View** - Visualize deadlines across multiple commitments
-• **Filter by Context** - "What do I owe Client A?" "What's due this week across everything?"
+Stop copy-pasting to ChatGPT. With Strata:
 
-**💡 Pro Tip:** Use tags as your project layers. Tag tasks with client names, project codes, or work types—then filter with one click to see everything for that context.
+1. Select text in ANY app
+2. Press ⌘⌥E
+3. Choose your enhancement mode
+4. Text transforms in-place
 
----
-
-**INSTANT CAPTURE**
-
-Press ⌘⇧N from anywhere to capture a task. No context switching. Whether you're in Slack, Figma, or a Zoom meeting—capture the thought instantly.
-
-Quick Entry Panel:
-• Task title and description
-• Due date and reminders
-• Priority (None → Critical)
-• Project tags
-• Photo attachments
+Works in Mail, Notes, Slack, Safari, Figma, and 100+ more apps. No copy-paste. No context switching.
 
 ---
 
-**AI-ENHANCED CLARITY**
+**BYOK (Bring Your Own Key)**
 
-Rough notes become clear action items:
+Your API key. Your costs. Your privacy.
 
+• Use Gemini, z.ai, or any compatible provider
+• Keys stored securely in macOS Keychain
+• Nothing sent to us—ever
+• Complete cost control
+
+---
+
+**AI MODES FOR EVERY WORKFLOW**
+
+Built-in modes:
 • **Correct Me** - Fix grammar, improve clarity
-• **Enhance Prompt** - Transform rough ideas into detailed, prompt-ready descriptions. Perfect for AI power users who craft prompts for a living.
-• **Explain** - Analyze images and documents
-• **Custom Modes** - Create your own enhancement styles for your unique workflow
+• **Enhance Prompt** - Transform ideas into detailed prompts
+• **Explain** - Analyze and summarize content
 
-**⌨️ Inline Enhance (Premium)** - Press ⌘⌥E in ANY app to enhance text in-place. Like Grammarly, but with your AI models. Select text in Mail, Notes, Safari, or any app → enhance instantly → replaced inline. No copy-paste, no context switching.
-
-**BYOK (Bring Your Own Key)** - Use your own API key from Gemini, z.ai, or any compatible provider. You control costs, you choose models, you own your data. Nothing sent to us.
+Plus custom AI modes for your unique workflow.
 
 ---
 
 **LOCAL-FIRST PRIVACY**
 
-Your work data is sensitive. Client names, project details, deadlines. Strata keeps it secure:
+Your work data is sensitive. Strata keeps it secure:
 
 • **100% Local Storage** - All data lives on YOUR Mac
-• **iCloud Sync** - Optional sync via your private iCloud (iOS app coming soon!)
 • **No Cloud Servers** - We never see your data
 • **No Account Required** - No email, no sign-up, no tracking
 • **Secure API Keys** - Stored in macOS Keychain
 
-This is YOUR task manager. Not another SaaS mining your workflow data.
+---
 
-**📱 iOS App Coming Soon** - Take your tasks everywhere. Same tags, same projects, same privacy—synced seamlessly via your iCloud.
+**BUILT-IN TASK MANAGEMENT**
+
+Capture thoughts with ⌘⇧N from anywhere. Organize with tags. See everything across all your projects in one view.
+
+**Free tier includes:**
+• Full task management (CRUD, tags, priorities, due dates)
+• List + Calendar views
+• AI modes (Correct Me, Enhance Prompt, Explain)
+• Custom AI modes
+• Global shortcuts
+• **UNLIMITED usage — NO CAPS**
 
 ---
 
-**BEAUTIFUL MAC EXPERIENCE**
+**PRICING**
 
-• Native SwiftUI design
-• Liquid glass dark mode
-• Light/dark/auto appearance
-• Always-on-top option
-• Menu bar quick access
-• Keyboard-first workflow
-
----
-
-**ORGANIZE YOUR WAY**
-
-• **Tags = Projects** - Create tags for clients, projects, or task types. Filter instantly.
-• **List View** - Classic task list with powerful filters
-• **Kanban Board** - Visual workflow: To Do → In Progress → Done
-• Filter by project, tag, priority, or date
-• Calendar integration
-• Custom fields for project-specific data
-
-**Quick Tag Workflow:**
-1. Add tags when creating tasks: #AcmeCorp, #Personal, #Urgent
-2. Click any tag in sidebar to filter
-3. See all tasks for that project instantly
-
----
-
-**POWER USER FEATURES**
-
-• **Recurring Tasks** - Daily standups, weekly reports, monthly reviews
-• **Custom Fields** - Track client, budget, effort, or custom data per task
-• **Reminders with Alarms** - Never miss a deadline
-• **Photo Attachments** - Screenshots, receipts, references
-• **Fast Search** - Find anything across all projects
-• **Data Export** - Your data, portable anytime
+| Tier | Price | What You Get |
+|------|-------|--------------|
+| **Free** | $0 forever | Everything above, NO LIMITS |
+| **Pro** | $4.99/month | Inline Enhance (⌘⌥E system-wide), Kanban, recurring tasks, custom fields, AI attachments |
+| **VIP** | $99.99 one-time | Everything in Pro + lifetime updates, priority support, early access |
 
 ---
 
 **PERFECT FOR**
 
-• **Freelancers** managing multiple clients with AI-enhanced task clarity
-• **Consultants** tracking deliverables across engagements
-• **Side-Hustlers** balancing day job + passion projects
-• **Contractors** juggling tickets from different company systems
-• **Project Hoppers** who need one view across all the things
-• **AI Power Users & Prompt Engineers** who want BYOK control over models and costs
+• **AI Power Users** who want BYOK control
+• **Freelancers** juggling multiple clients
+• **Privacy-conscious professionals** who can't use cloud AI
+• **Prompt Engineers** crafting perfect outputs
 
 ---
 
-**THE STRATA PHILOSOPHY**
+**BEAUTIFUL MAC DESIGN**
 
-Corporate tools manage teams. Strata manages YOU.
+• Native SwiftUI
+• Liquid glass dark mode
+• Light/dark/auto appearance
+• Keyboard-first workflow
+• Global shortcuts
+• Always-on-top option
+• Menu bar quick access
 
-Jira shows what your team owes. Monday shows what your company tracks. Strata shows what YOU need to do—across ALL your projects, ALL your clients, ALL your commitments.
+---
 
-Your workflow. Your data. Your control.
+Your AI. Your Mac. Your rules.
 
 **Strata - One layer for all your work.**
 
 ---
 
-## What's New (Release Notes Template)
+## What's New (Release Notes)
 
 ### Version 1.0.0
 
 **Initial Release**
 
-Welcome to Strata - the personal task manager for multi-project professionals!
+Welcome to Strata - your AI productivity utility for Mac!
 
-**Built for Multitaskers:**
-• Manage tasks across multiple clients, companies, and side projects
-• Tag-based organization for project context switching
-• One view across ALL your commitments
+**Inline Enhance (Pro/VIP):**
+• Press ⌘⌥E to enhance text in ANY app
+• Works in Mail, Notes, Slack, Safari, Figma, and 100+ more
+• Like Grammarly, but with YOUR AI models
 
-**Instant Capture:**
-• Global keyboard shortcuts (⌘⇧N) capture tasks from anywhere
-• Quick Entry Panel with title, description, due date, priority, tags
+**AI Modes (Free, Unlimited):**
+• Correct Me - Fix grammar, improve clarity
+• Enhance Prompt - Transform ideas into detailed prompts
+• Explain - Analyze and summarize content
+• Custom modes for your workflow
 
-**AI-Enhanced Clarity:**
-• Built-in modes: Correct Me, Enhance Prompt, Explain
-• Custom AI modes for your workflow
-• BYOK (Bring Your Own Key) - use Gemini, z.ai, or any provider
-• ⌨️ **Inline Enhance (Premium)** - ⌘⌥E enhances text in ANY app instantly
+**BYOK (Bring Your Own Key):**
+• Use Gemini, z.ai, or any compatible provider
+• Keys stored in macOS Keychain
+• Complete privacy and cost control
+
+**Built-in Task Management:**
+• Global capture with ⌘⇧N
+• Tags & filtering
+• List + Calendar views
+• Local storage
+• **NO USAGE LIMITS**
 
 **Local-First Privacy:**
 • 100% local storage on YOUR Mac
-• Optional iCloud sync (your private iCloud)
 • No cloud servers, no tracking, no account required
-• iOS app coming soon with iCloud sync
-
-**Beautiful Mac Design:**
-• Native SwiftUI with liquid glass effects
-• Light, dark, and auto appearance modes
-• Kanban board and list views
-• Always-on-top and menu bar access
 
 Your feedback shapes Strata. Reach out with suggestions!
 
@@ -215,22 +187,19 @@ Your feedback shapes Strata. Reach out with suggestions!
 
 ## Screenshots Needed
 
-Prepare these screenshots for App Store submission:
-
-1. **Hero Shot** - Main window showing multiple project tags, beautiful dark mode
-2. **Multi-Project View** - Demonstrate filtering by client/project
-3. **Quick Capture** - Show global shortcut capturing task from another app
-4. **AI Enhancement** - Before/after text enhancement comparison
-5. **Inline Enhance** - Show ⌘⌥E enhancing text in Mail/Notes/Safari
-6. **Kanban Board** - Visual workflow with project-colored cards
-7. **Privacy Focus** - Settings showing local storage / iCloud options
+1. **Hero Shot** - Main window, dark mode, beautiful UI
+2. **Inline Enhance Demo** - ⌘⌥E enhancing text in Mail
+3. **AI Modes** - Mode selection panel
+4. **Task Management** - List view with tags
+5. **Settings** - BYOK API key configuration
+6. **Privacy** - Local storage settings
 
 ---
 
 ## App Category
 
 **Primary:** Productivity
-**Secondary:** Business
+**Secondary:** Utilities
 
 ---
 
@@ -242,54 +211,40 @@ Prepare these screenshots for App Store submission:
 
 ## Support Links
 
-• **Support URL:** [your-support-page]
-• **Marketing URL:** [your-website]
-• **Privacy Policy URL:** [your-privacy-policy]
+• **Support URL:** kachersoft.com/support
+• **Marketing URL:** kachersoft.com/strata
+• **Privacy Policy URL:** kachersoft.com/privacy
 
 ---
 
 ## Price & Availability
 
 **Free with Premium Features:**
-• Free: Core task management, list view, basic tags, local storage
-• Premium (In-App Purchase): AI enhancement, **Inline Enhance (⌘⌥E system-wide)**, Kanban view, recurring tasks, custom fields, iCloud sync (iOS app included!)
-
-Suggested pricing:
-• Monthly: $4.99
-• Annual: $39.99 (save 33%)
-• Lifetime: $79.99
+• **Free ($0)**: Core features, **NO LIMITS**
+• **Pro ($4.99/month)**: Inline Enhance (⌘⌥E), Kanban, recurring tasks, custom fields, AI attachments
+• **VIP Lifetime ($99.99)**: Everything in Pro + lifetime updates, priority support, early access
 
 ---
 
-## Key Differentiators (for marketing)
+## Key Differentiators
 
-**Strata vs. Jira/Monday/Asana:**
-- Personal, not team-focused
-- Local-first, not cloud-dependent
-- No company email required
-- Your data never leaves your Mac
+**Strata vs. Grammarly:**
+- Works in ANY app (not just browsers)
+- BYOK - your AI models, your costs
+- 100% local, 100% private
+- One-time payment option
 
-**Strata vs. Apple Reminders:**
-- Multi-project organization with tags
-- AI enhancement (your API key, your privacy)
-- Custom fields per task
-- Kanban board view
+**Strata vs. ChatGPT:**
+- No copy-paste needed
+- Works inline in any app
+- Your own API key
+- Complete privacy
 
-**Strata vs. Todoist/Things:**
-- Built for juggling multiple contexts
-- Privacy-first (no cloud account required)
-- AI-enhanced text with custom modes
-- BYOK - Bring Your Own Key (Gemini, z.ai)
-- Project-centric tag design
-
-**Strata's AI Advantage:**
-- **BYOK (Bring Your Own Key)** - Your API key, your cost control
-- **Inline Enhance** - ⌘⌥E enhances text in ANY app (like Grammarly, but with your AI)
-- Nothing sent to us—complete privacy
-- Custom AI modes for your workflow
-- Supports multiple providers (Gemini, z.ai)
-- Perfect for prompt engineers and AI power users
+**Strata vs. Raycast AI:**
+- Focused on text enhancement
+- Simpler, more affordable
+- Task management built-in
 
 ---
 
-*Document updated: February 23, 2026*
+*Document updated: February 25, 2026*

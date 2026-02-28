@@ -1,15 +1,17 @@
-# TaskManager
+# Strata
 
-TaskManager is a macOS task management app with AI enhancement, premium entitlements (Pro + VIP), global shortcuts, and floating productivity panels.
+**Your AI, Anywhere on Your Mac**
+
+Strata is a macOS AI productivity utility with system-wide text enhancement, premium entitlements (Pro + VIP), global shortcuts, and built-in task management.
 
 ## Current Status
 
 - ✅ Core task management: tags, priority, due dates, reminders, photos
-- ✅ Pro features: Kanban, recurring tasks, custom fields
+- ✅ **Free tier: All core features, NO LIMITS** (unlimited AI enhancements in-app)
 - ✅ AI modes + Enhance Me panel
-- ✅ **Inline Enhance** (system-wide text enhancement via customizable global shortcut) — *Premium feature*
-- ✅ AI attachments (image/PDF) for supported premium modes/providers
-- ✅ StoreKit 2 subscriptions + VIP lifetime purchase
+- ✅ **Inline Enhance** (⌘⌥E system-wide text enhancement in ANY app) — *Premium feature*
+- ✅ Pro features: Kanban, recurring tasks, custom fields, AI attachments
+- ✅ DodoPayments licensing (VIP lifetime) + subscriptions (Pro)
 - ✅ Unified entitlement gating (`hasFullAccess`)
 
 ## Quick Start
@@ -56,7 +58,7 @@ TaskManager/
 ├── Sources/TaskManager/
 │   ├── TaskManagerApp.swift          # app entry + window scene
 │   ├── Data/                         # SwiftData models, config, repositories
-│   ├── Services/                     # subscription, notifications, export, storage
+│   ├── Services/                     # entitlements (DodoPayments), notifications, export, storage
 │   ├── AI/                           # providers (Gemini/z.ai), protocol, service, models
 │   ├── Views/                        # main UI + settings + premium UI
 │   ├── Windows/                      # Enhance Me / Quick Entry / Settings windows
@@ -66,11 +68,24 @@ TaskManager/
 
 ## Entitlements
 
-- `Free`: core task features
-- `Pro (subscription)`: premium feature set
-- `VIP (lifetime)`: same feature access as Pro, one-time purchase model
+| Tier | Price | Features |
+|------|-------|----------|
+| **Free** | $0 forever | Task management, list/calendar views, AI modes (unlimited), local storage — **no limits** |
+| **Pro** | $4.99/month | Inline Enhance (⌘⌥E system-wide), Kanban, recurring tasks, custom fields, AI attachments |
+| **VIP** | $99.99 one-time | Everything in Pro + lifetime updates, priority support, early access |
 
-App gating uses `SubscriptionService.hasFullAccess`.
+App gating uses `EntitlementService.hasFullAccess`.
+
+### Dodo API Notes
+
+- The app uses backend-issued signed entitlement tokens (`/v1/entitlements/resolve`) for Pro/VIP restore and validation.
+- Dodo secret API keys must stay server-side (Cloudflare Worker), not in the distributed app.
+- Subscription management uses backend `POST /v1/customer-portal/session` with install-bound proof.
+- Configure backend URLs via app Info.plist keys:
+  - `STRATA_BACKEND_TEST_BASE_URL`
+  - `STRATA_BACKEND_LIVE_BASE_URL`
+- Configure the entitlement verification key via `ENTITLEMENT_PUBLIC_KEY_HEX` (environment variable or Info.plist).
+- `ENTITLEMENT_PUBLIC_KEY_HEX` must match the Worker signing secret `ENTITLEMENT_SIGNING_PRIVATE_KEY` (Ed25519 key pair).
 
 ## AI Attachments
 
@@ -78,9 +93,9 @@ App gating uses `SubscriptionService.hasFullAccess`.
 - Availability is mode + provider capability + entitlement dependent.
 - Attachment size/count limits are enforced in-app.
 
-## Inline Enhance (System-Wide) — Developer ID Branch
+## Inline Enhance (System-Wide) — Pro/VIP Feature
 
-The `feature/inline-enhance-system-wide` branch adds **system-wide inline AI text enhancement** — press ⌘⌥E in any app's text field to enhance text in-place (like Grammarly).
+The **killer feature**: system-wide inline AI text enhancement. Press ⌘⌥E in any app's text field to enhance text in-place (like Grammarly, but with YOUR AI models).
 
 > ⚠️ This version disables App Sandbox (required for Accessibility API) and is distributed via **Developer ID only**, not the App Store.
 
@@ -113,7 +128,7 @@ open ../build/Debug/TaskManager.app
 
 - macOS 15+ (Sequoia)
 - Xcode 16+
-- Swift 6.0+
+- Swift 6.2+
 
 ## Component Library
 

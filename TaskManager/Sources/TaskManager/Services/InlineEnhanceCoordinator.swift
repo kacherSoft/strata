@@ -56,7 +56,7 @@ final class InlineEnhanceCoordinator: ObservableObject {
         }
         
         // 4. Check subscription
-        guard SubscriptionService.shared.hasFullAccess else {
+        guard EntitlementService.shared.hasFullAccess else {
             showHUD(modeName: mode.name, state: .error("Pro required"))
             scheduleDismiss(after: 3.0)
             return

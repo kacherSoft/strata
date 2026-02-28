@@ -22,6 +22,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Don't force window to front here - let WindowManager handle it
         // This prevents fighting with moveToActiveSpace behavior
     }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        Task { @MainActor in
+            for url in urls {
+                await EntitlementService.shared.handleOpenURL(url)
+            }
+            // Keep checkout callback on the current window when one already exists.
+            WindowManager.shared.focusMainWindowIfPresent()
+        }
+    }
     
     @MainActor
     private func applySettingsOnLaunch() {
@@ -67,7 +81,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var subscriptionService = SubscriptionService.shared
     let container: ModelContainer?
     private let menuBarController = MenuBarController()
 
@@ -118,7 +131,7 @@ struct TaskManagerApp: App {
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
-    @EnvironmentObject private var subscriptionService: SubscriptionService
+    @Environment(EntitlementService.self) var entitlementService
     @Query(sort: \TaskModel.createdAt, order: .reverse) private var taskModels: [TaskModel]
     @Query(sort: \CustomFieldDefinitionModel.sortOrder) private var customFieldDefinitions: [CustomFieldDefinitionModel]
     @Query private var customFieldValues: [CustomFieldValueModel]
@@ -154,7 +167,7 @@ struct ContentView: View {
                     get: { viewMode == .kanban },
                     set: { viewMode = $0 ? .kanban : .list }
                 ),
-                showsKanbanPremiumBadge: !subscriptionService.canUse(.kanban)
+                showsKanbanPremiumBadge: !entitlementService.canUse(.kanban)
             )
             .frame(minWidth: 220, idealWidth: 260)
             .onChange(of: selectedTag) { _, newValue in
@@ -198,7 +211,7 @@ struct ContentView: View {
                     selectedDate: selectedDate,
                     dateFilterMode: dateFilterMode,
                     selectedPriority: selectedPriority,
-                    recurringFeatureEnabled: subscriptionService.canUse(.recurringTasks),
+                    recurringFeatureEnabled: entitlementService.canUse(.recurringTasks),
                     activeCustomFieldDefinitions: activeCustomFieldDefinitions,
                     availableTags: allTags,
                     onToggleComplete: { taskItem in
@@ -250,7 +263,7 @@ struct ContentView: View {
                     }
                 )
             } else {
-                if subscriptionService.canUse(.kanban) {
+                if entitlementService.canUse(.kanban) {
                     KanbanBoardView(
                         tasks: filteredTaskItems,
                         onStatusChange: { taskID, newStatus in
@@ -273,7 +286,7 @@ struct ContentView: View {
         .sheet(isPresented: $showNewTaskSheet) {
             NewTaskSheet(
                 isPresented: $showNewTaskSheet,
-                recurringFeatureEnabled: subscriptionService.canUse(.recurringTasks),
+                recurringFeatureEnabled: entitlementService.canUse(.recurringTasks),
                 activeCustomFieldDefinitions: activeCustomFieldDefinitions,
                 availableTags: allTags,
                 onPickPhotos: { completion in
