@@ -7,6 +7,7 @@ import { AppError, handleError, generateRequestId } from "../errors.js";
 import { DodoClient } from "../dodo-client.js";
 import { verifyInstallProof } from "../install-proof.js";
 import { requireEmail, requireNonEmptyString, requireUUID } from "../validation.js";
+import { requireAuthSession } from "../auth.js";
 
 export async function handlePortalSession(
     request: Request,
@@ -22,7 +23,15 @@ export async function handlePortalSession(
             throw new AppError(400, "INVALID_BODY", "Request body must be valid JSON");
         }
 
-        const email = requireEmail(body.email);
+        const principal = await requireAuthSession(request, env);
+        if (body.email && requireEmail(body.email) !== principal.email) {
+            throw new AppError(
+                403,
+                "ACCOUNT_MISMATCH",
+                "Portal email must match the signed-in account",
+            );
+        }
+        const email = principal.email;
         const installId = requireUUID(body.install_id, "install_id", "INVALID_INSTALL_ID");
         const challengeId = requireNonEmptyString(
             body.challenge_id,

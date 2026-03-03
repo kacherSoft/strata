@@ -30,6 +30,14 @@ export interface CheckoutSessionLookupResult {
     paymentStatus: string | null;
 }
 
+export interface PaymentLookupResult {
+    status: string | null;
+    customerEmail: string | null;
+    customerId: string | null;
+    productIds: string[];
+    checkoutSessionId: string | null;
+}
+
 /**
  * Server-side client for Dodo Payments API.
  * Uses the secret API key stored in Worker secrets.
@@ -153,6 +161,49 @@ export class DodoClient {
             );
 
             return { customerEmail, customerId, paymentId, paymentStatus };
+        } catch (error) {
+            if (error instanceof AppError && error.statusCode === 404) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Resolve payment details required for VIP one-time restore fallback.
+     */
+    async getPayment(paymentId: string): Promise<PaymentLookupResult | null> {
+        const normalizedPaymentId = paymentId.trim();
+        if (!normalizedPaymentId) return null;
+
+        const url = `${this.baseURL}/payments/${encodeURIComponent(normalizedPaymentId)}`;
+
+        try {
+            const data = await this.get<Record<string, unknown>>(url);
+            const customer = this.asRecord(data.customer);
+            const productCart = Array.isArray(data.product_cart) ? data.product_cart : [];
+            const productIds = productCart
+                .map((item) => this.asRecord(item))
+                .map((item) => this.normalizeString(this.readString(item?.product_id) ?? ""))
+                .filter((value): value is string => Boolean(value));
+
+            const status = this.normalizeLowercaseString(this.readString(data.status) ?? "");
+            const customerEmail = this.normalizeEmail(
+                this.readString(data.customer_email) ??
+                this.readString(customer?.email) ??
+                "",
+            );
+            const customerId = this.normalizeString(
+                this.readString(data.customer_id) ??
+                this.readString(customer?.customer_id) ??
+                "",
+            );
+            const checkoutSessionId = this.normalizeString(
+                this.readString(data.checkout_session_id) ??
+                "",
+            );
+
+            return { status, customerEmail, customerId, productIds, checkoutSessionId };
         } catch (error) {
             if (error instanceof AppError && error.statusCode === 404) {
                 return null;

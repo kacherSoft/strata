@@ -258,5 +258,64 @@ describe("projector", () => {
             expect(runSql.some((sql) => sql.includes("INSERT INTO entitlements"))).toBe(true);
             expect(runSql.some((sql) => sql.includes("status = 'processed'"))).toBe(true);
         });
+
+        it("should mirror processed email entitlement into user_entitlements when user exists", async () => {
+            const runSql: string[] = [];
+
+            const env: Env = {
+                STRATA_DB: {
+                    prepare(sql: string) {
+                        return {
+                            bind() {
+                                return this;
+                            },
+                            async first() {
+                                if (sql.includes("FROM entitlements e")) {
+                                    return null;
+                                }
+                                if (sql.includes("FROM users")) {
+                                    return { id: "user_abc" };
+                                }
+                                if (
+                                    sql.includes("FROM entitlements") &&
+                                    sql.includes("subject_type = 'email'")
+                                ) {
+                                    return {
+                                        tier: "pro",
+                                        state: "active",
+                                        source_event_id: "wh_sync_prev",
+                                        effective_from: "2026-02-28T00:00:00Z",
+                                        effective_until: "2026-03-28T00:00:00Z",
+                                    };
+                                }
+                                return null;
+                            },
+                            async run() {
+                                runSql.push(sql);
+                                return { success: true, meta: { changes: 1 } };
+                            },
+                        };
+                    },
+                } as unknown as D1Database,
+                DODO_API_KEY: "test",
+                DODO_WEBHOOK_SECRET: "test",
+                ENTITLEMENT_SIGNING_PRIVATE_KEY: "test",
+                ENVIRONMENT: "test",
+                DODO_BASE_URL: "https://test.dodopayments.com",
+                TOKEN_TTL_SECONDS: "3600",
+            };
+
+            await processWebhookEvent(
+                env,
+                "wh_sync_new",
+                "subscription.active",
+                { data: { customer_email: "sync@example.com" } },
+                "300",
+            );
+
+            expect(runSql.some((sql) => sql.includes("INSERT INTO entitlements"))).toBe(true);
+            expect(runSql.some((sql) => sql.includes("INSERT INTO user_entitlements"))).toBe(true);
+            expect(runSql.some((sql) => sql.includes("status = 'processed'"))).toBe(true);
+        });
     });
 });

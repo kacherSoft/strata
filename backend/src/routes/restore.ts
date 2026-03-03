@@ -10,6 +10,12 @@ import { signToken } from "../signing.js";
 import { parseTokenTTLSeconds } from "../config.js";
 import { verifyInstallProof } from "../install-proof.js";
 import { requireEmail, requireNonEmptyString, requireUUID } from "../validation.js";
+import { authRequiredForRestore, optionalAuthSession, requireAuthSession } from "../auth.js";
+import {
+    ensureDeviceSeat,
+    resolveTierForUser,
+    upsertUserEntitlement,
+} from "../user-entitlements.js";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -67,6 +73,12 @@ const SUCCESSFUL_CHECKOUT_PAYMENT_STATUSES: ReadonlySet<string> = new Set<string
     "active",
 ]);
 
+interface InstallLinkRow {
+    customer_email: string | null;
+    checkout_session_id: string | null;
+    customer_id: string | null;
+}
+
 function normalizeEmailCandidate(value: string | null | undefined): string | null {
     if (!value) return null;
     try {
@@ -93,32 +105,38 @@ async function persistLinkedCustomer(
         .run();
 }
 
-async function inferEmailForInstall(
+async function loadInstallLinkRow(
     env: Env,
     installId: string,
-    dodo: DodoClient,
-    requestId: string,
-): Promise<string | null> {
-    const row = await env.STRATA_DB.prepare(
-        `SELECT customer_email, checkout_session_id
+): Promise<InstallLinkRow | null> {
+    return await env.STRATA_DB.prepare(
+        `SELECT customer_email, checkout_session_id, customer_id
          FROM purchase_links
          WHERE install_id = ?
          ORDER BY updated_at DESC, id DESC
          LIMIT 1`,
     )
         .bind(installId)
-        .first<{ customer_email: string | null; checkout_session_id: string | null }>();
+        .first<InstallLinkRow>();
+}
 
-    if (!row) {
+async function inferEmailForInstall(
+    env: Env,
+    installId: string,
+    installLink: InstallLinkRow | null,
+    dodo: DodoClient,
+    requestId: string,
+): Promise<string | null> {
+    if (!installLink) {
         return null;
     }
 
-    const linkedEmail = normalizeEmailCandidate(row.customer_email);
+    const linkedEmail = normalizeEmailCandidate(installLink.customer_email);
     if (linkedEmail) {
         return linkedEmail;
     }
 
-    const checkoutSessionId = readString(row.checkout_session_id);
+    const checkoutSessionId = readString(installLink.checkout_session_id);
     if (!checkoutSessionId) {
         return null;
     }
@@ -173,6 +191,96 @@ async function inferEmailForInstall(
     return null;
 }
 
+async function tryRestoreVipFromLinkedCheckout(
+    env: Env,
+    installId: string,
+    email: string,
+    installLink: InstallLinkRow | null,
+    dodo: DodoClient,
+    requestId: string,
+): Promise<boolean> {
+    const checkoutSessionId = readString(installLink?.checkout_session_id);
+    if (!checkoutSessionId) return false;
+
+    let checkout = null;
+    try {
+        checkout = await dodo.getCheckoutSession(checkoutSessionId);
+    } catch (error) {
+        console.error(
+            `[${requestId}] restore checkout lookup failed checkout_session_id=${checkoutSessionId}:`,
+            error,
+        );
+        return false;
+    }
+
+    if (!checkout?.paymentStatus || !SUCCESSFUL_CHECKOUT_PAYMENT_STATUSES.has(checkout.paymentStatus)) {
+        return false;
+    }
+
+    const paymentId = readString(checkout.paymentId);
+    if (!paymentId) {
+        return false;
+    }
+
+    let payment = null;
+    try {
+        payment = await dodo.getPayment(paymentId);
+    } catch (error) {
+        console.error(
+            `[${requestId}] restore payment lookup failed payment_id=${paymentId}:`,
+            error,
+        );
+        return false;
+    }
+
+    if (!payment?.status || !SUCCESSFUL_CHECKOUT_PAYMENT_STATUSES.has(payment.status)) {
+        return false;
+    }
+
+    if (!payment.productIds.includes(PRODUCT_IDS.vipLifetime)) {
+        return false;
+    }
+
+    const paymentCustomerEmail = normalizeEmailCandidate(payment.customerEmail);
+    if (paymentCustomerEmail && paymentCustomerEmail !== email) {
+        console.warn(
+            `[${requestId}] restore payment customer mismatch email=${email} payment_email=${paymentCustomerEmail}`,
+        );
+        return false;
+    }
+
+    const linkedCustomerId = readString(installLink?.customer_id);
+    const paymentCustomerId = readString(payment.customerId);
+    if (linkedCustomerId && paymentCustomerId && linkedCustomerId !== paymentCustomerId) {
+        console.warn(
+            `[${requestId}] restore payment customer mismatch customer_id=${linkedCustomerId} payment_customer_id=${paymentCustomerId}`,
+        );
+        return false;
+    }
+
+    await persistLinkedCustomer(
+        env,
+        installId,
+        paymentCustomerEmail ?? email,
+        paymentCustomerId,
+    ).catch(() => { });
+
+    await env.STRATA_DB.prepare(
+        `INSERT INTO entitlements (subject_type, subject_id, tier, state, source_event_id, effective_from, updated_at)
+         VALUES ('email', ?, 'vip', 'active', ?, datetime('now'), datetime('now'))
+         ON CONFLICT(subject_type, subject_id) DO UPDATE SET
+           tier = 'vip',
+           state = 'active',
+           source_event_id = excluded.source_event_id,
+           effective_from = COALESCE(excluded.effective_from, entitlements.effective_from),
+           updated_at = datetime('now')`,
+    )
+        .bind(email, `restore-payment-${requestId}`)
+        .run();
+
+    return true;
+}
+
 export async function handleRestore(
     request: Request,
     env: Env,
@@ -201,15 +309,35 @@ export async function handleRestore(
 
         const proof = await verifyInstallProof(env, installId, challengeId, nonceSignature);
 
+        const principal = authRequiredForRestore(env)
+            ? await requireAuthSession(request, env)
+            : await optionalAuthSession(request, env);
+
         const dodo = new DodoClient(env);
+        const installLink = await loadInstallLinkRow(env, installId);
         let email: string | null = null;
-        if (typeof body.email === "string" && body.email.trim()) {
+        if (principal) {
+            if (typeof body.email === "string" && body.email.trim()) {
+                const requestedEmail = requireEmail(body.email);
+                if (requestedEmail !== principal.email) {
+                    throw new AppError(
+                        403,
+                        "ACCOUNT_MISMATCH",
+                        "Restore email must match the signed-in account",
+                    );
+                }
+            }
+            email = principal.email;
+        } else if (typeof body.email === "string" && body.email.trim()) {
             email = requireEmail(body.email);
         } else {
-            email = await inferEmailForInstall(env, installId, dodo, requestId);
+            email = await inferEmailForInstall(env, installId, installLink, dodo, requestId);
         }
 
         if (!email) {
+            if (authRequiredForRestore(env)) {
+                throw new AppError(401, "AUTH_REQUIRED", "Sign in is required to restore purchases");
+            }
             throw new AppError(
                 400,
                 "INVALID_EMAIL",
@@ -221,31 +349,68 @@ export async function handleRestore(
         let restoreType: RestoreResponse["restore_type"] = "none";
         let tier: "free" | "pro" | "vip" = "free";
 
-        // Step 1: Check local entitlement store
-        const localEntitlement = await env.STRATA_DB.prepare(
-            "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
-        )
-            .bind(email)
-            .first<{ tier: string; state: string }>();
-
-        if (localEntitlement) {
-            tier = localEntitlement.tier as "free" | "pro" | "vip";
-            restoreType = tier === "vip" ? "lifetime" : "subscription";
-        }
-
-        // Step 2: If not found locally, check via Dodo API
-        if (tier === "free") {
-            // Check for active subscription
-            const subscription = await dodo.findActiveSubscription(email);
-            if (subscription) {
-                tier = "pro";
+        if (principal) {
+            const resolved = await resolveTierForUser(env, {
+                userId: principal.userId,
+                email: principal.email,
+                dodo,
+                allowProviderFallback: true,
+            });
+            tier = resolved.tier;
+            if (tier === "vip") {
+                restoreType = "lifetime";
+            } else if (tier === "pro") {
                 restoreType = "subscription";
+            }
+        } else {
+            // Legacy path while auth hardening rollout is in progress.
+            const localEntitlement = await env.STRATA_DB.prepare(
+                "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
+            )
+                .bind(email)
+                .first<{ tier: string; state: string }>();
+
+            if (localEntitlement) {
+                tier = localEntitlement.tier as "free" | "pro" | "vip";
+                restoreType = tier === "vip" ? "lifetime" : "subscription";
+            }
+
+            if (tier === "free") {
+                const subscription = await dodo.findActiveSubscription(email);
+                if (subscription) {
+                    tier = "pro";
+                    restoreType = "subscription";
+                }
             }
         }
 
-        // Step 3: If a license key was provided and we still haven't found anything, try activating it
+        // Step 3: VIP fallback for one-time checkout when webhook/license projection is delayed
+        if (tier !== "vip") {
+            const restoredFromVipPayment = await tryRestoreVipFromLinkedCheckout(
+                env,
+                installId,
+                email,
+                installLink,
+                dodo,
+                requestId,
+            );
+            if (restoredFromVipPayment) {
+                tier = "vip";
+                restoreType = "lifetime";
+                if (principal) {
+                    await upsertUserEntitlement(env, {
+                        userId: principal.userId,
+                        tier: "vip",
+                        state: "active",
+                        sourceEventId: `restore-payment-${requestId}`,
+                    });
+                }
+            }
+        }
+
+        // Step 4: If a license key was provided and we still haven't found VIP, try activating it
         const trimmedLicenseKey = body.license_key?.trim();
-        if (tier === "free" && trimmedLicenseKey) {
+        if (tier !== "vip" && trimmedLicenseKey) {
             try {
                 const licenseUrl = `${env.DODO_BASE_URL}/licenses/activate`;
                 const licenseResponse = await fetch(licenseUrl, {
@@ -288,6 +453,15 @@ export async function handleRestore(
                         )
                             .bind(email, `restore-${requestId}`)
                             .run();
+
+                        if (principal) {
+                            await upsertUserEntitlement(env, {
+                                userId: principal.userId,
+                                tier: "vip",
+                                state: "active",
+                                sourceEventId: `restore-${requestId}`,
+                            });
+                        }
                     }
                 } else {
                     const providerBody = await licenseResponse.text().catch(() => "");
@@ -304,10 +478,19 @@ export async function handleRestore(
             }
         }
 
+        if (principal && tier !== "free") {
+            await ensureDeviceSeat(env, {
+                userId: principal.userId,
+                installId,
+                tier,
+            });
+        }
+
         // Sign token with determined tier
         const token = await signToken({
             tier,
             sub: email,
+            uid: principal?.userId,
             installId,
             ttlSeconds: ttl,
             privateKeyHex: env.ENTITLEMENT_SIGNING_PRIVATE_KEY,
@@ -326,6 +509,17 @@ export async function handleRestore(
                 .bind(installId, email)
                 .run()
                 .catch(() => { }); // Best-effort
+
+            if (principal) {
+                await upsertUserEntitlement(env, {
+                    userId: principal.userId,
+                    tier,
+                    state: "active",
+                    sourceEventId: `restore-${requestId}`,
+                }).catch(() => {
+                    // Best effort; restore token is still issued.
+                });
+            }
         }
 
         const response: RestoreResponse = {

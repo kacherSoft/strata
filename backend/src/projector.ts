@@ -298,6 +298,61 @@ async function linkPurchaseRecord(
     }
 }
 
+async function syncUserEntitlementForEmail(
+    env: Env,
+    email: string,
+    fallbackSourceEventId: string,
+): Promise<void> {
+    const user = await env.STRATA_DB.prepare(
+        `SELECT id
+         FROM users
+         WHERE email_normalized = ?
+         LIMIT 1`,
+    )
+        .bind(email)
+        .first<{ id: string }>();
+
+    if (!user?.id) return;
+
+    const entitlement = await env.STRATA_DB.prepare(
+        `SELECT tier, state, source_event_id, effective_from, effective_until
+         FROM entitlements
+         WHERE subject_type = 'email' AND subject_id = ?
+         LIMIT 1`,
+    )
+        .bind(email)
+        .first<{
+            tier: string;
+            state: string;
+            source_event_id: string | null;
+            effective_from: string | null;
+            effective_until: string | null;
+        }>();
+
+    if (!entitlement) return;
+
+    await env.STRATA_DB.prepare(
+        `INSERT INTO user_entitlements (user_id, tier, state, source_event_id, effective_from, effective_until, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(user_id) DO UPDATE SET
+           tier = excluded.tier,
+           state = excluded.state,
+           source_event_id = excluded.source_event_id,
+           effective_from = COALESCE(excluded.effective_from, user_entitlements.effective_from),
+           effective_until = COALESCE(excluded.effective_until, user_entitlements.effective_until),
+           updated_at = datetime('now')`,
+    )
+        .bind(
+            user.id,
+            entitlement.tier,
+            entitlement.state,
+            entitlement.source_event_id || fallbackSourceEventId,
+            entitlement.effective_from,
+            entitlement.effective_until,
+        )
+        .run();
+}
+
 async function resolveCustomerEmail(
     env: Env,
     data: Record<string, unknown>,
@@ -464,6 +519,12 @@ export async function processWebhookEvent(
                 projection.effectiveUntil || null,
             )
             .run();
+    }
+
+    if (projection.subjectType === "email") {
+        await syncUserEntitlementForEmail(env, projection.subjectId, webhookId).catch((error) => {
+            console.error(`[projector] user entitlement sync failed for ${webhookId}:`, error);
+        });
     }
 
     await env.STRATA_DB.prepare(

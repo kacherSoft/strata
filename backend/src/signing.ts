@@ -62,6 +62,7 @@ function base64urlDecode(str: string): Uint8Array {
 export interface SignTokenParams {
     tier: Tier;
     sub: string;
+    uid?: string;
     installId: string;
     ttlSeconds: number;
     privateKeyHex: string;
@@ -83,6 +84,10 @@ export async function signToken(params: SignTokenParams): Promise<string> {
         exp: now + params.ttlSeconds,
         jti: crypto.randomUUID(),
     };
+
+    if (params.uid) {
+        claims.uid = params.uid;
+    }
 
     if (params.installPubkeyHash) {
         claims.install_pubkey_hash = params.installPubkeyHash;

@@ -17,6 +17,7 @@ const TEST_PRIVATE_KEY_HEX = "9d61b19deffd5a60ba844af492ec2cc44449c5697b32691970
 let mockLocalEntitlement: { tier: string; state: string } | null = null;
 let mockInstallLinkedEmail: string | null = null;
 let mockInstallLinkedCheckoutId: string | null = null;
+let mockInstallLinkedCustomerId: string | null = null;
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
     return {
@@ -29,12 +30,17 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
                             return mockLocalEntitlement;
                         }
                         if (sql.includes("FROM purchase_links")) {
-                            if (!mockInstallLinkedEmail && !mockInstallLinkedCheckoutId) {
+                            if (
+                                !mockInstallLinkedEmail &&
+                                !mockInstallLinkedCheckoutId &&
+                                !mockInstallLinkedCustomerId
+                            ) {
                                 return null;
                             }
                             return {
                                 customer_email: mockInstallLinkedEmail,
                                 checkout_session_id: mockInstallLinkedCheckoutId,
+                                customer_id: mockInstallLinkedCustomerId,
                             };
                         }
                         return null;
@@ -50,6 +56,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
         ENVIRONMENT: "test",
         DODO_BASE_URL: "https://test.dodopayments.com",
         TOKEN_TTL_SECONDS: "3600",
+        AUTH_REQUIRED_FOR_RESTORE: "false",
         ...overrides,
     };
 }
@@ -76,6 +83,7 @@ describe("POST /v1/purchases/restore", () => {
         mockLocalEntitlement = null;
         mockInstallLinkedEmail = null;
         mockInstallLinkedCheckoutId = null;
+        mockInstallLinkedCustomerId = null;
         vi.mocked(verifyInstallProof).mockResolvedValue({
             installPubkeyHash: "test_install_pubkey_hash",
         });
@@ -237,6 +245,16 @@ describe("POST /v1/purchases/restore", () => {
         mockFetch.mockResolvedValueOnce(
             new Response(JSON.stringify({ items: [] }), { status: 200 }),
         );
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    checkout_id: "cks_123",
+                    customer_email: "checkout@example.com",
+                    payment_status: "succeeded",
+                }),
+                { status: 200 },
+            ),
+        );
 
         const req = makeRequest({
             install_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -251,5 +269,113 @@ describe("POST /v1/purchases/restore", () => {
         const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
         const claims = await verifyToken(body.token, pubKey);
         expect(claims.sub).toBe("checkout@example.com");
+    });
+
+    it("should restore VIP from successful linked checkout payment without license key", async () => {
+        mockInstallLinkedCheckoutId = "cks_vip";
+        mockInstallLinkedCustomerId = "cus_vip";
+        mockFetch.mockResolvedValueOnce(
+            new Response(JSON.stringify({ items: [] }), { status: 200 }),
+        );
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    checkout_id: "cks_vip",
+                    payment_id: "pay_vip",
+                    payment_status: "succeeded",
+                    customer_email: "vip@example.com",
+                    customer_id: "cus_vip",
+                }),
+                { status: 200 },
+            ),
+        );
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    payment_id: "pay_vip",
+                    status: "succeeded",
+                    customer: {
+                        customer_id: "cus_vip",
+                        email: "vip@example.com",
+                    },
+                    product_cart: [{ product_id: PRODUCT_IDS.vipLifetime, quantity: 1 }],
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const req = makeRequest({
+            email: "vip@example.com",
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+        });
+        const res = await handleRestore(req, makeEnv());
+        expect(res.status).toBe(200);
+
+        const body: any = await res.json();
+        expect(body.restore_type).toBe("lifetime");
+
+        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
+        const claims = await verifyToken(body.token, pubKey);
+        expect(claims.tier).toBe("vip");
+        expect(claims.sub).toBe("vip@example.com");
+    });
+
+    it("should not restore VIP from linked checkout when payment product is not VIP", async () => {
+        mockInstallLinkedCheckoutId = "cks_nonvip";
+        mockInstallLinkedCustomerId = "cus_nonvip";
+        mockFetch.mockResolvedValueOnce(
+            new Response(JSON.stringify({ items: [] }), { status: 200 }),
+        );
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    checkout_id: "cks_nonvip",
+                    payment_id: "pay_nonvip",
+                    payment_status: "succeeded",
+                    customer_email: "user@example.com",
+                    customer_id: "cus_nonvip",
+                }),
+                { status: 200 },
+            ),
+        );
+        mockFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    payment_id: "pay_nonvip",
+                    status: "succeeded",
+                    customer: {
+                        customer_id: "cus_nonvip",
+                        email: "user@example.com",
+                    },
+                    product_cart: [{ product_id: PRODUCT_IDS.proMonthly, quantity: 1 }],
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const req = makeRequest({
+            email: "user@example.com",
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+        });
+        const res = await handleRestore(req, makeEnv());
+        expect(res.status).toBe(200);
+
+        const body: any = await res.json();
+        expect(body.restore_type).toBe("none");
+
+        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
+        const claims = await verifyToken(body.token, pubKey);
+        expect(claims.tier).toBe("free");
+    });
+
+    it("should require auth when AUTH_REQUIRED_FOR_RESTORE is enabled", async () => {
+        const req = makeRequest({
+            email: "vip@example.com",
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+        });
+        const res = await handleRestore(req, makeEnv({ AUTH_REQUIRED_FOR_RESTORE: "true" }));
+        expect(res.status).toBe(401);
+        const body: any = await res.json();
+        expect(body.error_code).toBe("AUTH_REQUIRED");
     });
 });

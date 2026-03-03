@@ -35,6 +35,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
         ENVIRONMENT: "test",
         DODO_BASE_URL: "https://test.dodopayments.com",
         TOKEN_TTL_SECONDS: "3600",
+        AUTH_REQUIRED_FOR_RESOLVE: "false",
         ...overrides,
     };
 }
@@ -231,5 +232,19 @@ describe("POST /v1/entitlements/resolve", () => {
         const body = await res.json() as { request_id: string };
         expect(body.request_id).toBeDefined();
         expect(body.request_id.length).toBeGreaterThan(0);
+    });
+
+    it("should require auth when AUTH_REQUIRED_FOR_RESOLVE is enabled", async () => {
+        mockFetch.mockResolvedValueOnce(
+            new Response(JSON.stringify({ items: [] }), { status: 200 }),
+        );
+        const req = makeRequest({
+            email: "free@example.com",
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+        });
+        const res = await handleResolve(req, makeEnv({ AUTH_REQUIRED_FOR_RESOLVE: "true" }));
+        expect(res.status).toBe(401);
+        const body = await res.json() as { error_code: string };
+        expect(body.error_code).toBe("AUTH_REQUIRED");
     });
 });

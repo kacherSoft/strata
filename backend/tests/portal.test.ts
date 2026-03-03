@@ -11,20 +11,50 @@ import { verifyInstallProof } from "../src/install-proof.js";
 import type { Env } from "../src/types.js";
 
 let hasPurchaseLink = true;
+let hasValidSession = true;
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
     const mockStatement = {
         bind: () => mockStatement,
         first: async () => {
+            if (hasValidSession) {
+                return {
+                    session_id: "sess_1",
+                    user_id: "usr_1",
+                    expires_at: Math.floor(Date.now() / 1000) + 3600,
+                    email_normalized: "pro@example.com",
+                };
+            }
             if (hasPurchaseLink) return { id: 1 };
             return null;
         },
-        run: async () => ({ success: true }),
+        run: async () => ({ success: true, meta: { changes: 1 } }),
     };
 
     return {
         STRATA_DB: {
-            prepare: () => mockStatement,
+            prepare: (sql: string) => {
+                const stmt = {
+                    bind: () => stmt,
+                    first: async () => {
+                        if (sql.includes("FROM account_sessions")) {
+                            if (!hasValidSession) return null;
+                            return {
+                                session_id: "sess_1",
+                                user_id: "usr_1",
+                                expires_at: Math.floor(Date.now() / 1000) + 3600,
+                                email_normalized: "pro@example.com",
+                            };
+                        }
+                        if (sql.includes("FROM purchase_links")) {
+                            return hasPurchaseLink ? { id: 1 } : null;
+                        }
+                        return null;
+                    },
+                    run: async () => ({ success: true, meta: { changes: 1 } }),
+                };
+                return stmt;
+            },
         } as unknown as D1Database,
         DODO_API_KEY: "test-api-key",
         DODO_WEBHOOK_SECRET: "test-webhook-secret",
@@ -36,7 +66,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     };
 }
 
-function makeRequest(body: Record<string, unknown>): Request {
+function makeRequest(body: Record<string, unknown>, withAuth = true): Request {
     const payload = {
         email: "pro@example.com",
         install_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -45,9 +75,16 @@ function makeRequest(body: Record<string, unknown>): Request {
         ...body,
     };
 
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+    };
+    if (withAuth) {
+        headers.Authorization = "Bearer session_token";
+    }
+
     return new Request("https://api.test/v1/customer-portal/session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
     });
 }
@@ -59,6 +96,7 @@ describe("POST /v1/customer-portal/session", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         hasPurchaseLink = true;
+        hasValidSession = true;
         vi.mocked(verifyInstallProof).mockResolvedValue({ installPubkeyHash: "test_hash" });
 
         // Dodo customer lookup + portal session
@@ -78,6 +116,14 @@ describe("POST /v1/customer-portal/session", () => {
                 { status: 200 },
             ),
         );
+    });
+
+    it("requires auth session", async () => {
+        const req = makeRequest({}, false);
+        const res = await handlePortalSession(req, makeEnv());
+        expect(res.status).toBe(401);
+        const body = await res.json() as { error_code: string };
+        expect(body.error_code).toBe("AUTH_REQUIRED");
     });
 
     it("should require install proof fields", async () => {

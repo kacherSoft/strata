@@ -9,6 +9,8 @@ import { signToken } from "../signing.js";
 import { parseTokenTTLSeconds } from "../config.js";
 import { verifyInstallProof } from "../install-proof.js";
 import { requireEmail, requireNonEmptyString, requireUUID } from "../validation.js";
+import { authRequiredForResolve, optionalAuthSession, requireAuthSession } from "../auth.js";
+import { ensureDeviceSeat, resolveTierForUser } from "../user-entitlements.js";
 
 // ---------------------------------------------------------------------------
 // D1-backed rate limiter (shared across Worker isolates)
@@ -103,7 +105,6 @@ export async function handleResolve(
             throw new AppError(400, "INVALID_BODY", "Request body must be valid JSON");
         }
 
-        const email = requireEmail(body.email);
         const installId = requireUUID(body.install_id, "install_id", "INVALID_INSTALL_ID");
         const challengeId = requireNonEmptyString(
             body.challenge_id,
@@ -124,28 +125,65 @@ export async function handleResolve(
         // Require install-bound proof before issuing entitlements.
         const proof = await verifyInstallProof(env, installId, challengeId, nonceSignature);
 
+        const principal = authRequiredForResolve(env)
+            ? await requireAuthSession(request, env)
+            : await optionalAuthSession(request, env);
+
+        let email: string;
+        if (principal) {
+            if (body.email && requireEmail(body.email) !== principal.email) {
+                throw new AppError(
+                    403,
+                    "ACCOUNT_MISMATCH",
+                    "Resolve email must match the signed-in account",
+                );
+            }
+            email = principal.email;
+        } else {
+            if (authRequiredForResolve(env)) {
+                throw new AppError(401, "AUTH_REQUIRED", "Sign in is required to resolve entitlements");
+            }
+            email = requireEmail(body.email);
+        }
+
         // -------------------------------------------------------------------
         // Phase 2: Local entitlement store first, Dodo API fallback
         // -------------------------------------------------------------------
         let tier: "free" | "pro" | "vip" = "free";
         let source: "store" | "fallback" = "fallback";
 
-        // Try local D1 store first
-        const localEntitlement = await env.STRATA_DB.prepare(
-            "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
-        )
-            .bind(email)
-            .first<{ tier: string; state: string }>();
-
-        if (localEntitlement) {
-            tier = localEntitlement.tier as typeof tier;
-            source = "store";
-        } else {
-            // Fallback to Dodo API
+        if (principal) {
             const dodo = new DodoClient(env);
-            const subscription = await dodo.findActiveSubscription(email);
-            tier = subscription ? "pro" : "free";
-            source = "fallback";
+            const resolved = await resolveTierForUser(env, {
+                userId: principal.userId,
+                email: principal.email,
+                dodo,
+                allowProviderFallback: !authRequiredForResolve(env),
+            });
+            tier = resolved.tier;
+            source = resolved.source === "provider" ? "fallback" : "store";
+            await ensureDeviceSeat(env, {
+                userId: principal.userId,
+                installId,
+                tier,
+            });
+        } else {
+            // Legacy fallback (disabled once AUTH_REQUIRED_FOR_RESOLVE=true in all envs)
+            const localEntitlement = await env.STRATA_DB.prepare(
+                "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
+            )
+                .bind(email)
+                .first<{ tier: string; state: string }>();
+
+            if (localEntitlement) {
+                tier = localEntitlement.tier as typeof tier;
+                source = "store";
+            } else {
+                const dodo = new DodoClient(env);
+                const subscription = await dodo.findActiveSubscription(email);
+                tier = subscription ? "pro" : "free";
+                source = "fallback";
+            }
         }
 
         console.log(`[${requestId}] resolve: email=${email} tier=${tier} source=${source}`);
@@ -155,6 +193,7 @@ export async function handleResolve(
         const token = await signToken({
             tier,
             sub: email,
+            uid: principal?.userId,
             installId,
             ttlSeconds: ttl,
             privateKeyHex: env.ENTITLEMENT_SIGNING_PRIVATE_KEY,

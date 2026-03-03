@@ -11,6 +11,11 @@ import { handleCheckoutSession } from "./routes/checkout.js";
 import { handleInstallRegister } from "./routes/install.js";
 import { handleInstallChallenge } from "./routes/challenge.js";
 import { handleRestore } from "./routes/restore.js";
+import { handleAuthEmailStart } from "./routes/auth-start.js";
+import { handleAuthEmailVerify } from "./routes/auth-verify.js";
+import { handleAuthSessionRevoke } from "./routes/auth-session-revoke.js";
+import { handleDevicesList } from "./routes/devices-list.js";
+import { handleDevicesRevoke } from "./routes/devices-revoke.js";
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -43,6 +48,16 @@ export default {
             response = await handleInstallChallenge(request, env);
         } else if (method === "POST" && path === "/v1/purchases/restore") {
             response = await handleRestore(request, env);
+        } else if (method === "POST" && path === "/v1/auth/email/start") {
+            response = await handleAuthEmailStart(request, env);
+        } else if (method === "POST" && path === "/v1/auth/email/verify") {
+            response = await handleAuthEmailVerify(request, env);
+        } else if (method === "POST" && path === "/v1/auth/session/revoke") {
+            response = await handleAuthSessionRevoke(request, env);
+        } else if (method === "GET" && path === "/v1/devices") {
+            response = await handleDevicesList(request, env);
+        } else if (method === "POST" && path === "/v1/devices/revoke") {
+            response = await handleDevicesRevoke(request, env);
         } else if (path === "/health") {
             response = new Response(JSON.stringify({ status: "ok" }), {
                 status: 200,
@@ -69,8 +84,8 @@ export default {
 function corsHeaders(): Record<string, string> {
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",
     };
 }

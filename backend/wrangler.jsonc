@@ -5,7 +5,20 @@
     "vars": {
         "ENVIRONMENT": "production",
         "DODO_BASE_URL": "https://live.dodopayments.com",
-        "TOKEN_TTL_SECONDS": "259200"
+        "TOKEN_TTL_SECONDS": "259200",
+        "AUTH_REQUIRED_FOR_CHECKOUT": "true",
+        "AUTH_REQUIRED_FOR_RESTORE": "true",
+        "AUTH_REQUIRED_FOR_RESOLVE": "true",
+        "ENFORCE_DEVICE_SEATS": "true",
+        "FREE_DEVICE_LIMIT": "1",
+        "PRO_DEVICE_LIMIT": "2",
+        "VIP_DEVICE_LIMIT": "3",
+        "AUTH_OTP_TTL_SECONDS": "600",
+        "AUTH_OTP_MAX_ATTEMPTS": "5",
+        "AUTH_SESSION_TTL_SECONDS": "2592000",
+        "AUTH_RATE_LIMIT_WINDOW_SECONDS": "60",
+        "AUTH_START_MAX_PER_EMAIL": "5",
+        "AUTH_START_MAX_PER_IP": "20"
     },
     // D1 database binding
     "d1_databases": [
@@ -19,6 +32,9 @@
     //   DODO_API_KEY
     //   DODO_WEBHOOK_SECRET
     //   ENTITLEMENT_SIGNING_PRIVATE_KEY
+    //   RESEND_API_KEY (required for production OTP delivery)
+    // Vars:
+    //   AUTH_EMAIL_FROM (e.g. "Strata <noreply@yourdomain.com>")
     "env": {
         "test": {
             "name": "strata-backend-test",
@@ -32,7 +48,20 @@
             "vars": {
                 "ENVIRONMENT": "test",
                 "DODO_BASE_URL": "https://test.dodopayments.com",
-                "TOKEN_TTL_SECONDS": "259200"
+                "TOKEN_TTL_SECONDS": "259200",
+                "AUTH_REQUIRED_FOR_CHECKOUT": "true",
+                "AUTH_REQUIRED_FOR_RESTORE": "true",
+                "AUTH_REQUIRED_FOR_RESOLVE": "true",
+                "ENFORCE_DEVICE_SEATS": "true",
+                "FREE_DEVICE_LIMIT": "1",
+                "PRO_DEVICE_LIMIT": "2",
+                "VIP_DEVICE_LIMIT": "3",
+                "AUTH_OTP_TTL_SECONDS": "600",
+                "AUTH_OTP_MAX_ATTEMPTS": "5",
+                "AUTH_SESSION_TTL_SECONDS": "2592000",
+                "AUTH_RATE_LIMIT_WINDOW_SECONDS": "60",
+                "AUTH_START_MAX_PER_EMAIL": "5",
+                "AUTH_START_MAX_PER_IP": "20"
             }
         }
     }
