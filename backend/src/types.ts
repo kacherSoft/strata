@@ -16,6 +16,25 @@ export interface Env {
     ENVIRONMENT: string;
     DODO_BASE_URL: string;
     TOKEN_TTL_SECONDS: string;
+
+    // Auth/account hardening flags
+    AUTH_REQUIRED_FOR_CHECKOUT?: string;
+    AUTH_REQUIRED_FOR_RESTORE?: string;
+    AUTH_REQUIRED_FOR_RESOLVE?: string;
+    ENFORCE_DEVICE_SEATS?: string;
+    FREE_DEVICE_LIMIT?: string;
+    PRO_DEVICE_LIMIT?: string;
+    VIP_DEVICE_LIMIT?: string;
+
+    // OTP/session config
+    AUTH_OTP_TTL_SECONDS?: string;
+    AUTH_OTP_MAX_ATTEMPTS?: string;
+    AUTH_SESSION_TTL_SECONDS?: string;
+    AUTH_RATE_LIMIT_WINDOW_SECONDS?: string;
+    AUTH_START_MAX_PER_EMAIL?: string;
+    AUTH_START_MAX_PER_IP?: string;
+    AUTH_EMAIL_FROM?: string;
+    RESEND_API_KEY?: string;
 }
 
 /** Entitlement tier */
@@ -33,6 +52,8 @@ export interface TokenClaims {
     tier: Tier;
     /** Subject (email, normalized lowercase) */
     sub: string;
+    /** Internal user id (account-based flow) */
+    uid?: string;
     /** Install ID that requested the token */
     install_id: string;
     /** Issued-at (Unix seconds) */
@@ -50,7 +71,7 @@ export interface TokenClaims {
 // ---------------------------------------------------------------------------
 
 export interface ResolveRequest {
-    email: string;
+    email?: string;
     install_id: string;
     challenge_id: string;
     nonce_signature: string;
@@ -61,7 +82,7 @@ export interface ResolveResponse {
 }
 
 export interface PortalSessionRequest {
-    email: string;
+    email?: string;
     install_id: string;
     challenge_id: string;
     nonce_signature: string;
@@ -114,6 +135,47 @@ export interface RestoreResponse {
     token: string;
     restore_type: "subscription" | "lifetime" | "none";
     resolved_email?: string;
+}
+
+export interface AuthStartRequest {
+    email: string;
+}
+
+export interface AuthStartResponse {
+    challenge_id: string;
+    expires_at: number;
+    delivery: "email" | "dev-log";
+    debug_code?: string;
+}
+
+export interface AuthVerifyRequest {
+    email: string;
+    challenge_id: string;
+    code: string;
+}
+
+export interface AuthVerifyResponse {
+    session_token: string;
+    session_expires_at: number;
+    user_id: string;
+    email: string;
+}
+
+export interface DeviceInfo {
+    install_id: string;
+    nickname?: string | null;
+    first_seen_at: number;
+    last_seen_at: number;
+    revoked_at?: number | null;
+    active: boolean;
+}
+
+export interface DevicesListResponse {
+    devices: DeviceInfo[];
+}
+
+export interface RevokeDeviceRequest {
+    install_id: string;
 }
 
 // ---------------------------------------------------------------------------
