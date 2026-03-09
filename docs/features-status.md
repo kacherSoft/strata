@@ -1,18 +1,28 @@
-# Strata — Feature Status
+# Strata — Feature & Project Status
 
-_Last updated: 2026-02-24_
-
-## Implementation Status
-
-All currently scoped product features are implemented and considered **DONE**.
+_Last updated: 2026-03-04_
 
 ---
 
-## Feature Tiers
+## What's In Progress
 
-### 🆓 Free Tier
+| Work Item | Status | Plan |
+|-----------|--------|------|
+| Security hardening finalization (29 tasks) | **In Progress** | [Active plan](../plans/260304-security-hardening-finalization/plan.md) |
 
-> **No limits on free features!** All core features are fully available.
+Key remaining work:
+- P0: Debug code leak, rate limiter fail-open, TOCTOU seat race, missing webhook handlers
+- P1: Restore rate limiting, tier precedence bug, concurrent webhook race
+- P2: Validation fixes, CRON cleanup, key rotation, legacy code removal
+- P3: GA gate checklist, documentation
+
+---
+
+## What's Done
+
+### Product Features — All DONE
+
+#### Free Tier (no limits)
 
 | Category | Feature | Notes |
 |---|---|---|
@@ -29,13 +39,10 @@ All currently scoped product features are implemented and considered **DONE**.
 | | Custom AI modes (basic) | Create modes with custom prompts |
 | | Enhance Me panel | Floating window via global shortcut |
 | | **UNLIMITED** in-app enhancements | No monthly cap |
-| **Shortcuts** | Quick Entry | Global shortcut for task capture |
-| | Enhance Me | Global shortcut for AI panel |
-| | Main Window | Global shortcut toggle |
-| **Data** | Local storage | All data on device |
-| | SwiftData persistence | Modern SwiftData models |
+| **Shortcuts** | Quick Entry, Enhance Me, Main Window | All customizable |
+| **Data** | Local storage + SwiftData | All data on device |
 
-### ⭐ Premium Tier (Pro Subscription or VIP Lifetime)
+#### Premium Tier (Pro Subscription or VIP Lifetime)
 
 | Category | Feature | Notes |
 |---|---|---|
@@ -47,99 +54,53 @@ All currently scoped product features are implemented and considered **DONE**.
 | | AI attachments | Image/PDF support in AI modes |
 | | Attachments in custom modes | Enable attachments for user-created modes |
 
+### Account & Security — Core DONE, Hardening In Progress
+
+| Feature | Status | Notes |
+|---|---|---|
+| Email OTP authentication | ✅ Done | Passwordless sign-in via 6-digit code (Resend) |
+| Account session management | ✅ Done | 30-day bearer tokens, stored in Keychain |
+| Auth-gated restore/resolve/checkout | ✅ Done | All entitlement endpoints require verified session |
+| Device seat enforcement | ✅ Done | Free: 1 / Pro: 2 / VIP: 3 active devices |
+| Manage Devices UI | ✅ Done | List, revoke devices in Settings |
+| Install proof (Secure Enclave) | ✅ Done | ECDSA P-256 challenge-nonce signing |
+| Webhook entitlement sync | ✅ Done | Dodo events → user_entitlements via projector |
+| User backfill migration | ✅ Done | Legacy email entitlements → user_id mapping |
+| Account-based entitlements | ✅ Done | user_id ownership, not email-based |
+| Legacy email-only paths | ⚠️ Flag-gated | Disabled in production, code not yet deleted |
+| Security hardening | 🔄 In Progress | [See active plan](../plans/260304-security-hardening-finalization/plan.md) |
+
+### Technical Implementation — All DONE
+
+| Area | Status | Notes |
+|---|---|---|
+| Unified access gate (`hasFullAccess`) | ✅ | Pro OR VIP OR debug override |
+| Pro subscription (DodoPayments) | ✅ | Subscription linking |
+| VIP lifetime (DodoPayments) | ✅ | License key activation |
+| Server-signed entitlement tokens | ✅ | Ed25519, 72h TTL, install-bound |
+| Settings & configuration | ✅ | AI, shortcuts, custom fields, inline enhance |
+| Data persistence (SwiftData) | ✅ | Local storage, photos in Application Support |
+
 ---
 
-## Product Tiers Summary
+## Product Tiers
 
 | Tier | Price | What You Get |
 |---|---|---|
-| **Free** | $0 forever | Full task management, list + calendar views, AI modes (unlimited), local storage — **no limits** |
+| **Free** | $0 forever | Full task management, list + calendar views, AI modes (unlimited), local storage |
 | **Pro** | $4.99/month | Everything in Free + Kanban, recurring tasks, custom fields, Inline Enhance, AI attachments |
 | **VIP** | $99.99 (one-time) | Same as Pro, lifetime access + priority support + early features |
 
-### Entitlement Gating
-
-All premium features use unified `hasFullAccess` check:
-- `isPremium` (active Pro subscription) **OR**
-- `isVIPPurchased` (lifetime purchase) **OR**
-- `isVIPAdminGranted` (debug override)
-
-Payment provider: DodoPayments (external MoR). License keys for VIP Lifetime, subscription linking for Pro.
-
 ---
 
-## Global Shortcuts
+## Architecture
 
-| Shortcut | Action | Customizable |
-|---|---|---|
-| Quick Entry | Capture task from anywhere | ✅ Yes |
-| Enhance Me | Open AI enhancement panel | ✅ Yes |
-| Main Window | Toggle main app window | ✅ Yes |
-| Inline Enhance | Enhance text in any app | ✅ Yes (Premium) |
-| ⌘N | New task in app | ❌ Fixed |
-| ⌘, | Open settings | ❌ Fixed |
-
----
-
-## AI Features Detail
-
-| Feature | Free | Premium | Notes |
-|---|---|---|---|
-| Built-in modes (Correct Me, Enhance Prompt, Explain) | ✅ | ✅ | Core AI enhancement |
-| Custom AI modes | ✅ | ✅ | Create your own modes |
-| Enhance Me panel | ✅ | ✅ | Floating AI window |
-| AI attachments (image/PDF) | ❌ | ✅ | Requires premium |
-| Inline Enhance (system-wide) | ❌ | ✅ | Works in any app |
-
----
-
-## Architecture Notes
-
-- **UI Framework**: SwiftUI with native macOS design
-- **Data Layer**: SwiftData with model containers
-- **AI Integration**: Protocol-based provider system (Gemini, z.ai)
-- **Shortcuts**: System-wide keyboard shortcuts via Carbon API
+- **UI**: SwiftUI, native macOS
+- **Data**: SwiftData with model containers
+- **AI**: Protocol-based provider system (Gemini, z.ai)
+- **Shortcuts**: System-wide via Carbon API
 - **Inline Enhance**: Accessibility API for system-wide text capture
-
----
-
-## Distribution
-
-| Model | Details |
-|---|---|
-| **Distribution** | Developer ID (notarized) |
-| **Download** | Website (kachersoft.com) |
-| **Payments** | DodoPayments (Merchant of Record) |
-| **Sandbox** | Disabled (required for Accessibility API) |
-
----
-
-## Technical Implementation
-
-### Entitlements & Billing
-
-| Feature | Status | Notes |
-|---|---|---|
-| Unified access gate | ✅ Done | `hasFullAccess` property |
-| Pro subscription | ✅ Done | DodoPayments subscription linking |
-| VIP lifetime | ✅ Done | DodoPayments license key activation |
-| License management | ✅ Done | Activate/deactivate/re-validate in Settings |
-| Debug VIP grant | ✅ Done | `#if DEBUG` admin override |
-
-### Settings & Configuration
-
-| Feature | Status | Notes |
-|---|---|---|
-| AI settings | ✅ Done | Provider, model, mode management |
-| General settings | ✅ Done | Appearance, window behavior |
-| Shortcut customization | ✅ Done | All global shortcuts configurable |
-| Custom field management | ✅ Done | Create/edit/delete fields |
-| Inline Enhance settings | ✅ Done | Toggle, permission grant, shortcut config |
-
-### Data Persistence
-
-| Feature | Status | Notes |
-|---|---|---|
-| SwiftData models | ✅ Done | Modern SwiftData persistence |
-| Local storage | ✅ Done | All data stored locally on device |
-| Photo storage | ✅ Done | Application Support directory |
+- **Backend**: Cloudflare Workers + D1 (SQLite), Ed25519 token signing
+- **Auth**: Email OTP via Resend, opaque session tokens (SHA-256 hashed)
+- **Install Binding**: Secure Enclave P-256 keypair, challenge-nonce protocol
+- **Distribution**: Developer ID (notarized), website download, DodoPayments (MoR)

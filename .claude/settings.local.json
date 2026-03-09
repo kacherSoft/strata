@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx wrangler secret list)",
+      "Bash(npx wrangler secret list --env test)",
+      "Bash(npx wrangler d1 execute STRATA_DB --remote --command \"SELECT name FROM sqlite_master WHERE type=''table'' ORDER BY name;\")",
+      "Bash(npx wrangler d1 execute STRATA_DB --remote --env test --command \"SELECT name FROM sqlite_master WHERE type=''table'' ORDER BY name;\")",
+      "Bash(./scripts/build-debug.sh)",
+      "Bash(curl -s https://strata-backend-test.kacher.workers.dev/health)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST https://strata-backend-test.kacher.workers.dev/v1/auth/email/start -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test-smoke@example.com\"\"}')",
+      "Bash(curl -s -X POST https://strata-backend-test.kacher.workers.dev/v1/auth/email/verify -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test-smoke@example.com\"\",\"\"challenge_id\"\":\"\"ea03c142-e953-4185-b1f3-a56bbab905ea\"\",\"\"code\"\":\"\"782868\"\"}')",
+      "Bash(curl -s -X GET https://strata-backend-test.kacher.workers.dev/v1/devices -H \"Authorization: Bearer aV5Cgl5eBnMFR9f5Wi6UsPBdNWBFfc75M1hdBYFgkuI\")",
+      "Bash(npx wrangler d1 execute STRATA_DB --remote --file=./migrations/0004_account_auth.sql)",
+      "Bash(npx wrangler d1 execute STRATA_DB --remote --file=./migrations/0005_user_backfill.sql)"
+    ]
+  }
+}

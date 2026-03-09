@@ -37,6 +37,9 @@ pnpm-debug.log*
 backend/.dev.vars
 backend/.dev.vars.*
 
+# Local dev config (machine-specific)
+config/
+
 # Cloudflare local runtime state
 .wrangler/
 backend/.wrangler/

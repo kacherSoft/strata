@@ -1,7 +1,7 @@
 # Strata Backend & Entitlements - Master Implementation Tracker
 
-Date: 2026-02-26  
-Status: Active implementation plan (split by phase)
+Date: 2026-02-26
+Status: SUPERSEDED — See `plans/260303-account-ownership-hardening-finalization/plan.md`
 
 ## Goal
 
