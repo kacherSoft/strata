@@ -24,7 +24,6 @@ export async function handleInstallChallenge(
         const installId = requireUUID(body.install_id, "install_id", "INVALID_INSTALL_ID");
 
         const challenge = await createInstallChallenge(env, installId);
-        console.log(`[createChallenge] id=${challenge.challenge_id} install=${installId}`);
         const response: InstallChallengeResponse = challenge;
         return new Response(JSON.stringify(response), {
             status: 200,

@@ -316,8 +316,6 @@ export async function verifyInstallProof(
         .bind(challengeId, installId)
         .first<ChallengeRow>();
 
-    console.log(`[verifyInstallProof] challengeId=${challengeId} installId=${installId} found=${!!challenge} used_at=${challenge?.used_at} expires_at=${challenge?.expires_at} now=${now}`);
-
     if (!challenge) {
         throw new AppError(401, "INVALID_CHALLENGE", "Challenge is invalid");
     }

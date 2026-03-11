@@ -214,7 +214,19 @@ export async function ensureDeviceSeat(
         ).bind(params.userId, params.installId).first<{ install_id: string; revoked_at: number | null }>();
 
         if (existingDevice) {
-            // Device already registered — update last_seen and clear any revocation
+            if (existingDevice.revoked_at) {
+                // Re-activating a revoked device — check seat availability first
+                const activeCount = await env.STRATA_DB.prepare(
+                    `SELECT COUNT(*) as cnt FROM user_devices WHERE user_id = ? AND revoked_at IS NULL`,
+                ).bind(params.userId).first<{ cnt: number }>();
+                if ((activeCount?.cnt ?? 0) >= limit) {
+                    throw new AppError(
+                        403,
+                        "DEVICE_LIMIT_REACHED",
+                        `Device limit (${limit}) reached for your plan. Remove a device first.`,
+                    );
+                }
+            }
             await env.STRATA_DB.prepare(
                 `UPDATE user_devices
                  SET revoked_at = NULL, last_seen_at = ?, updated_at = ?, nickname = COALESCE(?, nickname)

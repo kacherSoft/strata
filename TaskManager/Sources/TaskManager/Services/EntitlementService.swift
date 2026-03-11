@@ -320,41 +320,19 @@ final class EntitlementService {
         email: String?,
         licenseKey: String?
     ) async throws -> RestoreOutcome {
-        NSLog("[Restore] START email=%@ installId=%@", email ?? "nil", installId)
-        let proof: InstallProof
-        do {
-            proof = try await createInstallProof()
-            NSLog("[Restore] Got proof challengeId=%@", proof.challengeId)
-        } catch {
-            NSLog("[Restore] createInstallProof FAILED: %@", "\(error)")
-            throw error
-        }
-        let response: RestoreResponse
-        do {
-            response = try await backendClient.restore(
-                email: email,
-                installId: installId,
-                challengeId: proof.challengeId,
-                nonceSignature: proof.signature,
-                licenseKey: licenseKey
-            )
-            NSLog("[Restore] Backend OK restore_type=%@", response.restore_type ?? "nil")
-        } catch {
-            NSLog("[Restore] Backend FAILED: %@", "\(error)")
-            throw error
-        }
+        let proof = try await createInstallProof()
+        let response = try await backendClient.restore(
+            email: email,
+            installId: installId,
+            challengeId: proof.challengeId,
+            nonceSignature: proof.signature,
+            licenseKey: licenseKey
+        )
 
-        let claims: EntitlementTokenClaims
-        do {
-            claims = try verifyEntitlementToken(
-                response.token,
-                expectedInstallPubkeyHash: proof.installPubkeyHash
-            )
-            NSLog("[Restore] Token verified tier=%@ kid=%@", claims.tier, claims.kid ?? "nil")
-        } catch {
-            NSLog("[Restore] verifyEntitlementToken FAILED: %@", "\(error)")
-            throw error
-        }
+        let claims = try verifyEntitlementToken(
+            response.token,
+            expectedInstallPubkeyHash: proof.installPubkeyHash
+        )
 
         let resolvedEmail = response.resolved_email?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -746,15 +724,12 @@ final class EntitlementService {
 
     private func revalidateSubscriptionPath(_ usedOfflineCache: inout Bool) async {
         guard isAccountSignedIn, let email = accountEmail, !email.isEmpty else {
-            NSLog("[Revalidate] Skipped — not signed in or no email")
             clearLinkedSubscriptionState(deleteEmail: false)
             return
         }
 
         do {
-            NSLog("[Revalidate] START email=%@", email)
             let proof = try await createInstallProof()
-            NSLog("[Revalidate] Got proof challengeId=%@", proof.challengeId)
             let response = try await backendClient.resolve(
                 email: email,
                 installId: installId,
@@ -777,9 +752,8 @@ final class EntitlementService {
             }
 
             saveClockCheckpoint()
-            NSLog("[Revalidate] OK tier=%@", claims.tier)
         } catch {
-            NSLog("[Revalidate] FAILED: %@", "\(error)")
+            print("[Entitlement] revalidate failed: \(error)")
             if let backendError = error as? BackendError, case .authRequired = backendError {
                 clearAccountSession()
                 clearLinkedSubscriptionState(deleteEmail: false)
