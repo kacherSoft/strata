@@ -91,7 +91,6 @@ final class EntitlementService {
         let challengeId: String
         let expiresAt: Date
         let delivery: String
-        let debugCode: String?
     }
 
     private(set) var validationState: ValidationState = .idle
@@ -163,8 +162,7 @@ final class EntitlementService {
             email: normalizedEmail,
             challengeId: response.challenge_id,
             expiresAt: expiresAt,
-            delivery: response.delivery,
-            debugCode: response.debug_code
+            delivery: response.delivery
         )
     }
 
@@ -322,19 +320,41 @@ final class EntitlementService {
         email: String?,
         licenseKey: String?
     ) async throws -> RestoreOutcome {
-        let proof = try await createInstallProof()
-        let response = try await backendClient.restore(
-            email: email,
-            installId: installId,
-            challengeId: proof.challengeId,
-            nonceSignature: proof.signature,
-            licenseKey: licenseKey
-        )
+        NSLog("[Restore] START email=%@ installId=%@", email ?? "nil", installId)
+        let proof: InstallProof
+        do {
+            proof = try await createInstallProof()
+            NSLog("[Restore] Got proof challengeId=%@", proof.challengeId)
+        } catch {
+            NSLog("[Restore] createInstallProof FAILED: %@", "\(error)")
+            throw error
+        }
+        let response: RestoreResponse
+        do {
+            response = try await backendClient.restore(
+                email: email,
+                installId: installId,
+                challengeId: proof.challengeId,
+                nonceSignature: proof.signature,
+                licenseKey: licenseKey
+            )
+            NSLog("[Restore] Backend OK restore_type=%@", response.restore_type ?? "nil")
+        } catch {
+            NSLog("[Restore] Backend FAILED: %@", "\(error)")
+            throw error
+        }
 
-        let claims = try verifyEntitlementToken(
-            response.token,
-            expectedInstallPubkeyHash: proof.installPubkeyHash
-        )
+        let claims: EntitlementTokenClaims
+        do {
+            claims = try verifyEntitlementToken(
+                response.token,
+                expectedInstallPubkeyHash: proof.installPubkeyHash
+            )
+            NSLog("[Restore] Token verified tier=%@ kid=%@", claims.tier, claims.kid ?? "nil")
+        } catch {
+            NSLog("[Restore] verifyEntitlementToken FAILED: %@", "\(error)")
+            throw error
+        }
 
         let resolvedEmail = response.resolved_email?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -452,6 +472,13 @@ final class EntitlementService {
     }
 
     private func loadAccountSession() {
+        // Clear stale session if it was created against a different backend environment
+        let currentEnv = backendClient.environment == .live ? "live" : "test"
+        if let savedEnv = keychain.get(.accountSessionEnvironment), savedEnv != currentEnv {
+            clearAccountSession()
+            return
+        }
+
         let email = keychain.get(.accountEmail)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -482,6 +509,8 @@ final class EntitlementService {
         try? keychain.save(userId, for: .accountUserId)
         try? keychain.save(normalizedEmail, for: .accountEmail)
         try? keychain.save(String(expiresAtUnix), for: .accountSessionExpiresAt)
+        let envTag = backendClient.environment == .live ? "live" : "test"
+        try? keychain.save(envTag, for: .accountSessionEnvironment)
 
         accountUserId = userId
         accountEmail = normalizedEmail
@@ -493,6 +522,7 @@ final class EntitlementService {
         keychain.delete(.accountUserId)
         keychain.delete(.accountEmail)
         keychain.delete(.accountSessionExpiresAt)
+        keychain.delete(.accountSessionEnvironment)
 
         accountUserId = nil
         accountEmail = nil
@@ -556,19 +586,31 @@ final class EntitlementService {
         return false
     }
 
-    private static var entitlementPublicKeyHex: String {
-        if let configured = configuredEntitlementPublicKeyHex() {
-            return configured
+    // MARK: - Key Rotation Support
+
+    /// Build a map of key ID → public key hex for multi-key verification.
+    /// Supports rotation: current key (ENTITLEMENT_PUBLIC_KEY_HEX / key ID from ENTITLEMENT_KEY_ID)
+    /// and optional previous key (ENTITLEMENT_PUBLIC_KEY_HEX_PREV / key ID from ENTITLEMENT_KEY_ID_PREV).
+    private static var entitlementPublicKeyMap: [String: String] {
+        var map: [String: String] = [:]
+
+        // Current key
+        if let hex = configuredEntitlementPublicKeyHex() {
+            let kid = configuredStringFromEnvOrBundle("ENTITLEMENT_KEY_ID") ?? "default"
+            map[kid] = hex
+            // Also register under "default" for backward compat if no kid claim in old tokens
+            if kid != "default" {
+                map["default"] = hex
+            }
         }
 
-        #if DEBUG
-        print("[Entitlement] Missing ENTITLEMENT_PUBLIC_KEY_HEX configuration; token verification will fail.")
-        return ""
-        #else
-        preconditionFailure(
-            "ENTITLEMENT_PUBLIC_KEY_HEX must be configured with a valid Ed25519 public key"
-        )
-        #endif
+        // Previous key (only present during rotation window)
+        if let prevHex = configuredEntitlementPrevPublicKeyHex() {
+            let prevKid = configuredStringFromEnvOrBundle("ENTITLEMENT_KEY_ID_PREV") ?? "prev"
+            map[prevKid] = prevHex
+        }
+
+        return map
     }
 
     private static func configuredEntitlementPublicKeyHex() -> String? {
@@ -582,6 +624,32 @@ final class EntitlementService {
             if isValidEntitlementPublicKeyHex(trimmed) { return trimmed }
         }
 
+        return nil
+    }
+
+    private static func configuredEntitlementPrevPublicKeyHex() -> String? {
+        if let env = ProcessInfo.processInfo.environment["ENTITLEMENT_PUBLIC_KEY_HEX_PREV"] {
+            let trimmed = env.trimmingCharacters(in: .whitespacesAndNewlines)
+            if isValidEntitlementPublicKeyHex(trimmed) { return trimmed }
+        }
+
+        if let info = Bundle.main.object(forInfoDictionaryKey: "ENTITLEMENT_PUBLIC_KEY_HEX_PREV") as? String {
+            let trimmed = info.trimmingCharacters(in: .whitespacesAndNewlines)
+            if isValidEntitlementPublicKeyHex(trimmed) { return trimmed }
+        }
+
+        return nil
+    }
+
+    private static func configuredStringFromEnvOrBundle(_ key: String) -> String? {
+        if let env = ProcessInfo.processInfo.environment[key] {
+            let trimmed = env.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        if let info = Bundle.main.object(forInfoDictionaryKey: key) as? String {
+            let trimmed = info.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
         return nil
     }
 
@@ -678,12 +746,15 @@ final class EntitlementService {
 
     private func revalidateSubscriptionPath(_ usedOfflineCache: inout Bool) async {
         guard isAccountSignedIn, let email = accountEmail, !email.isEmpty else {
+            NSLog("[Revalidate] Skipped — not signed in or no email")
             clearLinkedSubscriptionState(deleteEmail: false)
             return
         }
 
         do {
+            NSLog("[Revalidate] START email=%@", email)
             let proof = try await createInstallProof()
+            NSLog("[Revalidate] Got proof challengeId=%@", proof.challengeId)
             let response = try await backendClient.resolve(
                 email: email,
                 installId: installId,
@@ -706,7 +777,9 @@ final class EntitlementService {
             }
 
             saveClockCheckpoint()
+            NSLog("[Revalidate] OK tier=%@", claims.tier)
         } catch {
+            NSLog("[Revalidate] FAILED: %@", "\(error)")
             if let backendError = error as? BackendError, case .authRequired = backendError {
                 clearAccountSession()
                 clearLinkedSubscriptionState(deleteEmail: false)
@@ -762,18 +835,28 @@ final class EntitlementService {
             throw BackendError.invalidToken("Failed to decode token signature")
         }
 
-        let publicKeyHex = Self.entitlementPublicKeyHex
-        guard let publicKeyData = Self.hexToData(publicKeyHex),
+        // Decode claims first to read kid before signature verification
+        let claims = try JSONDecoder().decode(EntitlementTokenClaims.self, from: payloadData)
+
+        // Select key by kid claim; fall back to "default" for tokens without kid
+        let kid = claims.kid ?? "default"
+        let keyMap = Self.entitlementPublicKeyMap
+        guard let publicKeyHex = keyMap[kid], !publicKeyHex.isEmpty,
+              let publicKeyData = Self.hexToData(publicKeyHex),
               publicKeyData.count == 32 else {
-            throw BackendError.invalidToken("Missing or invalid ENTITLEMENT_PUBLIC_KEY_HEX configuration")
+            #if DEBUG
+            if keyMap.isEmpty {
+                print("[Entitlement] Missing ENTITLEMENT_PUBLIC_KEY_HEX configuration; token verification will fail.")
+                throw BackendError.invalidToken("Missing or invalid ENTITLEMENT_PUBLIC_KEY_HEX configuration")
+            }
+            #endif
+            throw BackendError.invalidToken("Unknown key ID '\(kid)' — key rotation may be incomplete")
         }
 
         let publicKey = try Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)
         guard publicKey.isValidSignature(signatureData, for: payloadData) else {
             throw BackendError.invalidToken("Signature verification failed")
         }
-
-        let claims = try JSONDecoder().decode(EntitlementTokenClaims.self, from: payloadData)
 
         let now = Int(Date().timeIntervalSince1970)
         guard now < claims.exp else {
@@ -941,6 +1024,8 @@ struct EntitlementTokenClaims: Codable {
     let iat: Int
     let exp: Int
     let jti: String
+    /// Key ID for rotation support — identifies which public key was used to sign this token
+    let kid: String?
     let install_pubkey_hash: String?
 }
 

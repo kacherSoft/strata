@@ -6,6 +6,7 @@ import { AppError } from "./errors.js";
 import type { Env, Tier } from "./types.js";
 import { DodoClient } from "./dodo-client.js";
 import { deviceSeatsEnforced, seatLimitForTier } from "./auth.js";
+import { sanitizeNickname } from "./validation.js";
 
 export interface UserEntitlementRow {
     user_id: string;
@@ -70,6 +71,29 @@ export async function upsertUserEntitlement(
             params.effectiveUntil || null,
         )
         .run();
+
+    // Enforce device seat limit after tier change — revoke excess devices (oldest first)
+    if (deviceSeatsEnforced(env)) {
+        const limit = seatLimitForTier(env, params.tier);
+        const activeDevices = await env.STRATA_DB.prepare(
+            `SELECT install_id, last_seen_at FROM user_devices
+             WHERE user_id = ? AND revoked_at IS NULL
+             ORDER BY last_seen_at ASC`,
+        ).bind(params.userId).all<{ install_id: string; last_seen_at: number }>();
+
+        const devices = activeDevices.results || [];
+        if (devices.length > limit) {
+            const toRevoke = devices.slice(0, devices.length - limit);
+            const now = Math.floor(Date.now() / 1000);
+            for (const device of toRevoke) {
+                await env.STRATA_DB.prepare(
+                    `UPDATE user_devices SET revoked_at = ?, updated_at = ?
+                     WHERE user_id = ? AND install_id = ? AND revoked_at IS NULL`,
+                ).bind(now, now, params.userId, device.install_id).run();
+            }
+            console.warn(`[seats] auto-revoked ${toRevoke.length} excess device(s) for user ${params.userId} after tier change to ${params.tier}`);
+        }
+    }
 }
 
 export async function resolveTierForUser(
@@ -108,16 +132,21 @@ export async function resolveTierForUser(
     }
 
     if (params.allowProviderFallback && params.dodo) {
-        const subscription = await params.dodo.findActiveSubscription(params.email);
-        if (subscription) {
-            await upsertUserEntitlement(env, {
-                userId: params.userId,
-                tier: "pro",
-                state: "active",
-                sourceEventId: "provider-subscription-fallback",
-                effectiveUntil: subscription.nextBillingDateISO8601,
-            });
-            return { tier: "pro", source: "provider" };
+        try {
+            const subscription = await params.dodo.findActiveSubscription(params.email);
+            if (subscription) {
+                await upsertUserEntitlement(env, {
+                    userId: params.userId,
+                    tier: "pro",
+                    state: "active",
+                    sourceEventId: "provider-subscription-fallback",
+                    effectiveUntil: subscription.nextBillingDateISO8601,
+                });
+                return { tier: "pro", source: "provider" };
+            }
+        } catch (error) {
+            // Provider unavailable — fall through to "free" instead of propagating 502.
+            console.warn(`[resolveTier] provider fallback failed for ${params.email}:`, error);
         }
     }
 
@@ -140,59 +169,67 @@ export async function ensureDeviceSeat(
     },
 ): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
-
-    const existing = await env.STRATA_DB.prepare(
-        `SELECT install_id, revoked_at
-         FROM user_devices
-         WHERE user_id = ? AND install_id = ?
-         LIMIT 1`,
-    )
-        .bind(params.userId, params.installId)
-        .first<{ install_id: string; revoked_at: number | null }>();
-
     const limit = seatLimitForTier(env, params.tier);
+    const nickname = sanitizeNickname(params.nickname);
 
-    if (deviceSeatsEnforced(env)) {
-        const activeCountRow = await env.STRATA_DB.prepare(
-            `SELECT COUNT(*) AS count
-             FROM user_devices
-             WHERE user_id = ? AND revoked_at IS NULL`,
-        )
-            .bind(params.userId)
-            .first<{ count: number }>();
+    if (!deviceSeatsEnforced(env)) {
+        // Seats not enforced — upsert device record without checking limits
+        const existing = await env.STRATA_DB.prepare(
+            `SELECT install_id FROM user_devices WHERE user_id = ? AND install_id = ? LIMIT 1`,
+        ).bind(params.userId, params.installId).first<{ install_id: string }>();
 
-        const activeCount = Number(activeCountRow?.count || 0);
-        const currentDeviceIsActive = Boolean(existing && existing.revoked_at === null);
-
-        if (!currentDeviceIsActive && activeCount >= limit) {
-            throw new AppError(
-                403,
-                "DEVICE_LIMIT_REACHED",
-                `Device limit reached for your plan (${limit} active device${limit === 1 ? "" : "s"})`,
-            );
+        if (existing) {
+            await env.STRATA_DB.prepare(
+                `UPDATE user_devices SET revoked_at = NULL, last_seen_at = ?, updated_at = ?,
+                 nickname = COALESCE(?, nickname) WHERE user_id = ? AND install_id = ?`,
+            ).bind(now, now, nickname, params.userId, params.installId).run();
+        } else {
+            await env.STRATA_DB.prepare(
+                `INSERT INTO user_devices (user_id, install_id, nickname, first_seen_at, last_seen_at, revoked_at, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+            ).bind(params.userId, params.installId, nickname, now, now, now, now).run();
         }
-    }
-
-    if (existing) {
-        await env.STRATA_DB.prepare(
-            `UPDATE user_devices
-             SET revoked_at = NULL,
-                 nickname = COALESCE(?, nickname),
-                 last_seen_at = ?,
-                 updated_at = ?
-             WHERE user_id = ? AND install_id = ?`,
-        )
-            .bind(params.nickname || null, now, now, params.userId, params.installId)
-            .run();
         return;
     }
 
-    await env.STRATA_DB.prepare(
-        `INSERT INTO user_devices (user_id, install_id, nickname, first_seen_at, last_seen_at, revoked_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+    // Atomic seat check + insert: INSERT only if active device count < limit.
+    // INSERT OR IGNORE avoids UNIQUE(user_id, install_id) conflict — 0 changes means
+    // either the device already exists OR the seat limit is reached.
+    const insertResult = await env.STRATA_DB.prepare(
+        `INSERT OR IGNORE INTO user_devices (user_id, install_id, nickname, first_seen_at, last_seen_at, revoked_at, created_at, updated_at)
+         SELECT ?, ?, ?, ?, ?, NULL, ?, ?
+         WHERE (SELECT COUNT(*) FROM user_devices WHERE user_id = ? AND revoked_at IS NULL) < ?`,
     )
-        .bind(params.userId, params.installId, params.nickname || null, now, now, now, now)
+        .bind(
+            params.userId, params.installId, nickname,
+            now, now, now, now,
+            params.userId, limit,
+        )
         .run();
+
+    if (!insertResult.meta.changes || insertResult.meta.changes < 1) {
+        // Either device already exists (active or revoked) OR seat limit reached
+        const existingDevice = await env.STRATA_DB.prepare(
+            `SELECT install_id, revoked_at FROM user_devices WHERE user_id = ? AND install_id = ? LIMIT 1`,
+        ).bind(params.userId, params.installId).first<{ install_id: string; revoked_at: number | null }>();
+
+        if (existingDevice) {
+            // Device already registered — update last_seen and clear any revocation
+            await env.STRATA_DB.prepare(
+                `UPDATE user_devices
+                 SET revoked_at = NULL, last_seen_at = ?, updated_at = ?, nickname = COALESCE(?, nickname)
+                 WHERE user_id = ? AND install_id = ?`,
+            ).bind(now, now, nickname, params.userId, params.installId).run();
+            return;
+        }
+
+        // No existing device record — seat limit is full
+        throw new AppError(
+            403,
+            "DEVICE_LIMIT_REACHED",
+            `Device limit (${limit}) reached for your plan. Remove a device first.`,
+        );
+    }
 }
 
 export async function listUserDevices(env: Env, userId: string): Promise<DeviceRow[]> {

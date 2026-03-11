@@ -261,9 +261,6 @@ function makeEnv(state: MockState, overrides: Partial<Env> = {}): Env {
         ENVIRONMENT: "test",
         DODO_BASE_URL: "https://test.dodopayments.com",
         TOKEN_TTL_SECONDS: "3600",
-        AUTH_REQUIRED_FOR_CHECKOUT: "true",
-        AUTH_REQUIRED_FOR_RESTORE: "true",
-        AUTH_REQUIRED_FOR_RESOLVE: "true",
         ENFORCE_DEVICE_SEATS: "true",
         ...overrides,
     };
@@ -277,6 +274,16 @@ describe("auth endpoints", () => {
     });
 
     it("starts and verifies OTP challenge", async () => {
+        // Capture the OTP code logged to console in dev-log delivery mode
+        let capturedOtp: string | undefined;
+        const originalLog = console.log;
+        console.log = (...args: unknown[]) => {
+            const msg = String(args[0] || "");
+            const match = msg.match(/OTP code for .+?: (\d{6})/);
+            if (match) capturedOtp = match[1];
+            originalLog(...args);
+        };
+
         const startReq = new Request("https://api.test/v1/auth/email/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -284,17 +291,17 @@ describe("auth endpoints", () => {
         });
 
         const startRes = await handleAuthEmailStart(startReq, makeEnv(state));
+        console.log = originalLog;
         expect(startRes.status).toBe(200);
 
         const startBody = await startRes.json() as {
             challenge_id: string;
-            debug_code?: string;
             delivery: string;
         };
 
         expect(startBody.challenge_id).toBeTruthy();
         expect(startBody.delivery).toBe("dev-log");
-        expect(startBody.debug_code).toMatch(/^\d{6}$/);
+        expect(capturedOtp).toMatch(/^\d{6}$/);
 
         const verifyReq = new Request("https://api.test/v1/auth/email/verify", {
             method: "POST",
@@ -302,7 +309,7 @@ describe("auth endpoints", () => {
             body: JSON.stringify({
                 email: "user@example.com",
                 challenge_id: startBody.challenge_id,
-                code: startBody.debug_code,
+                code: capturedOtp,
             }),
         });
 
@@ -379,13 +386,24 @@ describe("auth endpoints", () => {
     });
 
     it("revokes auth session", async () => {
+        // Capture the OTP code logged to console in dev-log delivery mode
+        let capturedOtp: string | undefined;
+        const originalLog = console.log;
+        console.log = (...args: unknown[]) => {
+            const msg = String(args[0] || "");
+            const match = msg.match(/OTP code for .+?: (\d{6})/);
+            if (match) capturedOtp = match[1];
+            originalLog(...args);
+        };
+
         const startReq = new Request("https://api.test/v1/auth/email/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: "revoke@example.com" }),
         });
         const startRes = await handleAuthEmailStart(startReq, makeEnv(state));
-        const startBody = await startRes.json() as { challenge_id: string; debug_code: string };
+        console.log = originalLog;
+        const startBody = await startRes.json() as { challenge_id: string };
 
         const verifyReq = new Request("https://api.test/v1/auth/email/verify", {
             method: "POST",
@@ -393,7 +411,7 @@ describe("auth endpoints", () => {
             body: JSON.stringify({
                 email: "revoke@example.com",
                 challenge_id: startBody.challenge_id,
-                code: startBody.debug_code,
+                code: capturedOtp,
             }),
         });
         const verifyRes = await handleAuthEmailVerify(verifyReq, makeEnv(state));

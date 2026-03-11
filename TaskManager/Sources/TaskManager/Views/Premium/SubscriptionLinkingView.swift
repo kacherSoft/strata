@@ -8,16 +8,18 @@ struct SubscriptionLinkingView: View {
     @State private var licenseKey = ""
     @State private var restoreState: RestoreState = .idle
     @State private var showAccountSignIn = false
+    @State private var showManageDevices = false
 
     enum RestoreState: Equatable {
         case idle
         case restoring
         case restored(String)
         case failed(String)
+        case deviceLimitReached
 
         static func == (lhs: RestoreState, rhs: RestoreState) -> Bool {
             switch (lhs, rhs) {
-            case (.idle, .idle), (.restoring, .restoring):
+            case (.idle, .idle), (.restoring, .restoring), (.deviceLimitReached, .deviceLimitReached):
                 return true
             case (.restored(let a), .restored(let b)):
                 return a == b
@@ -94,6 +96,22 @@ struct SubscriptionLinkingView: View {
                     .foregroundStyle(.red)
                     .font(.caption)
                     .multilineTextAlignment(.center)
+            case .deviceLimitReached:
+                VStack(spacing: 8) {
+                    Label("Device limit reached for your plan.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                    Text("Remove an unused device to activate on this one.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Manage Devices") {
+                        showManageDevices = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
             }
 
             HStack(spacing: 12) {
@@ -114,6 +132,9 @@ struct SubscriptionLinkingView: View {
         .frame(width: 460)
         .sheet(isPresented: $showAccountSignIn) {
             AccountSignInView()
+        }
+        .sheet(isPresented: $showManageDevices) {
+            ManageDevicesView()
         }
     }
 
@@ -140,8 +161,21 @@ struct SubscriptionLinkingView: View {
                 try? await Task.sleep(for: .seconds(1.2))
                 dismiss()
             } catch {
-                restoreState = .failed(error.localizedDescription)
+                if isDeviceLimitError(error) {
+                    restoreState = .deviceLimitReached
+                } else {
+                    restoreState = .failed(error.localizedDescription)
+                }
             }
         }
+    }
+
+    /// Returns true if the error is a DEVICE_LIMIT_REACHED backend error.
+    private func isDeviceLimitError(_ error: Error) -> Bool {
+        guard case let BackendError.httpError(statusCode, body) = error,
+              statusCode == 403 else {
+            return false
+        }
+        return body.contains("DEVICE_LIMIT_REACHED")
     }
 }

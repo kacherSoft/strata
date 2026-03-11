@@ -165,29 +165,25 @@ export async function handleWebhook(
             throw new AppError(400, "MISSING_EVENT_TYPE", "Webhook payload is missing event type");
         }
 
-        // Check for duplicate (idempotent)
-        const existing = await env.STRATA_DB.prepare(
-            "SELECT webhook_id, status FROM webhook_events WHERE webhook_id = ?",
+        // Persist event atomically — ON CONFLICT DO NOTHING provides idempotency
+        // without a separate SELECT-then-INSERT race condition.
+        const eventTs = webhookTimestamp;
+        const insertResult = await env.STRATA_DB.prepare(
+            `INSERT INTO webhook_events (webhook_id, event_type, event_ts, payload_json, status)
+             VALUES (?, ?, ?, ?, 'pending')
+             ON CONFLICT(webhook_id) DO NOTHING`,
         )
-            .bind(webhookId)
-            .first<{ webhook_id: string; status: string }>();
+            .bind(webhookId, eventType, eventTs, body)
+            .run();
 
-        if (existing) {
-            // Already processed — return success (idempotent)
+        const changes = (insertResult as { meta?: { changes?: number } }).meta?.changes ?? 0;
+        if (changes === 0) {
+            // Duplicate webhook_id — already processed or in-flight
             return new Response(JSON.stringify({ status: "ok", deduplicated: true }), {
                 status: 200,
                 headers: { "Content-Type": "application/json" },
             });
         }
-
-        // Persist event
-        const eventTs = webhookTimestamp;
-        await env.STRATA_DB.prepare(
-            `INSERT INTO webhook_events (webhook_id, event_type, event_ts, payload_json, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-        )
-            .bind(webhookId, eventType, eventTs, body)
-            .run();
 
         // Return 200 quickly, process async
         ctx.waitUntil(

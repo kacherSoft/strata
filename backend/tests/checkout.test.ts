@@ -7,14 +7,35 @@ import { handleCheckoutSession } from "../src/routes/checkout.js";
 import type { Env } from "../src/types.js";
 import { PRODUCT_IDS } from "../src/types.js";
 
+const TEST_USER_ID = "user-checkout-123";
+const TEST_EMAIL = "test@example.com";
+const VALID_SESSION_TOKEN = "valid-session-token";
+
+let mockSessionValid = true;
+
 function makeEnv(overrides: Partial<Env> = {}): Env {
-    const mockStatement = {
-        bind: () => mockStatement,
-        run: async () => ({ success: true }),
-    };
     return {
         STRATA_DB: {
-            prepare: () => mockStatement,
+            prepare: (sql: string) => {
+                const mockStatement = {
+                    _sql: sql,
+                    bind: function () { return this; },
+                    first: async function () {
+                        if (this._sql?.includes("FROM account_sessions")) {
+                            if (!mockSessionValid) return null;
+                            return {
+                                session_id: "sess-checkout-1",
+                                user_id: TEST_USER_ID,
+                                expires_at: Math.floor(Date.now() / 1000) + 86400,
+                                email_normalized: TEST_EMAIL,
+                            };
+                        }
+                        return null;
+                    },
+                    run: async () => ({ success: true, meta: { changes: 1 } }),
+                };
+                return mockStatement;
+            },
         } as unknown as D1Database,
         DODO_API_KEY: "test-api-key",
         DODO_WEBHOOK_SECRET: "test-webhook-secret",
@@ -22,15 +43,18 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
         ENVIRONMENT: "test",
         DODO_BASE_URL: "https://test.dodopayments.com",
         TOKEN_TTL_SECONDS: "3600",
-        AUTH_REQUIRED_FOR_CHECKOUT: "false",
         ...overrides,
     };
 }
 
-function makeRequest(body: Record<string, unknown>): Request {
+function makeRequest(body: Record<string, unknown>, sessionToken?: string): Request {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
     return new Request("https://api.test/v1/checkout-sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
     });
 }
@@ -41,10 +65,40 @@ vi.stubGlobal("fetch", mockFetch);
 describe("POST /v1/checkout-sessions", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockSessionValid = true;
+    });
+
+    it("should return 401 without auth token", async () => {
+        const req = makeRequest({
+            product_id: PRODUCT_IDS.proMonthly,
+            install_id: "550e8400-e29b-41d4-a716-446655440000",
+        });
+        const res = await handleCheckoutSession(req, makeEnv());
+        expect(res.status).toBe(401);
+        const body: any = await res.json();
+        expect(body.error_code).toBe("AUTH_REQUIRED");
+    });
+
+    it("should return 401 with invalid session token", async () => {
+        mockSessionValid = false;
+        const req = makeRequest(
+            {
+                product_id: PRODUCT_IDS.proMonthly,
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleCheckoutSession(req, makeEnv());
+        expect(res.status).toBe(401);
+        const body: any = await res.json();
+        expect(body.error_code).toBe("INVALID_SESSION");
     });
 
     it("should reject missing product_id", async () => {
-        const req = makeRequest({ install_id: "550e8400-e29b-41d4-a716-446655440000" });
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(400);
         const body: any = await res.json();
@@ -52,7 +106,10 @@ describe("POST /v1/checkout-sessions", () => {
     });
 
     it("should reject missing or invalid install_id", async () => {
-        const req = makeRequest({ product_id: PRODUCT_IDS.proMonthly, install_id: "not-uuid" });
+        const req = makeRequest(
+            { product_id: PRODUCT_IDS.proMonthly, install_id: "not-uuid" },
+            VALID_SESSION_TOKEN,
+        );
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(400);
         const body: any = await res.json();
@@ -60,10 +117,13 @@ describe("POST /v1/checkout-sessions", () => {
     });
 
     it("should reject unknown product_id", async () => {
-        const req = makeRequest({
-            product_id: "pdt_123",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
+        const req = makeRequest(
+            {
+                product_id: "pdt_123",
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            VALID_SESSION_TOKEN,
+        );
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(400);
         const body: any = await res.json();
@@ -77,17 +137,17 @@ describe("POST /v1/checkout-sessions", () => {
                     payment_link: "https://checkout.dodo/123",
                     checkout_session_id: "cks_123",
                 }),
-                {
-                    status: 200,
-                },
+                { status: 200 },
             ),
         );
 
-        const req = makeRequest({
-            product_id: PRODUCT_IDS.proMonthly,
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            email: "test@example.com",
-        });
+        const req = makeRequest(
+            {
+                product_id: PRODUCT_IDS.proMonthly,
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            VALID_SESSION_TOKEN,
+        );
 
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(200);
@@ -102,16 +162,19 @@ describe("POST /v1/checkout-sessions", () => {
         expect(fetchBody.return_url).toContain("install_id=550e8400-e29b-41d4-a716-446655440000");
         expect(fetchBody.product_cart?.[0]?.product_id).toBe(PRODUCT_IDS.proMonthly);
         expect(fetchBody.product_cart?.[0]?.quantity).toBe(1);
-        expect(fetchBody.customer.email).toBe("test@example.com");
+        expect(fetchBody.customer.email).toBe(TEST_EMAIL);
         expect(fetchBody.metadata.install_id).toBe("550e8400-e29b-41d4-a716-446655440000");
     });
 
     it("should handle Dodo API failure", async () => {
         mockFetch.mockResolvedValueOnce(new Response("Gateway timeout", { status: 504 }));
-        const req = makeRequest({
-            product_id: PRODUCT_IDS.proMonthly,
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
+        const req = makeRequest(
+            {
+                product_id: PRODUCT_IDS.proMonthly,
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            VALID_SESSION_TOKEN,
+        );
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(502);
         const body: any = await res.json();
@@ -119,25 +182,32 @@ describe("POST /v1/checkout-sessions", () => {
     });
 
     it("should reject invalid return_url", async () => {
-        const req = makeRequest({
-            product_id: PRODUCT_IDS.proMonthly,
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            return_url: "https://example.com",
-        });
+        const req = makeRequest(
+            {
+                product_id: PRODUCT_IDS.proMonthly,
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+                return_url: "https://example.com",
+            },
+            VALID_SESSION_TOKEN,
+        );
         const res = await handleCheckoutSession(req, makeEnv());
         expect(res.status).toBe(400);
         const body: any = await res.json();
         expect(body.error_code).toBe("INVALID_RETURN_URL");
     });
 
-    it("should require auth when AUTH_REQUIRED_FOR_CHECKOUT is enabled", async () => {
-        const req = makeRequest({
-            product_id: PRODUCT_IDS.proMonthly,
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleCheckoutSession(req, makeEnv({ AUTH_REQUIRED_FOR_CHECKOUT: "true" }));
-        expect(res.status).toBe(401);
+    it("should reject email that does not match signed-in account", async () => {
+        const req = makeRequest(
+            {
+                product_id: PRODUCT_IDS.proMonthly,
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+                email: "other@example.com",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleCheckoutSession(req, makeEnv());
+        expect(res.status).toBe(403);
         const body: any = await res.json();
-        expect(body.error_code).toBe("AUTH_REQUIRED");
+        expect(body.error_code).toBe("ACCOUNT_MISMATCH");
     });
 });

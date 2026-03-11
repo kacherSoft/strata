@@ -116,8 +116,12 @@ function projectEvent(
             const state = normalizeSubscriptionState(eventType, data);
             if (!state) return null;
 
+            // Determine tier from product_id — VIP lifetime ID maps to "vip", all others "pro"
+            const productId = ((data.product_id as string) || "").trim();
+            const tier: Tier = productId === PRODUCT_IDS.vipLifetime ? "vip" : "pro";
+
             return {
-                tier: "pro",
+                tier,
                 state,
                 subjectType: "email",
                 subjectId: email,
@@ -145,6 +149,35 @@ function projectEvent(
                 };
             }
             return null;
+        }
+
+        case "license_key.revoked": {
+            const email = extractEmail(data);
+            if (!email) return null;
+            // VIP lifetime licenses are the only license_key product — revoke VIP tier
+            return {
+                tier: "vip" as Tier,
+                state: "inactive" as EntitlementState,
+                subjectType: "email",
+                subjectId: email,
+            };
+        }
+
+        case "refund.succeeded": {
+            // TODO: Dodo Payments does not document payload fields for refund.succeeded
+            // (no product_id or customer.email confirmed). Implement full handler once
+            // payload structure is validated against live webhook deliveries.
+            // For now: extract email if present and deactivate whatever tier is stored.
+            const email = extractEmail(data);
+            if (!email) return null;
+            const productId = ((data.product_id as string) || "").trim();
+            const tier: Tier = productId === PRODUCT_IDS.vipLifetime ? "vip" : "pro";
+            return {
+                tier,
+                state: "inactive" as EntitlementState,
+                subjectType: "email",
+                subjectId: email,
+            };
         }
 
         case "payment.succeeded":
@@ -467,15 +500,27 @@ export async function processWebhookEvent(
         const existingPrecedence = TIER_PRECEDENCE[existing.tier as Tier] ?? 0;
         const newPrecedence = TIER_PRECEDENCE[projection.tier] ?? 0;
 
-        if (newPrecedence < existingPrecedence) {
+        // Rule 1: Never downgrade an active higher-tier with a lower-tier event.
+        if (newPrecedence < existingPrecedence && existing.state === "active") {
             await markWebhookIgnored(env, webhookId);
             return;
         }
 
+        // Rule 2: Inactive higher-tier must not overwrite an active different-tier.
+        // (e.g., VIP revoked should not clear active Pro subscription.)
+        if (
+            projection.state === "inactive" &&
+            existing.state === "active" &&
+            projection.tier !== existing.tier
+        ) {
+            await markWebhookIgnored(env, webhookId);
+            return;
+        }
+
+        // Rule 3: Same tier + same state = no-op (skip unnecessary write).
         const hasEffectiveFieldUpdate = Boolean(
             projection.effectiveFrom || projection.effectiveUntil,
         );
-
         if (
             projection.tier === existing.tier &&
             projection.state === existing.state &&

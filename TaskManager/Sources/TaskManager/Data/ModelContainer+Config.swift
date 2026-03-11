@@ -1,35 +1,188 @@
 import SwiftData
 import Foundation
 
+// MARK: - Store URL & Backup helpers
+
 extension ModelContainer {
-    static var appSchema: Schema {
-        Schema([
-            TaskModel.self,
-            AIModeModel.self,
-            SettingsModel.self,
-            CustomFieldDefinitionModel.self,
-            CustomFieldValueModel.self
-        ])
+
+    /// Explicit store path: ~/Library/Application Support/Strata/strata.store
+    static var storeURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return appSupport
+            .appendingPathComponent("Strata", isDirectory: true)
+            .appendingPathComponent("strata.store")
     }
 
+    /// Moves store files from the legacy default-location to the explicit Strata/ path.
+    /// Runs before backup + container init so the correct file is in place.
+    static func migrateFromDefaultLocation() {
+        let fm = FileManager.default
+        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let legacyStoreURL = appSupport.appendingPathComponent("default.store")
+        let targetBase = storeURL
+
+        // Nothing to migrate if legacy store does not exist
+        guard fm.fileExists(atPath: legacyStoreURL.path) else { return }
+
+        // Skip if explicit store already exists — keep it, ignore legacy
+        if fm.fileExists(atPath: targetBase.path) {
+            print("[Strata] Legacy store found but explicit store already exists — skipping migration")
+            return
+        }
+
+        // Create destination directory
+        let targetDir = targetBase.deletingLastPathComponent()
+        try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
+
+        // Move .store, .store-wal, .store-shm from legacy to explicit path
+        for suffix in ["", "-wal", "-shm"] {
+            let srcURL = appSupport.appendingPathComponent("default.store\(suffix)")
+            let dstPath = URL(fileURLWithPath: targetBase.path + suffix)
+            guard fm.fileExists(atPath: srcURL.path) else { continue }
+            do {
+                try fm.moveItem(at: srcURL, to: dstPath)
+                print("[Strata] Migrated \(srcURL.lastPathComponent) → \(dstPath.lastPathComponent)")
+            } catch {
+                print("[Strata] Failed to migrate \(srcURL.lastPathComponent): \(error)")
+            }
+        }
+    }
+
+    /// Copies store + WAL + SHM sidecars into a timestamped Backups/ file.
+    /// Keeps the newest 5 backups; deletes older ones.
+    static func backupStore(at storeBase: URL) {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: storeBase.path) else { return }
+
+        let backupsDir = storeBase.deletingLastPathComponent()
+            .appendingPathComponent("Backups", isDirectory: true)
+        try? fm.createDirectory(at: backupsDir, withIntermediateDirectories: true)
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+
+        let sidecars = ["", "-wal", "-shm"]
+        for suffix in sidecars {
+            let srcURL = URL(fileURLWithPath: storeBase.path + suffix)
+            guard fm.fileExists(atPath: srcURL.path) else { continue }
+            let backupName = "store_\(timestamp).store\(suffix)"
+            let dstURL = backupsDir.appendingPathComponent(backupName)
+            do {
+                try fm.copyItem(at: srcURL, to: dstURL)
+            } catch {
+                print("[Strata] Backup copy failed for \(srcURL.lastPathComponent): \(error)")
+            }
+        }
+
+        // Rotate: keep newest 5 primary backup files (ignore .wal/.shm for counting)
+        rotateBackups(in: backupsDir, keepNewest: 5)
+    }
+
+    private static func rotateBackups(in backupsDir: URL, keepNewest maxCount: Int) {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(at: backupsDir, includingPropertiesForKeys: [.creationDateKey]) else { return }
+
+        // Only count primary .store files (not sidecars)
+        let primaryFiles = entries.filter {
+            $0.pathExtension == "store" && !$0.lastPathComponent.hasSuffix("-wal") && !$0.lastPathComponent.hasSuffix("-shm")
+        }
+
+        guard primaryFiles.count > maxCount else { return }
+
+        let sorted = primaryFiles.sorted {
+            let d0 = (try? $0.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            let d1 = (try? $1.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            return d0 < d1 // oldest first
+        }
+
+        let toDelete = sorted.prefix(primaryFiles.count - maxCount)
+        for primary in toDelete {
+            // Remove primary + sidecars
+            for suffix in ["", "-wal", "-shm"] {
+                let candidate = URL(fileURLWithPath: primary.path + suffix)
+                try? fm.removeItem(at: candidate)
+            }
+        }
+    }
+
+    // MARK: - Container Init
+
+    /// Configures the production ModelContainer:
+    /// 1. Migrates legacy default.store → Strata/strata.store
+    /// 2. Backs up existing store
+    /// 3. Initialises container with StrataMigrationPlan
+    /// 4. Runs a lightweight integrity check
+    ///
+    /// Throws on any failure — callers MUST handle the error (no silent fallback).
     static func configured() throws -> ModelContainer {
-        let config = ModelConfiguration(
-            schema: appSchema,
-            isStoredInMemoryOnly: false
+        // Step 1 — Ensure Strata/ directory exists
+        let storeDir = storeURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: storeDir, withIntermediateDirectories: true)
+
+        // Step 2 — Migrate from legacy location if needed
+        migrateFromDefaultLocation()
+
+        // Step 3 — Pre-migration backup
+        backupStore(at: storeURL)
+
+        // Step 4 — Initialise container with explicit URL + migration plan
+        let config = ModelConfiguration(url: storeURL)
+        let schema = Schema(StrataSchemaV1.models)
+        let container = try ModelContainer(
+            for: schema,
+            migrationPlan: StrataMigrationPlan.self,
+            configurations: [config]
         )
 
-        return try ModelContainer(for: appSchema, configurations: [config])
+        // Step 5 — Lightweight integrity check
+        let context = ModelContext(container)
+        let taskCount = (try? context.fetchCount(FetchDescriptor<TaskModel>())) ?? 0
+        if taskCount == 0 {
+            checkForDataLossWarning(storeURL: storeURL, taskCount: taskCount)
+        }
+
+        return container
     }
 
-    static func inMemoryFallback() throws -> ModelContainer {
-        let config = ModelConfiguration(
-            schema: appSchema,
-            isStoredInMemoryOnly: true
-        )
+    /// Posts a notification if zero tasks are found but a non-empty backup exists,
+    /// which may indicate accidental data loss.
+    private static func checkForDataLossWarning(storeURL: URL, taskCount: Int) {
+        let backupsDir = storeURL.deletingLastPathComponent().appendingPathComponent("Backups")
+        guard let entries = try? FileManager.default.contentsOfDirectory(
+            at: backupsDir,
+            includingPropertiesForKeys: [.fileSizeKey]
+        ) else { return }
 
-        return try ModelContainer(for: appSchema, configurations: [config])
+        let hasSubstantialBackup = entries.contains {
+            let size = (try? $0.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            return size > 8192 // larger than a near-empty SQLite file
+        }
+
+        if hasSubstantialBackup {
+            print("[Strata] WARNING: 0 tasks found but backup exists — possible data loss. Backup dir: \(backupsDir.path)")
+            NotificationCenter.default.post(name: .strataDataLossWarning, object: nil)
+        }
     }
 }
+
+// MARK: - Notifications
+
+extension Notification.Name {
+    static let strataDataLossWarning = Notification.Name("strataDataLossWarning")
+}
+
+// MARK: - In-Memory (tests only)
+
+extension ModelContainer {
+    static func inMemoryForTesting() throws -> ModelContainer {
+        let schema = Schema(StrataSchemaV1.models)
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        return try ModelContainer(for: schema, configurations: [config])
+    }
+}
+
+// MARK: - Seed Data
 
 @MainActor
 func seedDefaultData(container: ModelContainer) throws {

@@ -49,14 +49,6 @@ struct AccountSignInView: View {
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.oneTimeCode)
                     .disabled(isBusy)
-
-                #if DEBUG
-                if let debugCode = challenge?.debugCode, !debugCode.isEmpty {
-                    Text("Debug code: \(debugCode)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                #endif
             }
 
             switch state {

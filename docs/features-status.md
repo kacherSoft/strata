@@ -1,6 +1,6 @@
 # Strata — Feature & Project Status
 
-_Last updated: 2026-03-04_
+_Last updated: 2026-03-10 (v1.0 GA)_
 
 ---
 
@@ -8,13 +8,7 @@ _Last updated: 2026-03-04_
 
 | Work Item | Status | Plan |
 |-----------|--------|------|
-| Security hardening finalization (29 tasks) | **In Progress** | [Active plan](../plans/260304-security-hardening-finalization/plan.md) |
-
-Key remaining work:
-- P0: Debug code leak, rate limiter fail-open, TOCTOU seat race, missing webhook handlers
-- P1: Restore rate limiting, tier precedence bug, concurrent webhook race
-- P2: Validation fixes, CRON cleanup, key rotation, legacy code removal
-- P3: GA gate checklist, documentation
+| v1.0 Release Preparation | **Phase 5 (Documentation)** | [Active plan](../plans/260309-1600-v1-release-preparation/plan.md) |
 
 ---
 
@@ -54,7 +48,7 @@ Key remaining work:
 | | AI attachments | Image/PDF support in AI modes |
 | | Attachments in custom modes | Enable attachments for user-created modes |
 
-### Account & Security — Core DONE, Hardening In Progress
+### Account & Security — All DONE
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -67,8 +61,20 @@ Key remaining work:
 | Webhook entitlement sync | ✅ Done | Dodo events → user_entitlements via projector |
 | User backfill migration | ✅ Done | Legacy email entitlements → user_id mapping |
 | Account-based entitlements | ✅ Done | user_id ownership, not email-based |
-| Legacy email-only paths | ⚠️ Flag-gated | Disabled in production, code not yet deleted |
-| Security hardening | 🔄 In Progress | [See active plan](../plans/260304-security-hardening-finalization/plan.md) |
+| Legacy email-only paths | ✅ Removed | Code deleted — no email-only trust path remains |
+| Anomaly logging | ✅ Done | Account-sharing signals logged via fire-and-forget |
+| CRON session/OTP cleanup | ✅ Done | Scheduled every 6h via Cloudflare CRON trigger |
+| Ed25519 key rotation | ✅ Done | kid claim in token, multi-key verification support |
+| Security hardening | ✅ Done | Rate limiting, TOCTOU fix, CORS removal, webhook handlers |
+
+### Data Integrity — All DONE
+
+| Feature | Status | Notes |
+|---|---|---|
+| VersionedSchema (V1→V2) | ✅ Done | Explicit schema versioning with MigrationPlan |
+| Pre-migration store backup | ✅ Done | Backup to Application Support before every migration |
+| DataErrorView | ✅ Done | Shown on container init failure instead of silent in-memory fallback |
+| Explicit persistent store URL | ✅ Done | No silent in-memory fallback on schema mismatch |
 
 ### Technical Implementation — All DONE
 

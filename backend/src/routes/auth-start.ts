@@ -24,7 +24,6 @@ export async function handleAuthEmailStart(request: Request, env: Env): Promise<
             challenge_id: started.challengeId,
             expires_at: started.expiresAt,
             delivery: started.delivery,
-            debug_code: started.debugCode,
         };
 
         return new Response(JSON.stringify(response), {

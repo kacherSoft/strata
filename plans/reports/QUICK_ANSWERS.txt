@@ -1,0 +1,171 @@
+================================================================================
+  DODOPAYMENTS GIVEAWAY RESEARCH - QUICK ANSWERS
+================================================================================
+
+Q1: Can I create promo/discount codes?
+A:  YES - Full API support via POST /discounts endpoint
+    └─ Percentage-based (basis points)
+    └─ Flat-rate (USD cents)
+    └─ Custom codes or auto-generated 16-char codes
+
+Q2: Can I create 100% discount codes?
+A:  YES - Fully supported as of v1.30.0 (June 2025)
+    └─ Set type: "percentage", amount: 10000
+    └─ Customer sees $0 total at checkout
+    └─ Example: POST /discounts with amount:10000
+
+Q3: Can I create free checkout sessions?
+A:  YES - $0 payments supported for one-time products
+    └─ Use 100% discount code, OR
+    └─ Create product at $0 base price
+    └─ Customer completes checkout with no charge
+
+Q4: Can I create gift codes or gift cards?
+A:  NO - Not available in DodoPayments
+    └─ No dedicated gift card API
+    └─ Workaround: use high-value discount codes (documented)
+
+Q5: Can I generate license keys via API?
+A:  PARTIAL - Can activate/validate, cannot create
+    └─ Public activation: POST /licenses/activate
+    └─ Admin management: GET /licenses, PATCH /licenses/{id}
+    └─ But NO POST /licenses to create new licenses
+    └─ Licenses auto-generated only at checkout or in dashboard
+
+Q6: Can I issue licenses directly to users (admin grant)?
+A:  NO - Cannot bypass checkout via API
+    └─ Licenses must go through checkout OR
+    └─ Pre-create in dashboard, distribute manually
+    └─ No direct issuance endpoint available
+
+Q7: What's the exact API endpoint for discount codes?
+A:  POST https://live.dodopayments.com/discounts
+
+    Required fields:
+    ├─ type: "percentage" | "flat" | "flat_per_unit"
+    └─ amount: integer (basis points or cents)
+
+    Optional fields:
+    ├─ code: custom code (auto-generated if omitted)
+    ├─ name: display name
+    ├─ expires_at: ISO timestamp
+    ├─ usage_limit: max uses across all customers
+    ├─ subscription_cycles: limit to N billing cycles
+    ├─ preserve_on_plan_change: boolean
+    └─ restricted_to: array of product IDs
+
+Q8: What's the exact API endpoint for license activation?
+A:  POST https://live.dodopayments.com/licenses/activate
+
+    Required fields:
+    ├─ license_key: string (e.g., "LK-ABC123-DEF456")
+    └─ name: string (device name, e.g., "John's MacBook")
+
+    No authentication required (public endpoint)
+
+    Response includes:
+    ├─ id: license activation instance ID
+    ├─ customer: customer_id, name, email
+    ├─ product: product_id, product name
+    └─ created_at: timestamp
+
+Q9: How do I calculate discount amounts?
+A:  Percentage discounts use BASIS POINTS:
+    └─ 100 basis points = 1%
+    └─ 1000 basis points = 10%
+    └─ 5000 basis points = 50%
+    └─ 10000 basis points = 100% (FREE)
+
+    Flat-rate discounts use USD CENTS:
+    └─ 100 cents = $1.00
+    └─ 5000 cents = $50.00
+    └─ 999 cents = $9.99
+
+Q10: What are the limitations?
+A:   Key Limitations:
+     ├─ No direct license creation API (cannot bypass checkout)
+     ├─ $0 payments only for one-time products (not subscriptions)
+     ├─ No gift card support (use discounts as alternative)
+     ├─ License issuance tied to checkout or manual dashboard creation
+     ├─ Cannot offer instant admin-only giveaways
+     └─ Rate limits unknown (contact support)
+
+Q11: What's the recommended giveaway flow for Strata?
+A:   1. Create 100% discount: POST /discounts (amount:10000)
+     2. Share checkout link with discount code pre-applied
+     3. Customer sees $0 total
+     4. Complete checkout (no payment processed)
+     5. DodoPayments webhook delivers license_key
+     6. Strata backend receives license_key in webhook
+     7. Strata creates user account + activates lifetime seat
+     8. (Optional) User can activate license on device via /licenses/activate
+
+Q12: What are the testing endpoints?
+A:   Sandbox (Testing):
+     └─ https://test.dodopayments.com/
+     └─ Use API key: sk_test_xxx
+     └─ Use card: 4242 4242 4242 4242
+
+     Production:
+     └─ https://live.dodopayments.com/
+     └─ Use API key: sk_live_xxx
+     └─ Real payments processed
+
+Q13: How do I authenticate API calls?
+A:   All authenticated endpoints require:
+     Authorization: Bearer YOUR_API_KEY
+
+     Get API key at: https://app.dodopayments.com/developer/api-keys
+
+     Note: License activation endpoint (POST /licenses/activate) is public,
+     no authentication required.
+
+Q14: What happens when $0 checkout completes?
+A:   DodoPayments fires webhook:
+     ├─ event: "payment.completed"
+     ├─ payment_id: "pay_xxx"
+     ├─ amount: 0
+     ├─ license_key: "LK-ABC123-DEF456"
+     ├─ customer: {customer_id, email, name}
+     └─ discount_code: "STRATA_LAUNCH_FREE"
+
+     Strata backend should:
+     1. Verify webhook signature
+     2. Extract license_key and customer email
+     3. Create user account with lifetime entitlement
+     4. Store license_key for later validation
+     5. Optionally send welcome email
+
+Q15: What's still unknown/needs clarification?
+A:   Contact DodoPayments support@dodopayments.com:
+     1. Fee structure for $0 transactions
+     2. API rate limits (requests/minute)
+     3. Timeline for POST /licenses endpoint
+     4. Subscription discount behavior (if any)
+     5. Webhook retry policy for failed deliveries
+     6. Maximum basis points allowed for discounts
+
+================================================================================
+
+RECOMMENDED READING ORDER:
+
+For Quick Overview (15 minutes):
+  1. This file (QUICK_ANSWERS.txt)
+  2. dodopayments-findings-summary.md
+
+For Complete Knowledge (2 hours):
+  1. research-dodopayments-giveaway-capabilities-260311.md
+  2. dodopayments-payload-examples.md
+
+For Development Reference (ongoing):
+  1. dodopayments-api-quick-reference.md (bookmark this)
+  2. dodopayments-payload-examples.md (sections 1, 8-11)
+
+ALL FILES LOCATED IN:
+/Volumes/OCW-2TB/LocalProjects/TaskManager/plans/reports/
+
+================================================================================
+Status: ✅ RESEARCH COMPLETE
+Date: 2026-03-11
+Ready for: Implementation & Integration
+================================================================================

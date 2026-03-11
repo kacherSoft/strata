@@ -10,12 +10,14 @@ import { signToken } from "../signing.js";
 import { parseTokenTTLSeconds } from "../config.js";
 import { verifyInstallProof } from "../install-proof.js";
 import { requireEmail, requireNonEmptyString, requireUUID } from "../validation.js";
-import { authRequiredForRestore, optionalAuthSession, requireAuthSession } from "../auth.js";
+import { requireAuthSession } from "../auth.js";
+import { checkAnomalies } from "../anomaly-detection.js";
 import {
     ensureDeviceSeat,
     resolveTierForUser,
     upsertUserEntitlement,
 } from "../user-entitlements.js";
+import { checkRateLimit } from "../rate-limit.js";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -284,10 +286,17 @@ async function tryRestoreVipFromLinkedCheckout(
 export async function handleRestore(
     request: Request,
     env: Env,
+    ctx: ExecutionContext,
 ): Promise<Response> {
     const requestId = generateRequestId();
 
     try {
+        // Rate limit by IP — max 20 restore requests per minute
+        const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
+        if (!(await checkRateLimit(env, `restore:ip:${clientIp}`, 20, 60))) {
+            throw new AppError(429, "RATE_LIMITED", "Too many restore requests");
+        }
+
         let body: RestoreRequest;
         try {
             body = (await request.json()) as RestoreRequest;
@@ -296,6 +305,11 @@ export async function handleRestore(
         }
 
         const installId = requireUUID(body.install_id, "install_id", "INVALID_INSTALL_ID");
+
+        // Rate limit by install_id — max 5 restore requests per minute
+        if (!(await checkRateLimit(env, `restore:install:${installId}`, 5, 60))) {
+            throw new AppError(429, "RATE_LIMITED", "Too many restore requests from this device");
+        }
         const challengeId = requireNonEmptyString(
             body.challenge_id,
             "INVALID_CHALLENGE",
@@ -309,79 +323,38 @@ export async function handleRestore(
 
         const proof = await verifyInstallProof(env, installId, challengeId, nonceSignature);
 
-        const principal = authRequiredForRestore(env)
-            ? await requireAuthSession(request, env)
-            : await optionalAuthSession(request, env);
+        const principal = await requireAuthSession(request, env);
 
         const dodo = new DodoClient(env);
         const installLink = await loadInstallLinkRow(env, installId);
-        let email: string | null = null;
-        if (principal) {
-            if (typeof body.email === "string" && body.email.trim()) {
-                const requestedEmail = requireEmail(body.email);
-                if (requestedEmail !== principal.email) {
-                    throw new AppError(
-                        403,
-                        "ACCOUNT_MISMATCH",
-                        "Restore email must match the signed-in account",
-                    );
-                }
-            }
-            email = principal.email;
-        } else if (typeof body.email === "string" && body.email.trim()) {
-            email = requireEmail(body.email);
-        } else {
-            email = await inferEmailForInstall(env, installId, installLink, dodo, requestId);
-        }
 
-        if (!email) {
-            if (authRequiredForRestore(env)) {
-                throw new AppError(401, "AUTH_REQUIRED", "Sign in is required to restore purchases");
+        if (typeof body.email === "string" && body.email.trim()) {
+            const requestedEmail = requireEmail(body.email);
+            if (requestedEmail !== principal.email) {
+                throw new AppError(
+                    403,
+                    "ACCOUNT_MISMATCH",
+                    "Restore email must match the signed-in account",
+                );
             }
-            throw new AppError(
-                400,
-                "INVALID_EMAIL",
-                "email is required until a successful purchase links this install",
-            );
         }
+        const email: string = principal.email;
 
         const ttl = parseTokenTTLSeconds(env);
         let restoreType: RestoreResponse["restore_type"] = "none";
         let tier: "free" | "pro" | "vip" = "free";
 
-        if (principal) {
-            const resolved = await resolveTierForUser(env, {
-                userId: principal.userId,
-                email: principal.email,
-                dodo,
-                allowProviderFallback: true,
-            });
-            tier = resolved.tier;
-            if (tier === "vip") {
-                restoreType = "lifetime";
-            } else if (tier === "pro") {
-                restoreType = "subscription";
-            }
-        } else {
-            // Legacy path while auth hardening rollout is in progress.
-            const localEntitlement = await env.STRATA_DB.prepare(
-                "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
-            )
-                .bind(email)
-                .first<{ tier: string; state: string }>();
-
-            if (localEntitlement) {
-                tier = localEntitlement.tier as "free" | "pro" | "vip";
-                restoreType = tier === "vip" ? "lifetime" : "subscription";
-            }
-
-            if (tier === "free") {
-                const subscription = await dodo.findActiveSubscription(email);
-                if (subscription) {
-                    tier = "pro";
-                    restoreType = "subscription";
-                }
-            }
+        const resolved = await resolveTierForUser(env, {
+            userId: principal.userId,
+            email: principal.email,
+            dodo,
+            allowProviderFallback: true,
+        });
+        tier = resolved.tier;
+        if (tier === "vip") {
+            restoreType = "lifetime";
+        } else if (tier === "pro") {
+            restoreType = "subscription";
         }
 
         // Step 3: VIP fallback for one-time checkout when webhook/license projection is delayed
@@ -397,14 +370,12 @@ export async function handleRestore(
             if (restoredFromVipPayment) {
                 tier = "vip";
                 restoreType = "lifetime";
-                if (principal) {
-                    await upsertUserEntitlement(env, {
-                        userId: principal.userId,
-                        tier: "vip",
-                        state: "active",
-                        sourceEventId: `restore-payment-${requestId}`,
-                    });
-                }
+                await upsertUserEntitlement(env, {
+                    userId: principal.userId,
+                    tier: "vip",
+                    state: "active",
+                    sourceEventId: `restore-payment-${requestId}`,
+                });
             }
         }
 
@@ -454,14 +425,12 @@ export async function handleRestore(
                             .bind(email, `restore-${requestId}`)
                             .run();
 
-                        if (principal) {
-                            await upsertUserEntitlement(env, {
-                                userId: principal.userId,
-                                tier: "vip",
-                                state: "active",
-                                sourceEventId: `restore-${requestId}`,
-                            });
-                        }
+                        await upsertUserEntitlement(env, {
+                            userId: principal.userId,
+                            tier: "vip",
+                            state: "active",
+                            sourceEventId: `restore-${requestId}`,
+                        });
                     }
                 } else {
                     const providerBody = await licenseResponse.text().catch(() => "");
@@ -478,7 +447,7 @@ export async function handleRestore(
             }
         }
 
-        if (principal && tier !== "free") {
+        if (tier !== "free") {
             await ensureDeviceSeat(env, {
                 userId: principal.userId,
                 installId,
@@ -490,11 +459,12 @@ export async function handleRestore(
         const token = await signToken({
             tier,
             sub: email,
-            uid: principal?.userId,
+            uid: principal.userId,
             installId,
             ttlSeconds: ttl,
             privateKeyHex: env.ENTITLEMENT_SIGNING_PRIVATE_KEY,
             installPubkeyHash: proof.installPubkeyHash,
+            kid: env.ENTITLEMENT_SIGNING_KEY_ID || "default",
         });
 
         // Link this install to the email if we found something
@@ -510,16 +480,16 @@ export async function handleRestore(
                 .run()
                 .catch(() => { }); // Best-effort
 
-            if (principal) {
-                await upsertUserEntitlement(env, {
-                    userId: principal.userId,
-                    tier,
-                    state: "active",
-                    sourceEventId: `restore-${requestId}`,
-                }).catch(() => {
-                    // Best effort; restore token is still issued.
-                });
-            }
+            await upsertUserEntitlement(env, {
+                userId: principal.userId,
+                tier,
+                state: "active",
+                sourceEventId: `restore-${requestId}`,
+            }).catch(() => {
+                // Best effort; restore token is still issued.
+            });
+
+            ctx.waitUntil(checkAnomalies(env, { userId: principal.userId, installId, action: "restore" }));
         }
 
         const response: RestoreResponse = {

@@ -14,10 +14,16 @@ import { PRODUCT_IDS } from "../src/types.js";
 
 const TEST_PRIVATE_KEY_HEX = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
 
+// Simulated session state for DB mock
+let mockSessionValid = true;
 let mockLocalEntitlement: { tier: string; state: string } | null = null;
 let mockInstallLinkedEmail: string | null = null;
 let mockInstallLinkedCheckoutId: string | null = null;
 let mockInstallLinkedCustomerId: string | null = null;
+
+const TEST_USER_ID = "user-123";
+const TEST_EMAIL = "test@example.com";
+const VALID_SESSION_TOKEN = "valid-session-token";
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
     return {
@@ -26,6 +32,15 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
                 const mockStatement = {
                     bind: () => mockStatement,
                     first: async () => {
+                        if (sql.includes("FROM account_sessions")) {
+                            if (!mockSessionValid) return null;
+                            return {
+                                session_id: "sess-1",
+                                user_id: TEST_USER_ID,
+                                expires_at: Math.floor(Date.now() / 1000) + 86400,
+                                email_normalized: TEST_EMAIL,
+                            };
+                        }
                         if (sql.includes("FROM entitlements")) {
                             return mockLocalEntitlement;
                         }
@@ -43,9 +58,13 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
                                 customer_id: mockInstallLinkedCustomerId,
                             };
                         }
+                        if (sql.includes("FROM user_devices")) {
+                            return { count: 0 };
+                        }
                         return null;
                     },
-                    run: async () => ({ success: true }),
+                    all: async () => ({ results: [] }),
+                    run: async () => ({ success: true, meta: { changes: 1 } }),
                 };
                 return mockStatement;
             },
@@ -56,20 +75,28 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
         ENVIRONMENT: "test",
         DODO_BASE_URL: "https://test.dodopayments.com",
         TOKEN_TTL_SECONDS: "3600",
-        AUTH_REQUIRED_FOR_RESTORE: "false",
         ...overrides,
     };
 }
 
-function makeRequest(body: Record<string, unknown>): Request {
+// Minimal ctx mock for waitUntil
+function makeCtx(): ExecutionContext {
+    return { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
+}
+
+function makeRequest(body: Record<string, unknown>, sessionToken?: string): Request {
     const payload = {
         challenge_id: "f1f5bfc2-0a66-4f93-8178-f8a4c2f00d23",
         nonce_signature: "MEYCIQDaQ5I5QW1VQq2r2b2+X2j6G9QW3b2mF5Dq3xHh8A+8jwIhAOe+5x+2Uy9Y5nxe9vF6kWv9G1w+L1Qc6Y7m+WSfJUN8",
         ...body,
     };
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
     return new Request("https://api.test/v1/purchases/restore", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
     });
 }
@@ -80,6 +107,7 @@ vi.stubGlobal("fetch", mockFetch);
 describe("POST /v1/purchases/restore", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockSessionValid = true;
         mockLocalEntitlement = null;
         mockInstallLinkedEmail = null;
         mockInstallLinkedCheckoutId = null;
@@ -89,35 +117,36 @@ describe("POST /v1/purchases/restore", () => {
         });
     });
 
-    it("should restore from local D1 store (VIP fallback)", async () => {
-        mockLocalEntitlement = { tier: "vip", state: "active" };
-
-        const req = makeRequest({
-            email: "vip@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleRestore(req, makeEnv());
-        expect(res.status).toBe(200);
-
+    it("should return 401 without auth token", async () => {
+        const req = makeRequest({ install_id: "550e8400-e29b-41d4-a716-446655440000" });
+        const res = await handleRestore(req, makeEnv(), makeCtx());
+        expect(res.status).toBe(401);
         const body: any = await res.json();
-        expect(body.restore_type).toBe("lifetime");
-
-        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
-        const claims = await verifyToken(body.token, pubKey);
-        expect(claims.tier).toBe("vip");
-        expect(claims.install_pubkey_hash).toBe("test_install_pubkey_hash");
+        expect(body.error_code).toBe("AUTH_REQUIRED");
     });
 
-    it("should fallback to Dodo API if not found locally", async () => {
-        // Dodo subscription proxy mock (customer + active subscription)
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ customer_id: "123", email: "pro@example.com" }] }), { status: 200 }));
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ status: "active", product_id: "pdt_0NZEvu9tI0aecVEYkmxOH", next_billing_date: "2026-03-26T00:00:00Z", customer: { customer_id: "123", email: "pro@example.com" } }] }), { status: 200 }));
+    it("should return 401 with invalid/expired session", async () => {
+        mockSessionValid = false;
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
+        expect(res.status).toBe(401);
+        const body: any = await res.json();
+        expect(body.error_code).toBe("INVALID_SESSION");
+    });
 
-        const req = makeRequest({
-            email: "pro@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleRestore(req, makeEnv());
+    it("should restore from Dodo API (pro subscription)", async () => {
+        // resolveTierForUser calls: list customers, then list subscriptions
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ customer_id: "123", email: TEST_EMAIL }] }), { status: 200 }));
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ status: "active", product_id: "pdt_0NZEvu9tI0aecVEYkmxOH", next_billing_date: "2026-03-26T00:00:00Z", customer: { customer_id: "123", email: TEST_EMAIL } }] }), { status: 200 }));
+
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -129,9 +158,29 @@ describe("POST /v1/purchases/restore", () => {
         expect(claims.install_pubkey_hash).toBe("test_install_pubkey_hash");
     });
 
-    it("should activate license key if Dodo subscription not found", async () => {
-        // No local, no subscription in Dodo
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 })); // customer search
+    it("should restore free tier when no subscription found", async () => {
+        // No customers found in Dodo
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
+        expect(res.status).toBe(200);
+
+        const body: any = await res.json();
+        expect(body.restore_type).toBe("none");
+
+        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
+        const claims = await verifyToken(body.token, pubKey);
+        expect(claims.tier).toBe("free");
+        expect(claims.install_pubkey_hash).toBe("test_install_pubkey_hash");
+    });
+
+    it("should activate license key and grant VIP", async () => {
+        // No Dodo subscription
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }));
 
         // License activation mock
         mockFetch.mockResolvedValueOnce(
@@ -144,12 +193,14 @@ describe("POST /v1/purchases/restore", () => {
             ),
         );
 
-        const req = makeRequest({
-            email: "lic@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            license_key: "KAAA-BBBB-CCCC",
-        });
-        const res = await handleRestore(req, makeEnv());
+        const req = makeRequest(
+            {
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+                license_key: "KAAA-BBBB-CCCC",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -162,16 +213,19 @@ describe("POST /v1/purchases/restore", () => {
     });
 
     it("should return free pattern if nothing found", async () => {
-        // No local, no sub, license activation fails
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 })); // customer search
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: "invalid" }), { status: 400 })); // license activation
+        // No Dodo subscription
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+        // License activation fails
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: "invalid" }), { status: 400 }));
 
-        const req = makeRequest({
-            email: "none@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            license_key: "INVALID",
-        });
-        const res = await handleRestore(req, makeEnv());
+        const req = makeRequest(
+            {
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+                license_key: "INVALID",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -195,12 +249,14 @@ describe("POST /v1/purchases/restore", () => {
             ),
         );
 
-        const req = makeRequest({
-            email: "none@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            license_key: "NOT-VIP",
-        });
-        const res = await handleRestore(req, makeEnv());
+        const req = makeRequest(
+            {
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+                license_key: "NOT-VIP",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -211,84 +267,41 @@ describe("POST /v1/purchases/restore", () => {
         expect(claims.tier).toBe("free");
     });
 
-    it("should infer email from install link when request email is omitted", async () => {
-        mockInstallLinkedEmail = "linked@example.com";
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }));
-
-        const req = makeRequest({
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            email: undefined,
-        });
-        const res = await handleRestore(req, makeEnv());
-        expect(res.status).toBe(200);
-
+    it("should reject email that does not match signed-in account", async () => {
+        const req = makeRequest(
+            {
+                email: "other@example.com",
+                install_id: "550e8400-e29b-41d4-a716-446655440000",
+            },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
+        expect(res.status).toBe(403);
         const body: any = await res.json();
-        expect(body.resolved_email).toBe("linked@example.com");
-
-        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
-        const claims = await verifyToken(body.token, pubKey);
-        expect(claims.sub).toBe("linked@example.com");
-    });
-
-    it("should infer email from successful checkout session when request email is omitted", async () => {
-        mockInstallLinkedCheckoutId = "cks_123";
-        mockFetch.mockResolvedValueOnce(
-            new Response(
-                JSON.stringify({
-                    checkout_id: "cks_123",
-                    customer_email: "checkout@example.com",
-                    payment_status: "succeeded",
-                }),
-                { status: 200 },
-            ),
-        );
-        mockFetch.mockResolvedValueOnce(
-            new Response(JSON.stringify({ items: [] }), { status: 200 }),
-        );
-        mockFetch.mockResolvedValueOnce(
-            new Response(
-                JSON.stringify({
-                    checkout_id: "cks_123",
-                    customer_email: "checkout@example.com",
-                    payment_status: "succeeded",
-                }),
-                { status: 200 },
-            ),
-        );
-
-        const req = makeRequest({
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-            email: undefined,
-        });
-        const res = await handleRestore(req, makeEnv());
-        expect(res.status).toBe(200);
-
-        const body: any = await res.json();
-        expect(body.resolved_email).toBe("checkout@example.com");
-
-        const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
-        const claims = await verifyToken(body.token, pubKey);
-        expect(claims.sub).toBe("checkout@example.com");
+        expect(body.error_code).toBe("ACCOUNT_MISMATCH");
     });
 
     it("should restore VIP from successful linked checkout payment without license key", async () => {
         mockInstallLinkedCheckoutId = "cks_vip";
         mockInstallLinkedCustomerId = "cus_vip";
+        // resolveTierForUser: no subscription
         mockFetch.mockResolvedValueOnce(
             new Response(JSON.stringify({ items: [] }), { status: 200 }),
         );
+        // tryRestoreVipFromLinkedCheckout: checkout session lookup
         mockFetch.mockResolvedValueOnce(
             new Response(
                 JSON.stringify({
                     checkout_id: "cks_vip",
                     payment_id: "pay_vip",
                     payment_status: "succeeded",
-                    customer_email: "vip@example.com",
+                    customer_email: TEST_EMAIL,
                     customer_id: "cus_vip",
                 }),
                 { status: 200 },
             ),
         );
+        // payment lookup
         mockFetch.mockResolvedValueOnce(
             new Response(
                 JSON.stringify({
@@ -296,7 +309,7 @@ describe("POST /v1/purchases/restore", () => {
                     status: "succeeded",
                     customer: {
                         customer_id: "cus_vip",
-                        email: "vip@example.com",
+                        email: TEST_EMAIL,
                     },
                     product_cart: [{ product_id: PRODUCT_IDS.vipLifetime, quantity: 1 }],
                 }),
@@ -304,11 +317,11 @@ describe("POST /v1/purchases/restore", () => {
             ),
         );
 
-        const req = makeRequest({
-            email: "vip@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleRestore(req, makeEnv());
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -317,27 +330,30 @@ describe("POST /v1/purchases/restore", () => {
         const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
         const claims = await verifyToken(body.token, pubKey);
         expect(claims.tier).toBe("vip");
-        expect(claims.sub).toBe("vip@example.com");
+        expect(claims.sub).toBe(TEST_EMAIL);
     });
 
     it("should not restore VIP from linked checkout when payment product is not VIP", async () => {
         mockInstallLinkedCheckoutId = "cks_nonvip";
         mockInstallLinkedCustomerId = "cus_nonvip";
+        // resolveTierForUser: no subscription
         mockFetch.mockResolvedValueOnce(
             new Response(JSON.stringify({ items: [] }), { status: 200 }),
         );
+        // checkout session lookup
         mockFetch.mockResolvedValueOnce(
             new Response(
                 JSON.stringify({
                     checkout_id: "cks_nonvip",
                     payment_id: "pay_nonvip",
                     payment_status: "succeeded",
-                    customer_email: "user@example.com",
+                    customer_email: TEST_EMAIL,
                     customer_id: "cus_nonvip",
                 }),
                 { status: 200 },
             ),
         );
+        // payment lookup
         mockFetch.mockResolvedValueOnce(
             new Response(
                 JSON.stringify({
@@ -345,19 +361,20 @@ describe("POST /v1/purchases/restore", () => {
                     status: "succeeded",
                     customer: {
                         customer_id: "cus_nonvip",
-                        email: "user@example.com",
+                        email: TEST_EMAIL,
                     },
                     product_cart: [{ product_id: PRODUCT_IDS.proMonthly, quantity: 1 }],
                 }),
                 { status: 200 },
             ),
         );
+        // license activation: no license key provided so this won't be called
 
-        const req = makeRequest({
-            email: "user@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleRestore(req, makeEnv());
+        const req = makeRequest(
+            { install_id: "550e8400-e29b-41d4-a716-446655440000" },
+            VALID_SESSION_TOKEN,
+        );
+        const res = await handleRestore(req, makeEnv(), makeCtx());
         expect(res.status).toBe(200);
 
         const body: any = await res.json();
@@ -366,16 +383,5 @@ describe("POST /v1/purchases/restore", () => {
         const pubKey = await publicKeyFromPrivate(TEST_PRIVATE_KEY_HEX);
         const claims = await verifyToken(body.token, pubKey);
         expect(claims.tier).toBe("free");
-    });
-
-    it("should require auth when AUTH_REQUIRED_FOR_RESTORE is enabled", async () => {
-        const req = makeRequest({
-            email: "vip@example.com",
-            install_id: "550e8400-e29b-41d4-a716-446655440000",
-        });
-        const res = await handleRestore(req, makeEnv({ AUTH_REQUIRED_FOR_RESTORE: "true" }));
-        expect(res.status).toBe(401);
-        const body: any = await res.json();
-        expect(body.error_code).toBe("AUTH_REQUIRED");
     });
 });

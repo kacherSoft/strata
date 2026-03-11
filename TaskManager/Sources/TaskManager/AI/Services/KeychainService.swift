@@ -27,6 +27,7 @@ final class KeychainService: Sendable {
         case accountSessionExpiresAt = "strata.accountSessionExpiresAt"
         case accountUserId = "strata.accountUserId"
         case accountEmail = "strata.accountEmail"
+        case accountSessionEnvironment = "strata.accountSessionEnvironment"
     }
     
     private init() {}

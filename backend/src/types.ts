@@ -11,6 +11,9 @@ export interface Env {
     DODO_API_KEY: string;
     DODO_WEBHOOK_SECRET: string;
     ENTITLEMENT_SIGNING_PRIVATE_KEY: string; // hex-encoded Ed25519 seed
+    ENTITLEMENT_SIGNING_PRIVATE_KEY_PREV?: string; // hex-encoded Ed25519 seed (previous key during rotation)
+    ENTITLEMENT_SIGNING_KEY_ID?: string; // identifier for current signing key (e.g. "v2")
+    ENTITLEMENT_SIGNING_KEY_ID_PREV?: string; // identifier for previous signing key (e.g. "v1")
 
     // Environment variables (set in wrangler.jsonc)
     ENVIRONMENT: string;
@@ -18,9 +21,6 @@ export interface Env {
     TOKEN_TTL_SECONDS: string;
 
     // Auth/account hardening flags
-    AUTH_REQUIRED_FOR_CHECKOUT?: string;
-    AUTH_REQUIRED_FOR_RESTORE?: string;
-    AUTH_REQUIRED_FOR_RESOLVE?: string;
     ENFORCE_DEVICE_SEATS?: string;
     FREE_DEVICE_LIMIT?: string;
     PRO_DEVICE_LIMIT?: string;
@@ -62,6 +62,8 @@ export interface TokenClaims {
     exp: number;
     /** Unique token ID */
     jti: string;
+    /** Key ID for rotation support — identifies which public key to verify against */
+    kid?: string;
     /** Reserved for Phase 3 install binding */
     install_pubkey_hash?: string;
 }
@@ -145,7 +147,6 @@ export interface AuthStartResponse {
     challenge_id: string;
     expires_at: number;
     delivery: "email" | "dev-log";
-    debug_code?: string;
 }
 
 export interface AuthVerifyRequest {

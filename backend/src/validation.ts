@@ -29,10 +29,22 @@ export function requireEmail(value: unknown): string {
     }
 
     const normalized = value.trim().toLowerCase();
+    if (normalized.length > 254) {
+        throw new AppError(400, "INVALID_EMAIL", "email exceeds maximum length");
+    }
     if (!EMAIL_RE.test(normalized)) {
         throw new AppError(400, "INVALID_EMAIL", "email format is invalid");
     }
     return normalized;
+}
+
+export function sanitizeNickname(value: unknown): string | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim().slice(0, 100); // Max 100 chars
+    if (trimmed.length === 0) return null;
+    // Strip control characters (C0, DEL)
+    return trimmed.replace(/[\x00-\x1F\x7F]/g, "");
 }
 
 export function requireNonEmptyString(

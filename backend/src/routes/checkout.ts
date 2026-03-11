@@ -6,7 +6,7 @@ import type { Env, CheckoutSessionRequest, CheckoutSessionResponse } from "../ty
 import { AppError, handleError, generateRequestId } from "../errors.js";
 import { PRODUCT_IDS } from "../types.js";
 import { requireEmail, requireUUID } from "../validation.js";
-import { authRequiredForCheckout, optionalAuthSession, requireAuthSession } from "../auth.js";
+import { requireAuthSession } from "../auth.js";
 
 const ALLOWED_PRODUCT_IDS: ReadonlySet<string> = new Set<string>(
     Object.values(PRODUCT_IDS),
@@ -67,25 +67,17 @@ export async function handleCheckoutSession(
         // Validate install_id
         const installId = requireUUID(body.install_id, "install_id", "INVALID_INSTALL_ID");
 
-        const principal = authRequiredForCheckout(env)
-            ? await requireAuthSession(request, env)
-            : await optionalAuthSession(request, env);
+        const principal = await requireAuthSession(request, env);
 
         let email = body.email ? requireEmail(body.email) : null;
-        if (principal) {
-            if (email && email !== principal.email) {
-                throw new AppError(
-                    403,
-                    "ACCOUNT_MISMATCH",
-                    "Checkout email must match the signed-in account",
-                );
-            }
-            email = principal.email;
+        if (email && email !== principal.email) {
+            throw new AppError(
+                403,
+                "ACCOUNT_MISMATCH",
+                "Checkout email must match the signed-in account",
+            );
         }
-
-        if (authRequiredForCheckout(env) && !principal) {
-            throw new AppError(401, "AUTH_REQUIRED", "Sign in is required before checkout");
-        }
+        email = principal.email;
 
         // Build the success URL with install binding
         const successUrl = buildReturnURL(body.return_url, installId);

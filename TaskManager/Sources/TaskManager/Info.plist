@@ -31,6 +31,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ENTITLEMENT_PUBLIC_KEY_HEX</key>
 	<string>ea8e6eb72fa8d6e4b44ea18001d4c0b2081cdef655e813cbff70807b61206b25</string>
+	<key>ENTITLEMENT_KEY_ID</key>
+	<string>v1</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>STRATA_BACKEND_LIVE_BASE_URL</key>

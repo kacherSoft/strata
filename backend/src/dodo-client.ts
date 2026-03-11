@@ -254,7 +254,8 @@ export class DodoClient {
 
         if (!response.ok) {
             const status = response.status;
-            // Don't propagate provider error details
+            const body = await response.text().catch(() => "<unreadable>");
+            console.error(`[DodoClient] GET ${url} failed status=${status} body=${body.slice(0, 200)}`);
             if (status === 404) {
                 throw new AppError(404, "NOT_FOUND", "Resource not found");
             }

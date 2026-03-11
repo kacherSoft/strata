@@ -78,7 +78,7 @@ struct EntitlementBackendClient: Sendable {
             challenge_id: challengeId,
             nonce_signature: nonceSignature
         )
-        return try await post("/v1/entitlements/resolve", body: body, requiresAuth: true)
+        return try await post("/v1/entitlements/resolve", body: body, requiresAuth: true, retryable: false)
     }
 
     // MARK: - Restore
@@ -99,7 +99,7 @@ struct EntitlementBackendClient: Sendable {
             nonce_signature: nonceSignature,
             license_key: licenseKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         )
-        return try await post("/v1/purchases/restore", body: body, requiresAuth: true)
+        return try await post("/v1/purchases/restore", body: body, requiresAuth: true, retryable: false)
     }
 
     // MARK: - Checkout
@@ -138,7 +138,8 @@ struct EntitlementBackendClient: Sendable {
         let response: PortalSessionResponse = try await post(
             "/v1/customer-portal/session",
             body: body,
-            requiresAuth: true
+            requiresAuth: true,
+            retryable: false
         )
         guard let url = URL(string: response.portal_url),
               url.scheme?.lowercased() == "https" else {
@@ -240,7 +241,8 @@ struct EntitlementBackendClient: Sendable {
     private func post<T: Encodable, R: Decodable>(
         _ path: String,
         body: T,
-        requiresAuth: Bool = false
+        requiresAuth: Bool = false,
+        retryable: Bool = true
     ) async throws -> R {
         let url = baseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
@@ -257,9 +259,10 @@ struct EntitlementBackendClient: Sendable {
         }
         request.httpBody = try JSONEncoder().encode(body)
 
+        let effectiveMaxRetries = retryable ? maxRetries : 0
         var lastError: Error?
 
-        for attempt in 0...maxRetries {
+        for attempt in 0...effectiveMaxRetries {
             if attempt > 0 {
                 try await Task.sleep(nanoseconds: UInt64(retryDelay * 1_000_000_000))
             }
@@ -275,7 +278,7 @@ struct EntitlementBackendClient: Sendable {
                         statusCode: httpResponse.statusCode,
                         body: String(data: data, encoding: .utf8) ?? ""
                     )
-                    if attempt < maxRetries { continue }
+                    if attempt < effectiveMaxRetries { continue }
                     throw lastError!
                 }
 
@@ -293,20 +296,28 @@ struct EntitlementBackendClient: Sendable {
                     )
                 }
 
-                return try JSONDecoder().decode(R.self, from: data)
+                // Server processed the request — never retry after 2xx.
+                do {
+                    return try JSONDecoder().decode(R.self, from: data)
+                } catch {
+                    let preview = String(data: data.prefix(500), encoding: .utf8) ?? "<binary>"
+                    NSLog("[BackendClient] POST %@ decode failed status=%d body=%@: %@",
+                          path, httpResponse.statusCode, preview, "\(error)")
+                    throw BackendError.networkError(error)
+                }
             } catch let error as BackendError {
                 lastError = error
                 switch error {
                 case .networkError:
-                    if attempt < maxRetries { continue }
+                    if attempt < effectiveMaxRetries { continue }
                 case .httpError(let code, _) where code >= 500 || code == 429:
-                    if attempt < maxRetries { continue }
+                    if attempt < effectiveMaxRetries { continue }
                 default:
                     throw error
                 }
             } catch {
                 lastError = BackendError.networkError(error)
-                if attempt < maxRetries { continue }
+                if attempt < effectiveMaxRetries { continue }
             }
         }
 
@@ -366,7 +377,14 @@ struct EntitlementBackendClient: Sendable {
                     )
                 }
 
-                return try JSONDecoder().decode(R.self, from: data)
+                do {
+                    return try JSONDecoder().decode(R.self, from: data)
+                } catch {
+                    let preview = String(data: data.prefix(500), encoding: .utf8) ?? "<binary>"
+                    NSLog("[BackendClient] GET %@ decode failed status=%d body=%@: %@",
+                          path, httpResponse.statusCode, preview, "\(error)")
+                    throw BackendError.networkError(error)
+                }
             } catch let error as BackendError {
                 lastError = error
                 switch error {
@@ -464,7 +482,6 @@ struct AuthStartResponse: Decodable {
     let challenge_id: String
     let expires_at: Int
     let delivery: String
-    let debug_code: String?
 }
 
 struct AuthVerifyRequest: Encodable {
@@ -519,15 +536,52 @@ enum BackendError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .httpError(let code, let body):
-            return "Backend HTTP \(code): \(body)"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
+            return Self.friendlyMessage(statusCode: code, body: body)
+        case .networkError:
+            return "Unable to connect to the server. Please check your internet connection and try again."
         case .invalidPortalURL:
-            return "Invalid portal URL received from backend"
-        case .invalidToken(let reason):
-            return "Invalid entitlement token: \(reason)"
+            return "Unable to open the subscription management page. Please try again."
+        case .invalidToken:
+            return "Your entitlement could not be verified. Please try restoring your purchase."
         case .authRequired:
-            return "Sign in is required"
+            return "Please sign in to continue."
+        }
+    }
+
+    private static let errorCodeMessages: [String: String] = [
+        "CHALLENGE_ALREADY_USED": "Verification failed. Please try again.",
+        "CHALLENGE_EXPIRED": "Verification expired. Please try again.",
+        "INVALID_CHALLENGE": "Verification failed. Please try again.",
+        "INVALID_INSTALL_PROOF": "Device verification failed. Please try again.",
+        "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
+        "PROVIDER_ERROR": "Payment service is temporarily unavailable. Please try again later.",
+        "CUSTOMER_NOT_FOUND": "No account found for this email address.",
+        "DEVICE_LIMIT_REACHED": "You've reached the maximum number of devices for your plan.",
+        "DEVICE_NOT_FOUND": "Device not found. It may have already been removed.",
+        "ACCOUNT_MISMATCH": "The email doesn't match your signed-in account.",
+        "OTP_EXPIRED": "Verification code has expired. Please request a new one.",
+        "OTP_ATTEMPTS_EXCEEDED": "Too many failed attempts. Please request a new code.",
+        "INVALID_OTP": "Invalid verification code. Please check and try again.",
+        "INVALID_SESSION": "Your session has expired. Please sign in again.",
+        "ALREADY_REGISTERED": "This device is already registered.",
+    ]
+
+    private static func friendlyMessage(statusCode: Int, body: String) -> String {
+        if let data = body.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let errorCode = json["error_code"] as? String {
+            if let friendly = errorCodeMessages[errorCode] {
+                return friendly
+            }
+            if let message = json["message"] as? String {
+                return message
+            }
+        }
+        switch statusCode {
+        case 401: return "Authentication required. Please sign in and try again."
+        case 429: return "Too many requests. Please wait a moment and try again."
+        case 502, 503: return "Service temporarily unavailable. Please try again later."
+        default: return "Something went wrong (error \(statusCode)). Please try again."
         }
     }
 

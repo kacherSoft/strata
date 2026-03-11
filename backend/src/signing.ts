@@ -67,6 +67,8 @@ export interface SignTokenParams {
     ttlSeconds: number;
     privateKeyHex: string;
     installPubkeyHash?: string;
+    /** Key ID for rotation support — included in token payload as `kid` claim */
+    kid?: string;
 }
 
 /**
@@ -87,6 +89,10 @@ export async function signToken(params: SignTokenParams): Promise<string> {
 
     if (params.uid) {
         claims.uid = params.uid;
+    }
+
+    if (params.kid) {
+        claims.kid = params.kid;
     }
 
     if (params.installPubkeyHash) {
@@ -132,6 +138,43 @@ export async function verifyToken(
 
     const claimsJson = new TextDecoder().decode(payloadBytes);
     return JSON.parse(claimsJson) as TokenClaims;
+}
+
+/**
+ * Verify a token against a map of key IDs to public key hex strings.
+ * Uses the `kid` claim in the token payload to select the correct key.
+ * Falls back to the "default" key if no `kid` claim is present.
+ * Throws on invalid signature, unknown kid, or malformed token.
+ */
+export async function verifyTokenMultiKey(
+    token: string,
+    keyMap: Record<string, string>,
+): Promise<TokenClaims> {
+    const parts = token.split(".");
+    if (parts.length !== 2) {
+        throw new Error("Invalid token format: expected payload.signature");
+    }
+
+    const [payloadB64, signatureB64] = parts;
+    const payloadBytes = base64urlDecode(payloadB64);
+    const claimsJson = new TextDecoder().decode(payloadBytes);
+    const claims = JSON.parse(claimsJson) as TokenClaims;
+
+    const kid = claims.kid || "default";
+    const publicKeyHex = keyMap[kid];
+    if (!publicKeyHex) {
+        throw new Error(`Unknown key ID: ${kid}`);
+    }
+
+    const signature = base64urlDecode(signatureB64);
+    const publicKey = hexToBytes(publicKeyHex);
+
+    const valid = await ed.verifyAsync(signature, payloadBytes, publicKey);
+    if (!valid) {
+        throw new Error("Invalid token signature");
+    }
+
+    return claims;
 }
 
 /**

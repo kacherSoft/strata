@@ -19,7 +19,7 @@ const MIN_SESSION_TTL_SECONDS = 15 * 60;
 const MAX_SESSION_TTL_SECONDS = 90 * 24 * 60 * 60;
 const MAX_AUTH_RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 
-const AUTH_RATE_LIMIT_CLEANUP_INTERVAL_MS = 60_000;
+const AUTH_RATE_LIMIT_CLEANUP_INTERVAL_MS = 30_000;
 let lastAuthRateLimitCleanupMs = 0;
 
 export interface AuthPrincipal {
@@ -33,7 +33,6 @@ export interface StartEmailAuthResult {
     challengeId: string;
     expiresAt: number;
     delivery: "email" | "dev-log";
-    debugCode?: string;
 }
 
 export interface VerifyEmailAuthResult {
@@ -68,7 +67,7 @@ function nowSeconds(): number {
     return Math.floor(Date.now() / 1000);
 }
 
-async function checkAuthRateLimit(
+export async function checkAuthRateLimit(
     env: Env,
     key: string,
     max: number,
@@ -99,9 +98,9 @@ async function checkAuthRateLimit(
 
         await cleanupAuthRateLimitRows(env, nowMs, nowSec);
         return (bucket?.request_count ?? 0) <= max;
-    } catch {
-        // Fail open if shared limiter table is unavailable.
-        return true;
+    } catch (error) {
+        console.error("[auth] rate limiter DB error, failing closed:", error);
+        return false; // Deny on error — fail closed
     }
 }
 
@@ -121,7 +120,7 @@ async function cleanupAuthRateLimitRows(
                 FROM resolve_rate_limits
                 WHERE bucket_key LIKE 'auth:%' AND expires_at < ?
                 ORDER BY expires_at ASC
-                LIMIT 500
+                LIMIT 2000
              )`,
         )
             .bind(nowSec)
@@ -141,9 +140,11 @@ function bytesToBase64url(data: Uint8Array): string {
 function randomDigits(length: number): string {
     const out: string[] = [];
     while (out.length < length) {
-        const buffer = new Uint8Array(length);
+        // Over-allocate to ensure enough non-rejected bytes in a single pass.
+        const buffer = new Uint8Array(length * 2);
         crypto.getRandomValues(buffer);
         for (const byte of buffer) {
+            if (byte >= 250) continue; // Reject biased values (250-255); 0-249 = 25 each digit
             out.push(String(byte % 10));
             if (out.length >= length) break;
         }
@@ -212,18 +213,6 @@ function sessionTTLSeconds(env: Env): number {
 
 function otpMaxAttempts(env: Env): number {
     return parseBoundedInt(env.AUTH_OTP_MAX_ATTEMPTS, DEFAULT_OTP_MAX_ATTEMPTS, 1, 10);
-}
-
-export function authRequiredForCheckout(env: Env): boolean {
-    return isTruthyFlag(env.AUTH_REQUIRED_FOR_CHECKOUT, true);
-}
-
-export function authRequiredForRestore(env: Env): boolean {
-    return isTruthyFlag(env.AUTH_REQUIRED_FOR_RESTORE, true);
-}
-
-export function authRequiredForResolve(env: Env): boolean {
-    return isTruthyFlag(env.AUTH_REQUIRED_FOR_RESOLVE, true);
 }
 
 export function deviceSeatsEnforced(env: Env): boolean {
@@ -372,10 +361,6 @@ export async function startEmailAuth(
         delivery,
     };
 
-    if (!isLiveEnvironment(env)) {
-        response.debugCode = otpCode;
-    }
-
     return response;
 }
 
@@ -504,6 +489,25 @@ export async function verifyEmailAuth(
         .bind(sessionId, user.userId, sessionHash, sessionExpiresAt, now, now)
         .run();
 
+    // Cap concurrent sessions — revoke oldest if over limit
+    const MAX_SESSIONS_PER_USER = 10;
+    const sessionCount = await env.STRATA_DB.prepare(
+        `SELECT COUNT(*) AS count FROM account_sessions
+         WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?`,
+    ).bind(user.userId, now).first<{ count: number }>();
+
+    if (sessionCount && sessionCount.count > MAX_SESSIONS_PER_USER) {
+        await env.STRATA_DB.prepare(
+            `UPDATE account_sessions SET revoked_at = ?
+             WHERE id IN (
+                 SELECT id FROM account_sessions
+                 WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
+                 ORDER BY created_at ASC
+                 LIMIT ?
+             )`,
+        ).bind(now, user.userId, now, sessionCount.count - MAX_SESSIONS_PER_USER).run();
+    }
+
     return {
         principal: {
             userId: user.userId,
@@ -562,19 +566,6 @@ export async function requireAuthSession(request: Request, env: Env): Promise<Au
         sessionId: session.session_id,
         sessionExpiresAt: session.expires_at,
     };
-}
-
-export async function optionalAuthSession(
-    request: Request,
-    env: Env,
-): Promise<AuthPrincipal | null> {
-    const token = parseBearerToken(request);
-    if (!token) return null;
-    try {
-        return await requireAuthSession(request, env);
-    } catch {
-        return null;
-    }
 }
 
 export async function revokeAuthSession(request: Request, env: Env): Promise<void> {

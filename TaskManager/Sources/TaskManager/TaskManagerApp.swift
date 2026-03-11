@@ -90,43 +90,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let container: ModelContainer?
+    @State private var container: ModelContainer?
+    @State private var initError: Error?
     private let menuBarController = MenuBarController()
-
-    init() {
-        let resolvedContainer: ModelContainer?
-
-        do {
-            let configured = try ModelContainer.configured()
-            try seedDefaultData(container: configured)
-            resolvedContainer = configured
-        } catch {
-            do {
-                let fallback = try ModelContainer.inMemoryFallback()
-                try seedDefaultData(container: fallback)
-                resolvedContainer = fallback
-            } catch {
-                resolvedContainer = nil
-            }
-        }
-
-        container = resolvedContainer
-        if let container {
-            WindowManager.shared.configure(modelContainer: container)
-            ShortcutManager.shared.configure(modelContainer: container)
-            appDelegate.modelContainer = container
-        }
-
-    }
 
     var body: some Scene {
         Window("Task Manager", id: "main-window") {
-            if let container {
-                ContentView()
-                    .withAppEnvironment(container: container)
-            } else {
-                Text("Unable to initialize local data store.")
-                    .padding()
+            Group {
+                if let container {
+                    ContentView()
+                        .withAppEnvironment(container: container)
+                } else if let error = initError {
+                    DataErrorView(error: error, storeURL: ModelContainer.storeURL)
+                } else {
+                    ProgressView("Loading…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .task { await initializeContainer() }
+                }
             }
         }
         .windowStyle(.hiddenTitleBar)
@@ -134,6 +114,86 @@ struct TaskManagerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
+    }
+
+    @MainActor
+    private func initializeContainer() async {
+        do {
+            let configured = try ModelContainer.configured()
+            try seedDefaultData(container: configured)
+            WindowManager.shared.configure(modelContainer: configured)
+            ShortcutManager.shared.configure(modelContainer: configured)
+            appDelegate.modelContainer = configured
+            container = configured
+        } catch {
+            initError = error
+        }
+    }
+}
+
+// MARK: - DataErrorView
+
+/// Shown when ModelContainer init fails — no silent in-memory fallback.
+struct DataErrorView: View {
+    let error: Error
+    let storeURL: URL
+    @State private var showResetConfirmation = false
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.red)
+
+            Text("Unable to Open Data Store")
+                .font(.title2.bold())
+
+            Text(error.localizedDescription)
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 400)
+
+            HStack(spacing: 16) {
+                Button("Reset Data…") {
+                    showResetConfirmation = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+
+                Link("Contact Support",
+                     destination: URL(string: "mailto:support@getstrata.app?subject=Strata%20Data%20Store%20Error")!)
+            }
+        }
+        .padding(40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .confirmationDialog(
+            "Reset All Data?",
+            isPresented: $showResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Data and Restart", role: .destructive) {
+                deleteStoreAndRestart()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete all tasks and settings. This cannot be undone.")
+        }
+    }
+
+    private func deleteStoreAndRestart() {
+        let fm = FileManager.default
+        for suffix in ["", "-wal", "-shm"] {
+            let url = URL(fileURLWithPath: storeURL.path + suffix)
+            try? fm.removeItem(at: url)
+        }
+        // Relaunch the app
+        let url = URL(fileURLWithPath: Bundle.main.executablePath!)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", Bundle.main.bundlePath]
+        try? process.run()
+        NSApp.terminate(nil)
     }
 }
 

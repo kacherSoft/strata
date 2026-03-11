@@ -316,13 +316,15 @@ export async function verifyInstallProof(
         .bind(challengeId, installId)
         .first<ChallengeRow>();
 
+    console.log(`[verifyInstallProof] challengeId=${challengeId} installId=${installId} found=${!!challenge} used_at=${challenge?.used_at} expires_at=${challenge?.expires_at} now=${now}`);
+
     if (!challenge) {
         throw new AppError(401, "INVALID_CHALLENGE", "Challenge is invalid");
     }
     if (challenge.used_at) {
         throw new AppError(401, "CHALLENGE_ALREADY_USED", "Challenge has already been used");
     }
-    if (challenge.expires_at < now) {
+    if (challenge.expires_at <= now) {
         throw new AppError(401, "CHALLENGE_EXPIRED", "Challenge has expired");
     }
 

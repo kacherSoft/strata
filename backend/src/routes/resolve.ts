@@ -9,76 +9,16 @@ import { signToken } from "../signing.js";
 import { parseTokenTTLSeconds } from "../config.js";
 import { verifyInstallProof } from "../install-proof.js";
 import { requireEmail, requireNonEmptyString, requireUUID } from "../validation.js";
-import { authRequiredForResolve, optionalAuthSession, requireAuthSession } from "../auth.js";
+import { requireAuthSession } from "../auth.js";
 import { ensureDeviceSeat, resolveTierForUser } from "../user-entitlements.js";
+import { checkAnomalies } from "../anomaly-detection.js";
+import { checkRateLimit } from "../rate-limit.js";
 
 // ---------------------------------------------------------------------------
-// D1-backed rate limiter (shared across Worker isolates)
+// Rate limit constants for resolve endpoint
 // ---------------------------------------------------------------------------
-const RATE_LIMIT_WINDOW_SECONDS = 60; // 1 minute
-const RATE_LIMIT_MAX_IP = 30; // requests per IP per window
-const RATE_LIMIT_MAX_INSTALL = 10; // requests per install_id per window
-const RATE_LIMIT_CLEANUP_INTERVAL_MS = 60_000;
-
-let lastCleanupMs = 0;
-
-async function checkRateLimit(
-    env: Env,
-    key: string,
-    max: number,
-): Promise<boolean> {
-    const nowMs = Date.now();
-    const nowSec = Math.floor(nowMs / 1000);
-    const window = Math.floor(nowSec / RATE_LIMIT_WINDOW_SECONDS);
-    const bucketKey = `${key}:${window}`;
-    const expiresAt = nowSec + RATE_LIMIT_WINDOW_SECONDS * 2;
-
-    try {
-        await env.STRATA_DB.prepare(
-            `INSERT INTO resolve_rate_limits (bucket_key, request_count, expires_at)
-             VALUES (?, 1, ?)
-             ON CONFLICT(bucket_key) DO UPDATE SET
-               request_count = request_count + 1,
-               expires_at = excluded.expires_at`,
-        )
-            .bind(bucketKey, expiresAt)
-            .run();
-
-        const bucket = await env.STRATA_DB.prepare(
-            "SELECT request_count FROM resolve_rate_limits WHERE bucket_key = ? LIMIT 1",
-        )
-            .bind(bucketKey)
-            .first<{ request_count: number }>();
-
-        await cleanupRateLimitRows(env, nowMs, nowSec);
-        return (bucket?.request_count ?? 0) <= max;
-    } catch {
-        // Fail open if migration is missing; availability is preferable to lockouts.
-        return true;
-    }
-}
-
-async function cleanupRateLimitRows(env: Env, nowMs: number, nowSec: number): Promise<void> {
-    if (nowMs - lastCleanupMs < RATE_LIMIT_CLEANUP_INTERVAL_MS) return;
-    lastCleanupMs = nowMs;
-
-    try {
-        await env.STRATA_DB.prepare(
-            `DELETE FROM resolve_rate_limits
-             WHERE bucket_key IN (
-                SELECT bucket_key
-                FROM resolve_rate_limits
-                WHERE expires_at < ?
-                ORDER BY expires_at ASC
-                LIMIT 500
-             )`,
-        )
-            .bind(nowSec)
-            .run();
-    } catch {
-        // Best effort cleanup only.
-    }
-}
+const RATE_LIMIT_MAX_IP = 30; // requests per IP per minute
+const RATE_LIMIT_MAX_INSTALL = 10; // requests per install_id per minute
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -87,6 +27,7 @@ async function cleanupRateLimitRows(env: Env, nowMs: number, nowSec: number): Pr
 export async function handleResolve(
     request: Request,
     env: Env,
+    ctx: ExecutionContext,
 ): Promise<Response> {
     const requestId = generateRequestId();
 
@@ -125,66 +66,37 @@ export async function handleResolve(
         // Require install-bound proof before issuing entitlements.
         const proof = await verifyInstallProof(env, installId, challengeId, nonceSignature);
 
-        const principal = authRequiredForResolve(env)
-            ? await requireAuthSession(request, env)
-            : await optionalAuthSession(request, env);
+        const principal = await requireAuthSession(request, env);
 
-        let email: string;
-        if (principal) {
-            if (body.email && requireEmail(body.email) !== principal.email) {
-                throw new AppError(
-                    403,
-                    "ACCOUNT_MISMATCH",
-                    "Resolve email must match the signed-in account",
-                );
-            }
-            email = principal.email;
-        } else {
-            if (authRequiredForResolve(env)) {
-                throw new AppError(401, "AUTH_REQUIRED", "Sign in is required to resolve entitlements");
-            }
-            email = requireEmail(body.email);
+        if (body.email && requireEmail(body.email) !== principal.email) {
+            throw new AppError(
+                403,
+                "ACCOUNT_MISMATCH",
+                "Resolve email must match the signed-in account",
+            );
         }
+        const email: string = principal.email;
 
         // -------------------------------------------------------------------
-        // Phase 2: Local entitlement store first, Dodo API fallback
+        // Local entitlement store first, Dodo API fallback
         // -------------------------------------------------------------------
         let tier: "free" | "pro" | "vip" = "free";
         let source: "store" | "fallback" = "fallback";
 
-        if (principal) {
-            const dodo = new DodoClient(env);
-            const resolved = await resolveTierForUser(env, {
-                userId: principal.userId,
-                email: principal.email,
-                dodo,
-                allowProviderFallback: !authRequiredForResolve(env),
-            });
-            tier = resolved.tier;
-            source = resolved.source === "provider" ? "fallback" : "store";
-            await ensureDeviceSeat(env, {
-                userId: principal.userId,
-                installId,
-                tier,
-            });
-        } else {
-            // Legacy fallback (disabled once AUTH_REQUIRED_FOR_RESOLVE=true in all envs)
-            const localEntitlement = await env.STRATA_DB.prepare(
-                "SELECT tier, state FROM entitlements WHERE subject_type = 'email' AND subject_id = ? AND state = 'active'",
-            )
-                .bind(email)
-                .first<{ tier: string; state: string }>();
-
-            if (localEntitlement) {
-                tier = localEntitlement.tier as typeof tier;
-                source = "store";
-            } else {
-                const dodo = new DodoClient(env);
-                const subscription = await dodo.findActiveSubscription(email);
-                tier = subscription ? "pro" : "free";
-                source = "fallback";
-            }
-        }
+        const dodo = new DodoClient(env);
+        const resolved = await resolveTierForUser(env, {
+            userId: principal.userId,
+            email: principal.email,
+            dodo,
+            allowProviderFallback: true,
+        });
+        tier = resolved.tier;
+        source = resolved.source === "provider" ? "fallback" : "store";
+        await ensureDeviceSeat(env, {
+            userId: principal.userId,
+            installId,
+            tier,
+        });
 
         console.log(`[${requestId}] resolve: email=${email} tier=${tier} source=${source}`);
 
@@ -193,11 +105,12 @@ export async function handleResolve(
         const token = await signToken({
             tier,
             sub: email,
-            uid: principal?.userId,
+            uid: principal.userId,
             installId,
             ttlSeconds: ttl,
             privateKeyHex: env.ENTITLEMENT_SIGNING_PRIVATE_KEY,
             installPubkeyHash: proof.installPubkeyHash,
+            kid: env.ENTITLEMENT_SIGNING_KEY_ID || "default",
         });
 
         if (tier !== "free") {
@@ -210,6 +123,8 @@ export async function handleResolve(
             )
                 .bind(installId, email)
                 .run();
+
+            ctx.waitUntil(checkAnomalies(env, { userId: principal.userId, installId, action: "resolve" }));
         }
 
         const response: ResolveResponse = { token };
