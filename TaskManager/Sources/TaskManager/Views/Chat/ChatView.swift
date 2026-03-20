@@ -14,6 +14,8 @@ struct ChatView: View {
     @State private var inputText = ""
     @State private var attachments: [AIAttachment] = []
     @State private var errorMessage: String?
+    @State private var selectedProviderId: UUID?
+    @State private var selectedModelName: String = ""
 
     /// Reference to sidebar for triggering reloads after ChatView-level operations
     @State private var sidebarKey = UUID()
@@ -32,6 +34,18 @@ struct ChatView: View {
         } detail: {
             // Main chat content area
             VStack(spacing: 0) {
+                // Toolbar with model selector
+                HStack(spacing: 8) {
+                    ChatModelSelectorView(
+                        selectedProviderId: $selectedProviderId,
+                        selectedModelName: $selectedModelName
+                    )
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                Divider()
+
                 chatContentArea
             }
             .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
@@ -142,6 +156,11 @@ struct ChatView: View {
         } else {
             createNewSession()
         }
+        // Initialize model selector from Chat mode defaults
+        if selectedModelName.isEmpty, let chatMode = resolveChatMode() {
+            selectedModelName = chatMode.modelName
+            selectedProviderId = chatMode.aiProviderId
+        }
     }
 
     private func loadSessions() {
@@ -207,17 +226,34 @@ struct ChatView: View {
 
         loadMessages(for: sessionId)
 
+        // Resolve provider/model: toolbar selection > chat mode > session fallback
         let chatMode = resolveChatMode()
+        let resolvedProvider: AIProviderType
+        let resolvedModel: String
+        let resolvedBaseURL: String?
+
+        if let pid = selectedProviderId, !selectedModelName.isEmpty,
+           let provModel = resolveProviderModel(pid) {
+            resolvedProvider = provModel.providerType
+            resolvedModel = selectedModelName
+            resolvedBaseURL = provModel.baseURL
+        } else {
+            resolvedProvider = chatMode?.provider ?? session.provider
+            resolvedModel = chatMode?.modelName ?? session.modelName
+            resolvedBaseURL = chatMode?.customBaseURL ?? session.customBaseURL
+        }
+
         let modeData = AIModeData(
             name: chatMode?.name ?? "Chat",
             systemPrompt: chatMode?.systemPrompt ?? resolveSystemPrompt(for: session),
-            provider: chatMode?.provider ?? session.provider,
-            modelName: chatMode?.modelName ?? session.modelName,
+            provider: resolvedProvider,
+            modelName: resolvedModel,
             supportsAttachments: true,
-            customBaseURL: chatMode?.customBaseURL ?? session.customBaseURL
+            customBaseURL: resolvedBaseURL
         )
 
-        let task = Task {
+        // Set streamTask BEFORE task body starts (both @MainActor, so safe)
+        chatService.streamTask = Task {
             do {
                 let response = try await chatService.sendMessage(
                     userMessage: text,
@@ -243,13 +279,17 @@ struct ChatView: View {
                 errorMessage = error.localizedDescription
             }
         }
-        chatService.streamTask = task
     }
 
     private func resolveChatMode() -> AIModeModel? {
         let descriptor = FetchDescriptor<AIModeModel>(
             predicate: #Predicate { $0.isBuiltIn && $0.name == "Chat" }
         )
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    private func resolveProviderModel(_ id: UUID) -> AIProviderModel? {
+        let descriptor = FetchDescriptor<AIProviderModel>(predicate: #Predicate { $0.id == id })
         return try? modelContext.fetch(descriptor).first
     }
 

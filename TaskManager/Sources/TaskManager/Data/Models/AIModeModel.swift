@@ -64,6 +64,7 @@ final class AIModeModel: Identifiable {
     var isBuiltIn: Bool
     var supportsAttachments: Bool = false
     var customBaseURL: String?
+    var aiProviderId: UUID?
     var createdAt: Date
     
     var provider: AIProviderType {

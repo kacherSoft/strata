@@ -84,6 +84,52 @@ final class KeychainService: Sendable {
     func hasKey(_ key: Key) -> Bool {
         get(key) != nil
     }
+
+    // MARK: - Dynamic key support (for AIProviderModel.apiKeyRef)
+
+    func saveValue(_ value: String, forRef ref: String) throws {
+        guard let data = value.data(using: .utf8) else {
+            throw KeychainError.encodingFailed
+        }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: ref,
+            kSecValueData as String: data
+        ]
+        SecItemDelete(query as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw KeychainError.saveFailed(status)
+        }
+    }
+
+    func getValue(forRef ref: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: ref,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    func deleteValue(forRef ref: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: ref
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    func hasValue(forRef ref: String) -> Bool {
+        getValue(forRef: ref) != nil
+    }
 }
 
 enum KeychainError: LocalizedError {

@@ -95,10 +95,10 @@ struct TaskManagerApp: App {
     private let menuBarController = MenuBarController()
 
     var body: some Scene {
-        Window("Task Manager", id: "main-window") {
+        Window("Strata", id: "main-window") {
             Group {
                 if let container {
-                    ContentView()
+                    ChatView(onDismiss: {})
                         .withAppEnvironment(container: container)
                 } else if let error = initError {
                     DataErrorView(error: error, storeURL: ModelContainer.storeURL)
@@ -114,10 +114,10 @@ struct TaskManagerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .newItem) {
-                Button("Chat") {
-                    WindowManager.shared.showChat()
+                Button("Tasks") {
+                    WindowManager.shared.showTasks()
                 }
-                .keyboardShortcut("j", modifiers: [.command, .option])
+                .keyboardShortcut("t", modifiers: [.command, .shift])
             }
         }
     }

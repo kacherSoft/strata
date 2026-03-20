@@ -128,11 +128,10 @@ extension ModelContainer {
 
         // Step 4 — Initialise container with explicit URL + migration plan
         let config = ModelConfiguration(url: storeURL)
-        let schema = Schema(StrataSchemaV2.models)
-        // No explicit migrationPlan — changes are purely additive (new tables + nullable column)
-        // so SwiftData's automatic lightweight migration handles it.
+        let schema = Schema(StrataSchemaV3.models)
         let container = try ModelContainer(
             for: schema,
+            migrationPlan: StrataMigrationPlan.self,
             configurations: [config]
         )
 
@@ -177,7 +176,7 @@ extension Notification.Name {
 
 extension ModelContainer {
     static func inMemoryForTesting() throws -> ModelContainer {
-        let schema = Schema(StrataSchemaV2.models)
+        let schema = Schema(StrataSchemaV3.models)
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
     }
@@ -189,6 +188,7 @@ extension ModelContainer {
 func seedDefaultData(container: ModelContainer) throws {
     let context = ModelContext(container)
 
+    try seedDefaultAIProviders(context: context)
     try seedDefaultAIModes(context: context)
     try removeDeprecatedBuiltInModesIfNeeded(context: context)
     try seedExplainModeIfNeeded(context: context)
@@ -199,6 +199,36 @@ func seedDefaultData(container: ModelContainer) throws {
     try migrateExistingCustomFieldValues(context: context)
 
     try context.save()
+}
+
+/// Seed 2 default AI providers (Gemini + z.ai) on first launch.
+/// Uses existing Keychain keys so users don't lose their configured API keys.
+@MainActor
+private func seedDefaultAIProviders(context: ModelContext) throws {
+    let descriptor = FetchDescriptor<AIProviderModel>()
+    guard try context.fetchCount(descriptor) == 0 else { return }
+
+    let gemini = AIProviderModel(
+        name: "Google Gemini",
+        providerType: .gemini,
+        apiKeyRef: KeychainService.Key.geminiAPIKey.rawValue,
+        models: ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3-flash-preview"],
+        defaultModelName: "gemini-flash-lite-latest",
+        isDefault: true,
+        sortOrder: 0
+    )
+    context.insert(gemini)
+
+    let zai = AIProviderModel(
+        name: "z.ai",
+        providerType: .zai,
+        apiKeyRef: KeychainService.Key.zaiAPIKey.rawValue,
+        models: ["GLM-4.6", "GLM-4.7"],
+        defaultModelName: "GLM-4.6",
+        isDefault: true,
+        sortOrder: 1
+    )
+    context.insert(zai)
 }
 
 @MainActor

@@ -62,14 +62,14 @@ struct AIModesSettingsView: View {
             .background(.bar)
         }
         .sheet(isPresented: $showAddSheet) {
-            ModeEditorSheet(mode: nil) { name, prompt, provider, model, supportsAttachments, baseURL in
-                addMode(name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL)
+            ModeEditorSheet(mode: nil) { name, prompt, provider, model, supportsAttachments, baseURL, providerId in
+                addMode(name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL, aiProviderId: providerId)
             }
         }
         .sheet(item: $editingItem) { item in
             if let mode = modes.first(where: { $0.id == item.id }) {
-                ModeEditorSheet(mode: mode) { name, prompt, provider, model, supportsAttachments, baseURL in
-                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL)
+                ModeEditorSheet(mode: mode) { name, prompt, provider, model, supportsAttachments, baseURL, providerId in
+                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL, aiProviderId: providerId)
                 }
             }
         }
@@ -85,21 +85,23 @@ struct AIModesSettingsView: View {
         }
     }
     
-    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?) {
+    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?, aiProviderId: UUID?) {
         let canSupportAttachments = provider.supportsAnyAttachments
         let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false, supportsAttachments: supportsAttachments && canSupportAttachments, customBaseURL: customBaseURL)
+        mode.aiProviderId = aiProviderId
         mode.sortOrder = modes.count
         modelContext.insert(mode)
         saveModes()
     }
 
-    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?) {
+    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?, aiProviderId: UUID?) {
         mode.name = name
         mode.systemPrompt = prompt
         mode.provider = provider
         mode.modelName = model
         mode.supportsAttachments = supportsAttachments && provider.supportsAnyAttachments
         mode.customBaseURL = customBaseURL
+        mode.aiProviderId = aiProviderId
         saveModes()
     }
     
@@ -182,40 +184,23 @@ private struct ModeRow: View {
 
 private struct ModeEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(EntitlementService.self) var entitlementService
 
     let mode: AIModeModel?
-    let onSave: (String, String, AIProviderType, String, Bool, String?) -> Void
+    let onSave: (String, String, AIProviderType, String, Bool, String?, UUID?) -> Void
 
     @State private var name = ""
     @State private var systemPrompt = ""
-    @State private var selectedProvider: AIProviderType = .gemini
-    @State private var selectedModel: String
-    @State private var customModelName = ""
-    @State private var customBaseURL = ""
+    @State private var selectedProviderId: UUID?
+    @State private var selectedModel = ""
     @State private var supportsAttachments = false
+    @State private var providers: [AIProviderModel] = []
 
-    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String, Bool, String?) -> Void) {
-        self.mode = mode
-        self.onSave = onSave
-        let provider: AIProviderType = mode?.provider ?? .gemini
-        let validModel: String = if let mode, provider.availableModels.contains(mode.modelName) {
-            mode.modelName
-        } else if provider.supportsCustomModel, let mode {
-            mode.modelName
-        } else {
-            provider.defaultModel
-        }
-        _selectedModel = State(initialValue: validModel)
-        _selectedProvider = State(initialValue: provider)
-        if let mode {
-            _name = State(initialValue: mode.name)
-            _systemPrompt = State(initialValue: mode.systemPrompt)
-            _customModelName = State(initialValue: provider.supportsCustomModel ? mode.modelName : "")
-            _customBaseURL = State(initialValue: mode.customBaseURL ?? "")
-        }
+    private var selectedProvider: AIProviderModel? {
+        providers.first { $0.id == selectedProviderId }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -226,44 +211,36 @@ private struct ModeEditorSheet: View {
                     .keyboardShortcut(.escape)
             }
             .padding()
-            
+
             Divider()
-            
+
             Form {
                 TextField("Name", text: $name)
 
                 Section("AI Provider") {
-                    Picker("Provider", selection: $selectedProvider) {
-                        ForEach(AIProviderType.allCases, id: \.self) { provider in
-                            Text(provider.displayName).tag(provider)
+                    Picker("Provider", selection: $selectedProviderId) {
+                        Text("Select…").tag(nil as UUID?)
+                        ForEach(providers) { p in
+                            Text(p.name).tag(p.id as UUID?)
                         }
                     }
-                    .onChange(of: selectedProvider) { _, newValue in
-                        if !newValue.supportsCustomModel {
-                            if !newValue.availableModels.contains(selectedModel) {
-                                selectedModel = newValue.defaultModel
+                    .onChange(of: selectedProviderId) { _, _ in
+                        // Reset model when provider changes
+                        if let p = selectedProvider {
+                            let models = p.models
+                            if !models.contains(selectedModel) {
+                                selectedModel = p.defaultModelName ?? models.first ?? ""
                             }
-                            customModelName = ""
-                            customBaseURL = ""
-                        }
-                        if !newValue.supportsAnyAttachments {
-                            supportsAttachments = false
+                            if !p.supportsAttachments { supportsAttachments = false }
                         }
                     }
 
-                    if selectedProvider.supportsCustomModel {
-                        TextField("Model Name", text: $customModelName, prompt: Text("e.g. gpt-4o, llama-3.1-70b"))
-                    } else {
+                    if let p = selectedProvider {
                         Picker("Model", selection: $selectedModel) {
-                            ForEach(selectedProvider.availableModels, id: \.self) { model in
+                            ForEach(p.models, id: \.self) { model in
                                 Text(model).tag(model)
                             }
                         }
-                    }
-
-                    if selectedProvider.requiresBaseURL {
-                        TextField("Base URL", text: $customBaseURL, prompt: Text("e.g. https://openrouter.ai/api/v1"))
-                            .textFieldStyle(.roundedBorder)
                     }
                 }
 
@@ -271,9 +248,9 @@ private struct ModeEditorSheet: View {
                     Section("Input") {
                         Toggle("Allow Attachments (Images & PDF)", isOn: $supportsAttachments)
                             .controlSize(.small)
-                            .disabled(!selectedProvider.supportsAnyAttachments)
-                        if !selectedProvider.supportsAnyAttachments {
-                            Label("Attachments are currently not supported for this provider.", systemImage: "info.circle")
+                            .disabled(selectedProvider?.supportsAttachments != true)
+                        if selectedProvider?.supportsAttachments != true {
+                            Label("Attachments not supported for this provider.", systemImage: "info.circle")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -288,47 +265,51 @@ private struct ModeEditorSheet: View {
                         .padding(8)
                         .background(.background)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(.quaternary)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
                 }
             }
             .formStyle(.grouped)
-            
+
             Divider()
-            
+
             HStack {
                 Spacer()
                 Button("Save") {
-                    let resolvedModel = selectedProvider.supportsCustomModel ? customModelName : selectedModel
-                    let resolvedURL: String? = selectedProvider.requiresBaseURL && !customBaseURL.isEmpty ? customBaseURL : nil
-                    onSave(name, systemPrompt, selectedProvider, resolvedModel, supportsAttachments, resolvedURL)
+                    let provType = selectedProvider?.providerType ?? .gemini
+                    let baseURL = selectedProvider?.baseURL
+                    onSave(name, systemPrompt, provType, selectedModel, supportsAttachments, baseURL, selectedProviderId)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || systemPrompt.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || systemPrompt.trimmingCharacters(in: .whitespaces).isEmpty || selectedProviderId == nil)
             }
             .padding()
         }
         .frame(width: 500, height: 480)
-        .onAppear {
-            if let mode {
-                name = mode.name
-                systemPrompt = mode.systemPrompt
-                selectedProvider = mode.provider
-                supportsAttachments = mode.supportsAttachments && selectedProvider.supportsAnyAttachments
-                customBaseURL = mode.customBaseURL ?? ""
-                if selectedProvider.supportsCustomModel {
-                    customModelName = mode.modelName
-                } else {
-                    let valid = selectedProvider.availableModels.contains(mode.modelName)
-                    selectedModel = valid ? mode.modelName : selectedProvider.defaultModel
-                }
+        .onAppear { loadState() }
+    }
+
+    private func loadState() {
+        let repo = AIProviderRepository(modelContext: modelContext)
+        providers = (try? repo.fetchEnabled()) ?? []
+
+        if let mode {
+            name = mode.name
+            systemPrompt = mode.systemPrompt
+            supportsAttachments = mode.supportsAttachments
+
+            // Match to provider by aiProviderId or by providerType fallback
+            if let pid = mode.aiProviderId, providers.contains(where: { $0.id == pid }) {
+                selectedProviderId = pid
             } else {
-                selectedModel = selectedProvider.defaultModel
-                supportsAttachments = false
+                selectedProviderId = providers.first { $0.providerType == mode.provider }?.id
             }
+            selectedModel = mode.modelName
+        } else {
+            // Default to first provider
+            selectedProviderId = providers.first?.id
+            selectedModel = providers.first?.defaultModelName ?? ""
+            supportsAttachments = false
         }
     }
 }

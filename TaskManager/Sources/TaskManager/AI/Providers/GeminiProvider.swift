@@ -13,13 +13,24 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
 
     private let keychain = KeychainService.shared
     private let defaultModel = "gemini-flash-lite-latest"
+    private let apiKeyRef: String?
+
+    init(apiKeyRef: String? = nil) {
+        self.apiKeyRef = apiKeyRef
+    }
 
     var isConfigured: Bool {
-        keychain.hasKey(.geminiAPIKey)
+        resolveAPIKey() != nil
+    }
+
+    /// Resolve API key: prefer dynamic ref, fallback to legacy Keychain key
+    private func resolveAPIKey() -> String? {
+        if let ref = apiKeyRef { return keychain.getValue(forRef: ref) }
+        return keychain.get(.geminiAPIKey)
     }
 
     func enhance(text: String, attachments: [AIAttachment], mode: AIModeData) async throws -> AIEnhancementResult {
-        guard let apiKey = keychain.get(.geminiAPIKey) else {
+        guard let apiKey = resolveAPIKey() else {
             throw AIError.notConfigured
         }
 
@@ -109,7 +120,7 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
     }
 
     func streamChat(messages: [ChatMessage], mode: AIModeData) async throws -> AsyncThrowingStream<ChatStreamChunk, Error> {
-        guard let apiKey = keychain.get(.geminiAPIKey) else { throw AIError.notConfigured }
+        guard let apiKey = resolveAPIKey() else { throw AIError.notConfigured }
         let modelName = mode.modelName.isEmpty ? defaultModel : mode.modelName
         chatLog.info("streamChat: model=\(modelName), messages=\(messages.count)")
 
@@ -165,7 +176,7 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
     }
 
     func testConnection() async throws -> Bool {
-        guard let apiKey = keychain.get(.geminiAPIKey) else {
+        guard let apiKey = resolveAPIKey() else {
             throw AIError.notConfigured
         }
 

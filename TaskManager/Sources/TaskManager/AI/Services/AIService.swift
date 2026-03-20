@@ -16,18 +16,35 @@ final class AIService {
     
     private init() {}
     
+    /// Resolve provider from legacy enum + optional base URL (backward compat)
     func providerFor(_ type: AIProviderType, customBaseURL: String? = nil) -> AIProviderProtocol {
         switch type {
         case .gemini: return geminiProvider
         case .zai: return zaiProvider
         case .openai:
             guard let baseURL = customBaseURL, !baseURL.isEmpty else {
-                return zaiProvider  // fallback if UI fails to validate
+                return zaiProvider
             }
             return OpenAICompatibleProvider(
                 name: "OpenAI Compatible",
                 baseURL: baseURL,
                 apiKeyProvider: { KeychainService.shared.get(.openaiAPIKey) }
+            )
+        }
+    }
+
+    /// Resolve provider from AIProviderModel (new dynamic system)
+    func providerFor(_ model: AIProviderModel) -> AIProviderProtocol {
+        switch model.providerType {
+        case .gemini:
+            return GeminiProvider(apiKeyRef: model.apiKeyRef)
+        case .zai:
+            return ZAIProvider(apiKeyRef: model.apiKeyRef)
+        case .openai:
+            return OpenAICompatibleProvider(
+                name: model.name,
+                baseURL: model.baseURL ?? "",
+                apiKeyRef: model.apiKeyRef
             )
         }
     }

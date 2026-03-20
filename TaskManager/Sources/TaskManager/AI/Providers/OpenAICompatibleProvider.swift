@@ -16,6 +16,16 @@ final class OpenAICompatibleProvider: AIProviderProtocol, @unchecked Sendable {
         self.timeout = timeout
     }
 
+    /// Convenience init using a Keychain ref string instead of a closure
+    convenience init(name: String, baseURL: String, apiKeyRef: String, timeout: TimeInterval = 30) {
+        self.init(
+            name: name,
+            baseURL: baseURL,
+            apiKeyProvider: { KeychainService.shared.getValue(forRef: apiKeyRef) },
+            timeout: timeout
+        )
+    }
+
     var isConfigured: Bool {
         guard let key = apiKeyProvider() else { return false }
         return !key.isEmpty && Self.isValidBaseURL(baseURL)

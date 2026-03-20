@@ -9,6 +9,7 @@ final class ChatSessionModel: Identifiable {
     var providerRaw: String
     var modelName: String
     var customBaseURL: String?
+    var aiProviderId: UUID?
     var createdAt: Date
     var updatedAt: Date
     var lastMessageAt: Date?

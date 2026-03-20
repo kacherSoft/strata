@@ -29,9 +29,13 @@ final class MenuBarController: NSObject {
         newTaskItem.target = self
         menu.addItem(newTaskItem)
         
-        let showMainItem = NSMenuItem(title: "Show TaskFlow Pro", action: #selector(showMain), keyEquivalent: "")
+        let showMainItem = NSMenuItem(title: "Show Strata", action: #selector(showMain), keyEquivalent: "")
         showMainItem.target = self
         menu.addItem(showMainItem)
+
+        let showTasksItem = NSMenuItem(title: "Tasks", action: #selector(showTasks), keyEquivalent: "")
+        showTasksItem.target = self
+        menu.addItem(showTasksItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -66,6 +70,12 @@ final class MenuBarController: NSObject {
         }
     }
     
+    @objc private func showTasks() {
+        Task { @MainActor in
+            ShortcutManager.shared.showTasks()
+        }
+    }
+
     @objc private func enhanceMe() {
         Task { @MainActor in
             ShortcutManager.shared.showEnhanceMe()

@@ -10,7 +10,7 @@ final class WindowManager: ObservableObject {
     private var quickEntryPanel: QuickEntryPanel?
     private var settingsWindow: SettingsWindow?
     private var enhanceMePanel: EnhanceMePanel?
-    private var chatPanel: ChatPanel?
+    private var taskPanel: ChatPanel?  // Reuse ChatPanel (NSPanel subclass) for tasks
     private var modelContainer: ModelContainer?
     var openWindowAction: OpenWindowAction?
     
@@ -64,8 +64,8 @@ final class WindowManager: ObservableObject {
             hideEnhanceMe()
             return true
         }
-        if let panel = chatPanel, panel.isVisible {
-            hideChat()
+        if let panel = taskPanel, panel.isVisible {
+            hideTasks()
             return true
         }
         return false
@@ -325,23 +325,23 @@ final class WindowManager: ObservableObject {
         enhanceMePanel?.orderOut(nil)
     }
 
-    // MARK: - Chat
+    // MARK: - Tasks (secondary panel, was main window before pivot)
 
-    func showChat() {
-        // NOTE: intentionally does NOT call closeAllFloatingWindows()
+    func showTasks() {
         guard let container = modelContainer else { return }
 
-        if chatPanel == nil {
-            let panel = ChatPanel()
-            let view = ChatView(onDismiss: { [weak self] in self?.hideChat() })
+        if taskPanel == nil {
+            let panel = ChatPanel()  // Reuse NSPanel subclass
+            panel.title = "Strata Tasks"
+            let view = ContentView()
                 .withAppEnvironment(container: container)
             panel.collectionBehavior.insert(.moveToActiveSpace)
             panel.setContent(view)
             panel.center()
-            chatPanel = panel
+            taskPanel = panel
         }
 
-        guard let panel = chatPanel else { return }
+        guard let panel = taskPanel else { return }
         if !panel.isVisible || !panel.isOnActiveSpace {
             panel.orderOut(nil)
         }
@@ -349,7 +349,7 @@ final class WindowManager: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func hideChat() {
-        chatPanel?.orderOut(nil)
+    func hideTasks() {
+        taskPanel?.orderOut(nil)
     }
 }

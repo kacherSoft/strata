@@ -65,7 +65,7 @@ final class ShortcutManager: ObservableObject {
         }
 
         KeyboardShortcuts.onKeyUp(for: .chatWindow) { [weak self] in
-            self?.showChat()
+            self?.showTasks()
         }
     }
     
@@ -134,8 +134,8 @@ final class ShortcutManager: ObservableObject {
         WindowManager.shared.showEnhanceMe()
     }
 
-    func showChat() {
-        WindowManager.shared.showChat()
+    func showTasks() {
+        WindowManager.shared.showTasks()
     }
     
     func showSettings() {

@@ -3,27 +3,31 @@ import KeyboardShortcuts
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
-    case customFields = "Custom Fields"
-    case shortcuts = "Shortcuts"
-    case aiConfig = "AI Config"
+    case chat = "Chat"
+    case aiProviders = "AI Providers"
     case aiModes = "AI Modes"
-    
+    case tasks = "Tasks"
+    case shortcuts = "Shortcuts"
+    case account = "Account"
+
     var id: String { rawValue }
-    
+
     var icon: String {
         switch self {
         case .general: return "gearshape"
-        case .customFields: return "slider.horizontal.3"
-        case .shortcuts: return "keyboard"
-        case .aiConfig: return "cpu"
+        case .chat: return "bubble.left.and.bubble.right"
+        case .aiProviders: return "cpu"
         case .aiModes: return "sparkles"
+        case .tasks: return "checklist"
+        case .shortcuts: return "keyboard"
+        case .account: return "person.circle"
         }
     }
 }
 
 struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
-    
+
     var body: some View {
         HStack(spacing: 0) {
             // Sidebar
@@ -41,25 +45,31 @@ struct SettingsView: View {
             .padding(12)
             .frame(width: 200)
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-            
+
+            Divider()
+
             // Content
             Group {
                 switch selectedTab {
                 case .general:
                     GeneralSettingsView()
-                case .customFields:
-                    CustomFieldsSettingsView()
-                case .shortcuts:
-                    ShortcutsSettingsView()
-                case .aiConfig:
-                    AIConfigSettingsView()
+                case .chat:
+                    ChatSettingsView()
+                case .aiProviders:
+                    AIProvidersSettingsView()
                 case .aiModes:
                     AIModesSettingsView()
+                case .tasks:
+                    TasksSettingsView()
+                case .shortcuts:
+                    ShortcutsSettingsView()
+                case .account:
+                    AccountSettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 720, height: 520)
+        .frame(width: 780, height: 560)
     }
 }
 
@@ -67,7 +77,7 @@ struct SettingsSidebarRow: View {
     let tab: SettingsTab
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {

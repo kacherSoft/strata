@@ -5,11 +5,23 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
     var name: String { "z.ai" }
 
     private let keychain = KeychainService.shared
-    private lazy var inner = OpenAICompatibleProvider(
-        name: "z.ai",
-        baseURL: "https://api.z.ai/v1",
-        apiKeyProvider: { [weak self] in self?.keychain.get(.zaiAPIKey) }
-    )
+    private let apiKeyRef: String?
+    private lazy var inner: OpenAICompatibleProvider = {
+        let provider: () -> String? = if let ref = apiKeyRef {
+            { KeychainService.shared.getValue(forRef: ref) }
+        } else {
+            { [weak self] in self?.keychain.get(.zaiAPIKey) }
+        }
+        return OpenAICompatibleProvider(
+            name: "z.ai",
+            baseURL: "https://api.z.ai/v1",
+            apiKeyProvider: provider
+        )
+    }()
+
+    init(apiKeyRef: String? = nil) {
+        self.apiKeyRef = apiKeyRef
+    }
 
     var isConfigured: Bool { inner.isConfigured }
 
