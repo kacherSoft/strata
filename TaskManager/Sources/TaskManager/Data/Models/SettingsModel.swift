@@ -38,7 +38,7 @@ enum AIProvider: String, Codable, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .gemini: return "Google Gemini"
-        case .zai: return "z.ai (GLM 4.6)"
+        case .zai: return "z.ai (GLM)"
         }
     }
 }

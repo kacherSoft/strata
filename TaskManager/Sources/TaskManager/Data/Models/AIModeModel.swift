@@ -17,7 +17,7 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var availableModels: [String] {
         switch self {
         case .gemini: return ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3-flash-preview"]
-        case .zai: return ["GLM-4.6", "GLM-4.7"]
+        case .zai: return ["GLM-4.7", "GLM-4.5-air"]
         case .openai: return []
         }
     }

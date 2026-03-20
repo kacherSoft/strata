@@ -14,7 +14,7 @@ final class ZAIProvider: AIProviderProtocol, @unchecked Sendable {
         }
         return OpenAICompatibleProvider(
             name: "z.ai",
-            baseURL: "https://api.z.ai/v1",
+            baseURL: "https://api.z.ai/api/paas/v4",
             apiKeyProvider: provider
         )
     }()
