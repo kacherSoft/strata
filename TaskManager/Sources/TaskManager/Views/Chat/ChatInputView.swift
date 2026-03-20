@@ -2,8 +2,13 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// Modern chat input — rounded card with inline attachment button and send icon.
-/// Inspired by ChatGPT / Claude desktop input style.
+/// Chat input card matching Claude Desktop layout:
+/// ┌──────────────────────────────────────┐
+/// │ [Attachment chips]                   │
+/// │ [Text input area]                    │
+/// │──────────────────────────────────────│
+/// │ [+]        [model ▾]           [↑]   │
+/// └──────────────────────────────────────┘
 struct ChatInputView: View {
     @Binding var text: String
     @Binding var attachments: [AIAttachment]
@@ -14,7 +19,6 @@ struct ChatInputView: View {
     let onSend: () -> Void
     let onStop: () -> Void
 
-    /// Dynamic height reported by NSTextView content measurement
     @State private var textHeight: CGFloat = ChatTextInput.minContentHeight
 
     private var canSend: Bool {
@@ -23,41 +27,50 @@ struct ChatInputView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Attachment preview strip above input card
-            if !attachments.isEmpty {
-                attachmentPreviewStrip
-            }
-
-            // Input card — tight padding matching Claude/ChatGPT desktop
-            HStack(alignment: .bottom, spacing: 0) {
-                // Attach button (left side, inside card)
-                if supportsAttachments {
-                    Button(action: pickFiles) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Attach files (images, PDFs)")
-                    .padding(.leading, 8)
-                    .padding(.bottom, 4)
+            // Input card
+            VStack(spacing: 0) {
+                // Attachment chips (above text area, inside card)
+                if !attachments.isEmpty {
+                    attachmentPreviewStrip
                 }
 
-                // Text input — explicit height from NSTextView content measurement
+                // Text input area
                 ChatTextInput(text: $text, textHeight: $textHeight, onSend: onSend, onFileDrop: { url in
                     addAttachment(from: url)
                 })
-                    .frame(height: min(textHeight, 120))
-                    .padding(.horizontal, 2)
+                .frame(height: min(textHeight, 120))
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
 
-                // Send / Stop button (right side, inside card)
-                actionButton
-                    .padding(.trailing, 8)
-                    .padding(.bottom, 4)
+                // Bottom bar: [+] ... [model ▾] ... [send/stop]
+                HStack(spacing: 8) {
+                    // Attach button
+                    if supportsAttachments {
+                        Button(action: pickFiles) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 26, height: 26)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Attach files")
+                    }
+
+                    Spacer()
+
+                    // Model selector
+                    ChatModelSelectorView(
+                        selectedProviderId: $selectedProviderId,
+                        selectedModelName: $selectedModelName
+                    )
+
+                    // Send / Stop button
+                    actionButton
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
             }
-            .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 18)
                     .fill(Color(nsColor: .controlBackgroundColor))
@@ -67,36 +80,11 @@ struct ChatInputView: View {
                     .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
             )
             .padding(.horizontal, 16)
-            .padding(.top, 2)
-
-            // Model selector row — below the input card
-            HStack(spacing: 6) {
-                ChatModelSelectorView(
-                    selectedProviderId: $selectedProviderId,
-                    selectedModelName: $selectedModelName
-                )
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-            .padding(.top, 2)
+            .padding(.bottom, 10)
+            .padding(.top, 4)
         }
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
-            var handled = false
-            for provider in providers {
-                if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                    provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
-                        if let data = item as? Data,
-                           let url = URL(dataRepresentation: data, relativeTo: nil) {
-                            DispatchQueue.main.async { addAttachment(from: url) }
-                        } else if let url = item as? URL {
-                            DispatchQueue.main.async { addAttachment(from: url) }
-                        }
-                    }
-                    handled = true
-                }
-            }
-            return handled
+            handleDrop(providers)
         }
     }
 
@@ -105,7 +93,7 @@ struct ChatInputView: View {
         if isStreaming {
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
                     .background(Color.accentColor)
@@ -116,7 +104,7 @@ struct ChatInputView: View {
         } else {
             Button(action: onSend) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
                     .background(canSend ? Color.accentColor : Color.gray.opacity(0.4))
@@ -139,12 +127,12 @@ struct ChatInputView: View {
                     )
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 10)
             .padding(.top, 8)
         }
     }
 
-    // MARK: - File Picking
+    // MARK: - Actions
 
     private func pickFiles() {
         let panel = NSOpenPanel()
@@ -152,14 +140,30 @@ struct ChatInputView: View {
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.png, .jpeg, .tiff, .pdf]
         guard panel.runModal() == .OK else { return }
-        for url in panel.urls {
-            addAttachment(from: url)
-        }
+        for url in panel.urls { addAttachment(from: url) }
     }
 
     private func addAttachment(from url: URL) {
         if let attachment = ChatAttachmentHelper.makeAttachment(from: url, currentCount: attachments.count) {
             attachments.append(attachment)
         }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var handled = false
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+                    if let data = item as? Data,
+                       let url = URL(dataRepresentation: data, relativeTo: nil) {
+                        DispatchQueue.main.async { addAttachment(from: url) }
+                    } else if let url = item as? URL {
+                        DispatchQueue.main.async { addAttachment(from: url) }
+                    }
+                }
+                handled = true
+            }
+        }
+        return handled
     }
 }
