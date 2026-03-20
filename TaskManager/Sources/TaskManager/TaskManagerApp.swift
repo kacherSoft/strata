@@ -87,6 +87,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+/// Wrapper that captures @Environment(\.openWindow) for WindowManager,
+/// then renders ChatView as the main window content.
+struct MainChatWrapper: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        ChatView(onDismiss: {})
+            .onAppear {
+                WindowManager.shared.openWindowAction = openWindow
+            }
+    }
+}
+
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -98,7 +111,7 @@ struct TaskManagerApp: App {
         Window("Strata", id: "main-window") {
             Group {
                 if let container {
-                    ChatView(onDismiss: {})
+                    MainChatWrapper()
                         .withAppEnvironment(container: container)
                 } else if let error = initError {
                     DataErrorView(error: error, storeURL: ModelContainer.storeURL)
