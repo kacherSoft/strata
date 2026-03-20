@@ -38,7 +38,6 @@ struct SettingsView: View {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 160, ideal: 190, max: 220)
-            .toolbar(.hidden)
         } detail: {
             Group {
                 switch selectedTab {
@@ -61,7 +60,6 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .toolbar(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationSplitViewStyle(.balanced)

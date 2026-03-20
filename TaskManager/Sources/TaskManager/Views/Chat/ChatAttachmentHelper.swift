@@ -48,13 +48,27 @@ enum ChatAttachmentHelper {
         )
     }
 
-    /// Extract file URLs from a drag pasteboard (handles multiple formats).
+    /// Extract file URLs from a pasteboard (drag or clipboard — handles multiple formats).
     static func fileURLs(from pasteboard: NSPasteboard) -> [URL] {
-        // Primary: readObjects for NSURL
+        var results: [URL] = []
+
+        // Method 1: readObjects (works for drag & drop)
         if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] {
-            return urls.filter { $0.isFileURL && supportedExtensions.contains($0.pathExtension.lowercased()) }
+            results = urls.filter { $0.isFileURL }
         }
-        return []
+
+        // Method 2: propertyList (works for Finder copy/paste)
+        if results.isEmpty, let urlString = pasteboard.propertyList(forType: .fileURL) as? String,
+           let url = URL(string: urlString), url.isFileURL {
+            results = [url]
+        }
+
+        // Method 3: NSFilenamesPboardType (legacy Finder)
+        if results.isEmpty, let paths = pasteboard.propertyList(forType: NSPasteboard.PasteboardType("NSFilenamesPboardType")) as? [String] {
+            results = paths.compactMap { URL(fileURLWithPath: $0) }
+        }
+
+        return results.filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
     }
 
     /// Save pasted image data (PNG/TIFF from clipboard) to a temp file and return URL.
