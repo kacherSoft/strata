@@ -129,9 +129,10 @@ extension ModelContainer {
         // Step 4 — Initialise container with explicit URL + migration plan
         let config = ModelConfiguration(url: storeURL)
         let schema = Schema(StrataSchemaV3.models)
+        // No explicit migrationPlan — all V1→V2→V3 changes are purely additive
+        // (new tables + nullable columns), so SwiftData's automatic lightweight migration handles it.
         let container = try ModelContainer(
             for: schema,
-            migrationPlan: StrataMigrationPlan.self,
             configurations: [config]
         )
 
