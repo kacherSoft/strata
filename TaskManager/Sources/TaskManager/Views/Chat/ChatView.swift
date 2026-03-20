@@ -32,20 +32,7 @@ struct ChatView: View {
             .id(sidebarKey)
             .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 300)
         } detail: {
-            // Main chat content area
             VStack(spacing: 0) {
-                // Toolbar with model selector
-                HStack(spacing: 8) {
-                    ChatModelSelectorView(
-                        selectedProviderId: $selectedProviderId,
-                        selectedModelName: $selectedModelName
-                    )
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                Divider()
-
                 chatContentArea
             }
             .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
@@ -100,6 +87,8 @@ struct ChatView: View {
             ChatInputView(
                 text: $inputText,
                 attachments: $attachments,
+                selectedProviderId: $selectedProviderId,
+                selectedModelName: $selectedModelName,
                 isStreaming: chatService.isStreaming,
                 supportsAttachments: currentModeSupportsAttachments,
                 onSend: { sendMessage() },

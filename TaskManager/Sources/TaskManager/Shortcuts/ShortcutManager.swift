@@ -56,16 +56,18 @@ final class ShortcutManager: ObservableObject {
             self?.showEnhanceMe()
         }
         
+        // Cmd+Shift+T → Tasks (secondary panel)
         KeyboardShortcuts.onKeyUp(for: .mainWindow) { [weak self] in
-            self?.showMainWindow()
+            self?.showTasks()
         }
-        
+
         KeyboardShortcuts.onKeyUp(for: .inlineEnhanceMe) { [weak self] in
             self?.performInlineEnhance()
         }
 
+        // Cmd+Option+J → Show main Chat window
         KeyboardShortcuts.onKeyUp(for: .chatWindow) { [weak self] in
-            self?.showTasks()
+            self?.showMainWindow()
         }
     }
     

@@ -92,10 +92,16 @@ class ChatNSTextView: NSTextView {
     var onFileDrop: ((URL) -> Void)?
 
     override func keyDown(with event: NSEvent) {
+        // Enter → send message (Shift+Enter → newline)
         if event.keyCode == 36 && !event.modifierFlags.contains(.shift) {
             let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
             onSend?()
+            return
+        }
+        // ESC → resign focus so window can handle close
+        if event.keyCode == 53 {
+            window?.makeFirstResponder(nil)
             return
         }
         super.keyDown(with: event)

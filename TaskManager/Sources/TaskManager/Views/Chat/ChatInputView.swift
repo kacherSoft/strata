@@ -7,6 +7,8 @@ import UniformTypeIdentifiers
 struct ChatInputView: View {
     @Binding var text: String
     @Binding var attachments: [AIAttachment]
+    @Binding var selectedProviderId: UUID?
+    @Binding var selectedModelName: String
     let isStreaming: Bool
     let supportsAttachments: Bool
     let onSend: () -> Void
@@ -65,6 +67,17 @@ struct ChatInputView: View {
                     .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
             )
             .padding(.horizontal, 16)
+            .padding(.top, 2)
+
+            // Model selector row — below the input card
+            HStack(spacing: 6) {
+                ChatModelSelectorView(
+                    selectedProviderId: $selectedProviderId,
+                    selectedModelName: $selectedModelName
+                )
+                Spacer()
+            }
+            .padding(.horizontal, 20)
             .padding(.bottom, 8)
             .padding(.top, 2)
         }
