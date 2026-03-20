@@ -128,10 +128,11 @@ extension ModelContainer {
 
         // Step 4 — Initialise container with explicit URL + migration plan
         let config = ModelConfiguration(url: storeURL)
-        let schema = Schema(StrataSchemaV1.models)
+        let schema = Schema(StrataSchemaV2.models)
+        // No explicit migrationPlan — changes are purely additive (new tables + nullable column)
+        // so SwiftData's automatic lightweight migration handles it.
         let container = try ModelContainer(
             for: schema,
-            migrationPlan: StrataMigrationPlan.self,
             configurations: [config]
         )
 
@@ -176,7 +177,7 @@ extension Notification.Name {
 
 extension ModelContainer {
     static func inMemoryForTesting() throws -> ModelContainer {
-        let schema = Schema(StrataSchemaV1.models)
+        let schema = Schema(StrataSchemaV2.models)
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
     }
@@ -191,6 +192,8 @@ func seedDefaultData(container: ModelContainer) throws {
     try seedDefaultAIModes(context: context)
     try removeDeprecatedBuiltInModesIfNeeded(context: context)
     try seedExplainModeIfNeeded(context: context)
+    try seedChatModeIfNeeded(context: context)
+    try repairInvalidAIModeProviders(context: context)
     try seedDefaultSettings(context: context)
     try seedDefaultCustomFieldDefinitions(context: context)
     try migrateExistingCustomFieldValues(context: context)
@@ -215,6 +218,42 @@ private func removeDeprecatedBuiltInModesIfNeeded(context: ModelContext) throws 
     let builtInModes = try context.fetch(FetchDescriptor<AIModeModel>(predicate: #Predicate { $0.isBuiltIn }))
     for mode in builtInModes where modesToRemove.contains(mode.name) {
         context.delete(mode)
+    }
+}
+
+@MainActor
+private func seedChatModeIfNeeded(context: ModelContext) throws {
+    let descriptor = FetchDescriptor<AIModeModel>(
+        predicate: #Predicate { $0.isBuiltIn && $0.name == "Chat" }
+    )
+    guard try context.fetch(descriptor).isEmpty else { return }
+
+    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
+    let maxOrder = allModes.map(\.sortOrder).max() ?? -1
+
+    let chatMode = AIModeModel(
+        name: "Chat",
+        systemPrompt: "You are a helpful, knowledgeable assistant. Respond conversationally. Use markdown formatting for code blocks, lists, and emphasis when appropriate.",
+        provider: .gemini,
+        isBuiltIn: true,
+        supportsAttachments: true
+    )
+    chatMode.sortOrder = maxOrder + 1
+    context.insert(chatMode)
+}
+
+/// Fix modes with invalid providerRaw values (e.g. "custom" from old code).
+/// When providerRaw is unrecognized, the computed `provider` property silently defaults to .gemini,
+/// but the modelName can be stale (e.g. "gpt-5.4"). This repairs both fields.
+@MainActor
+private func repairInvalidAIModeProviders(context: ModelContext) throws {
+    let validRaw = Set(AIProviderType.allCases.map(\.rawValue))
+    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
+    for mode in allModes {
+        guard !validRaw.contains(mode.providerRaw) else { continue }
+        // Invalid providerRaw — reset to gemini with default model
+        mode.providerRaw = AIProviderType.gemini.rawValue
+        mode.modelName = AIProviderType.gemini.defaultModel
     }
 }
 

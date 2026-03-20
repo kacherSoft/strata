@@ -10,6 +10,7 @@ final class WindowManager: ObservableObject {
     private var quickEntryPanel: QuickEntryPanel?
     private var settingsWindow: SettingsWindow?
     private var enhanceMePanel: EnhanceMePanel?
+    private var chatPanel: ChatPanel?
     private var modelContainer: ModelContainer?
     var openWindowAction: OpenWindowAction?
     
@@ -61,6 +62,10 @@ final class WindowManager: ObservableObject {
         }
         if let panel = enhanceMePanel, panel.isVisible {
             hideEnhanceMe()
+            return true
+        }
+        if let panel = chatPanel, panel.isVisible {
+            hideChat()
             return true
         }
         return false
@@ -318,5 +323,33 @@ final class WindowManager: ObservableObject {
     
     func hideEnhanceMe() {
         enhanceMePanel?.orderOut(nil)
+    }
+
+    // MARK: - Chat
+
+    func showChat() {
+        // NOTE: intentionally does NOT call closeAllFloatingWindows()
+        guard let container = modelContainer else { return }
+
+        if chatPanel == nil {
+            let panel = ChatPanel()
+            let view = ChatView(onDismiss: { [weak self] in self?.hideChat() })
+                .withAppEnvironment(container: container)
+            panel.collectionBehavior.insert(.moveToActiveSpace)
+            panel.setContent(view)
+            panel.center()
+            chatPanel = panel
+        }
+
+        guard let panel = chatPanel else { return }
+        if !panel.isVisible || !panel.isOnActiveSpace {
+            panel.orderOut(nil)
+        }
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func hideChat() {
+        chatPanel?.orderOut(nil)
     }
 }

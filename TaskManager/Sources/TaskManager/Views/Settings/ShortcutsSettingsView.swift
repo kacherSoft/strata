@@ -60,7 +60,17 @@ struct ShortcutsSettingsView: View {
                         description: "Focus the main task list window",
                         icon: "macwindow"
                     )
-                    
+
+                    Divider()
+                        .padding(.horizontal, 20)
+
+                    ShortcutRow(
+                        name: .chatWindow,
+                        title: "Chat",
+                        description: "Open AI chat window",
+                        icon: "bubble.left.and.bubble.right"
+                    )
+
                     // Local Shortcuts
                     Text("Local Shortcuts")
                         .font(.subheadline)

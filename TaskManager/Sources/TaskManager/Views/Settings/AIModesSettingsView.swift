@@ -62,14 +62,14 @@ struct AIModesSettingsView: View {
             .background(.bar)
         }
         .sheet(isPresented: $showAddSheet) {
-            ModeEditorSheet(mode: nil) { name, prompt, provider, model, supportsAttachments in
-                addMode(name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments)
+            ModeEditorSheet(mode: nil) { name, prompt, provider, model, supportsAttachments, baseURL in
+                addMode(name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL)
             }
         }
         .sheet(item: $editingItem) { item in
             if let mode = modes.first(where: { $0.id == item.id }) {
-                ModeEditorSheet(mode: mode) { name, prompt, provider, model, supportsAttachments in
-                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments)
+                ModeEditorSheet(mode: mode) { name, prompt, provider, model, supportsAttachments, baseURL in
+                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, supportsAttachments: supportsAttachments, customBaseURL: baseURL)
                 }
             }
         }
@@ -85,20 +85,21 @@ struct AIModesSettingsView: View {
         }
     }
     
-    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool) {
+    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?) {
         let canSupportAttachments = provider.supportsAnyAttachments
-        let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false, supportsAttachments: supportsAttachments && canSupportAttachments)
+        let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false, supportsAttachments: supportsAttachments && canSupportAttachments, customBaseURL: customBaseURL)
         mode.sortOrder = modes.count
         modelContext.insert(mode)
         saveModes()
     }
-    
-    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool) {
+
+    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, supportsAttachments: Bool, customBaseURL: String?) {
         mode.name = name
         mode.systemPrompt = prompt
         mode.provider = provider
         mode.modelName = model
         mode.supportsAttachments = supportsAttachments && provider.supportsAnyAttachments
+        mode.customBaseURL = customBaseURL
         saveModes()
     }
     
@@ -184,19 +185,23 @@ private struct ModeEditorSheet: View {
     @Environment(EntitlementService.self) var entitlementService
 
     let mode: AIModeModel?
-    let onSave: (String, String, AIProviderType, String, Bool) -> Void
+    let onSave: (String, String, AIProviderType, String, Bool, String?) -> Void
 
     @State private var name = ""
     @State private var systemPrompt = ""
     @State private var selectedProvider: AIProviderType = .gemini
     @State private var selectedModel: String
+    @State private var customModelName = ""
+    @State private var customBaseURL = ""
     @State private var supportsAttachments = false
 
-    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String, Bool) -> Void) {
+    init(mode: AIModeModel?, onSave: @escaping (String, String, AIProviderType, String, Bool, String?) -> Void) {
         self.mode = mode
         self.onSave = onSave
         let provider: AIProviderType = mode?.provider ?? .gemini
         let validModel: String = if let mode, provider.availableModels.contains(mode.modelName) {
+            mode.modelName
+        } else if provider.supportsCustomModel, let mode {
             mode.modelName
         } else {
             provider.defaultModel
@@ -206,6 +211,8 @@ private struct ModeEditorSheet: View {
         if let mode {
             _name = State(initialValue: mode.name)
             _systemPrompt = State(initialValue: mode.systemPrompt)
+            _customModelName = State(initialValue: provider.supportsCustomModel ? mode.modelName : "")
+            _customBaseURL = State(initialValue: mode.customBaseURL ?? "")
         }
     }
     
@@ -232,18 +239,31 @@ private struct ModeEditorSheet: View {
                         }
                     }
                     .onChange(of: selectedProvider) { _, newValue in
-                        if !newValue.availableModels.contains(selectedModel) {
-                            selectedModel = newValue.defaultModel
+                        if !newValue.supportsCustomModel {
+                            if !newValue.availableModels.contains(selectedModel) {
+                                selectedModel = newValue.defaultModel
+                            }
+                            customModelName = ""
+                            customBaseURL = ""
                         }
                         if !newValue.supportsAnyAttachments {
                             supportsAttachments = false
                         }
                     }
 
-                    Picker("Model", selection: $selectedModel) {
-                        ForEach(selectedProvider.availableModels, id: \.self) { model in
-                            Text(model).tag(model)
+                    if selectedProvider.supportsCustomModel {
+                        TextField("Model Name", text: $customModelName, prompt: Text("e.g. gpt-4o, llama-3.1-70b"))
+                    } else {
+                        Picker("Model", selection: $selectedModel) {
+                            ForEach(selectedProvider.availableModels, id: \.self) { model in
+                                Text(model).tag(model)
+                            }
                         }
+                    }
+
+                    if selectedProvider.requiresBaseURL {
+                        TextField("Base URL", text: $customBaseURL, prompt: Text("e.g. https://openrouter.ai/api/v1"))
+                            .textFieldStyle(.roundedBorder)
                     }
                 }
 
@@ -281,7 +301,9 @@ private struct ModeEditorSheet: View {
             HStack {
                 Spacer()
                 Button("Save") {
-                    onSave(name, systemPrompt, selectedProvider, selectedModel, supportsAttachments)
+                    let resolvedModel = selectedProvider.supportsCustomModel ? customModelName : selectedModel
+                    let resolvedURL: String? = selectedProvider.requiresBaseURL && !customBaseURL.isEmpty ? customBaseURL : nil
+                    onSave(name, systemPrompt, selectedProvider, resolvedModel, supportsAttachments, resolvedURL)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -296,8 +318,13 @@ private struct ModeEditorSheet: View {
                 systemPrompt = mode.systemPrompt
                 selectedProvider = mode.provider
                 supportsAttachments = mode.supportsAttachments && selectedProvider.supportsAnyAttachments
-                let valid = selectedProvider.availableModels.contains(mode.modelName)
-                selectedModel = valid ? mode.modelName : selectedProvider.defaultModel
+                customBaseURL = mode.customBaseURL ?? ""
+                if selectedProvider.supportsCustomModel {
+                    customModelName = mode.modelName
+                } else {
+                    let valid = selectedProvider.availableModels.contains(mode.modelName)
+                    selectedModel = valid ? mode.modelName : selectedProvider.defaultModel
+                }
             } else {
                 selectedModel = selectedProvider.defaultModel
                 supportsAttachments = false

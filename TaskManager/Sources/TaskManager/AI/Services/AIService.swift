@@ -16,19 +16,28 @@ final class AIService {
     
     private init() {}
     
-    func providerFor(_ type: AIProviderType) -> AIProviderProtocol {
+    func providerFor(_ type: AIProviderType, customBaseURL: String? = nil) -> AIProviderProtocol {
         switch type {
         case .gemini: return geminiProvider
         case .zai: return zaiProvider
+        case .openai:
+            guard let baseURL = customBaseURL, !baseURL.isEmpty else {
+                return zaiProvider  // fallback if UI fails to validate
+            }
+            return OpenAICompatibleProvider(
+                name: "OpenAI Compatible",
+                baseURL: baseURL,
+                apiKeyProvider: { KeychainService.shared.get(.openaiAPIKey) }
+            )
         }
     }
-    
+
     func isConfigured(for provider: AIProviderType) -> Bool {
         providerFor(provider).isConfigured
     }
-    
+
     var hasAnyProviderConfigured: Bool {
-        geminiProvider.isConfigured || zaiProvider.isConfigured
+        geminiProvider.isConfigured || zaiProvider.isConfigured || KeychainService.shared.hasKey(.openaiAPIKey)
     }
     
     func setMode(_ mode: AIModeModel) {
@@ -89,7 +98,7 @@ final class AIService {
     
     func enhance(text: String, attachments: [AIAttachment] = [], mode: AIModeModel) async throws -> AIEnhancementResult {
         let modeData = AIModeData(from: mode)
-        let provider = providerFor(modeData.provider)
+        let provider = providerFor(modeData.provider, customBaseURL: modeData.customBaseURL)
 
         guard provider.isConfigured else {
             throw AIError.notConfigured

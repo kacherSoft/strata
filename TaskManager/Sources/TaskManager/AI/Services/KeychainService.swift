@@ -8,6 +8,7 @@ final class KeychainService: Sendable {
     enum Key: String, Sendable {
         case geminiAPIKey = "gemini-api-key"
         case zaiAPIKey = "zai-api-key"
+        case openaiAPIKey = "openai-api-key"
         
         // DodoPayments entitlement keys
         case licenseKey = "strata.licenseKey"

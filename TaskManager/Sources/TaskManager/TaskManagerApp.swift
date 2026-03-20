@@ -113,6 +113,12 @@ struct TaskManagerApp: App {
         .defaultSize(width: 1000, height: 700)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .newItem) {
+                Button("Chat") {
+                    WindowManager.shared.showChat()
+                }
+                .keyboardShortcut("j", modifiers: [.command, .option])
+            }
         }
     }
 

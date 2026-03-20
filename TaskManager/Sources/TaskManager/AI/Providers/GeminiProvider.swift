@@ -1,17 +1,23 @@
 import Foundation
 import GoogleGenerativeAI
 import PDFKit
+import os
+
+/// Boxes a non-Sendable value for use in @Sendable closures where exclusive access is guaranteed.
+private struct SendableBox<T>: @unchecked Sendable { let value: T }
+
+private let chatLog = Logger(subsystem: "com.strata.app", category: "GeminiChat")
 
 final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
     var name: String { "Google Gemini" }
-    
+
     private let keychain = KeychainService.shared
     private let defaultModel = "gemini-flash-lite-latest"
-    
+
     var isConfigured: Bool {
         keychain.hasKey(.geminiAPIKey)
     }
-    
+
     func enhance(text: String, attachments: [AIAttachment], mode: AIModeData) async throws -> AIEnhancementResult {
         guard let apiKey = keychain.get(.geminiAPIKey) else {
             throw AIError.notConfigured
@@ -101,7 +107,63 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
             throw AIError.networkError(error.localizedDescription)
         }
     }
-    
+
+    func streamChat(messages: [ChatMessage], mode: AIModeData) async throws -> AsyncThrowingStream<ChatStreamChunk, Error> {
+        guard let apiKey = keychain.get(.geminiAPIKey) else { throw AIError.notConfigured }
+        let modelName = mode.modelName.isEmpty ? defaultModel : mode.modelName
+        chatLog.info("streamChat: model=\(modelName), messages=\(messages.count)")
+
+        let model = GenerativeModel(name: modelName, apiKey: apiKey)
+
+        // Build prompt text from conversation history
+        var prompt = mode.systemPrompt + "\n\n"
+        for msg in messages {
+            guard msg.role != .system else { continue }
+            let label = msg.role == .user ? "User" : "Assistant"
+            prompt += "\(label): \(msg.content)\n\n"
+        }
+        prompt += "Assistant:"
+
+        // Build parts: text prompt + attachments from the last message (multimodal support)
+        var parts: [ModelContent.Part] = [.text(prompt)]
+        if let lastMsg = messages.last, !lastMsg.attachments.isEmpty {
+            for attachment in lastMsg.attachments {
+                parts.append(.data(mimetype: attachment.mimeType, try attachment.loadData()))
+            }
+            chatLog.info("streamChat: \(lastMsg.attachments.count) attachment(s) included")
+        }
+        chatLog.info("streamChat: prompt length=\(prompt.count), parts=\(parts.count)")
+
+        let boxedModel = SendableBox(value: model)
+        let boxedParts = SendableBox(value: parts)
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let content = [ModelContent(parts: boxedParts.value)]
+                    let stream = boxedModel.value.generateContentStream(content)
+                    for try await response in stream {
+                        if Task.isCancelled { break }
+                        if let text = response.text {
+                            chatLog.debug("streamChat: chunk: \(text.prefix(50))")
+                            continuation.yield(.text(text))
+                        }
+                    }
+                    chatLog.info("streamChat: stream complete")
+                    continuation.yield(.done(tokensUsed: nil))
+                    continuation.finish()
+                } catch let error as GenerateContentError {
+                    chatLog.error("streamChat: stream error: \(error)")
+                    continuation.finish(throwing: GeminiProvider.geminiErrorToAIError(error))
+                } catch {
+                    chatLog.error("streamChat: stream error: \(error)")
+                    continuation.finish(throwing: AIError.networkError(error.localizedDescription))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     func testConnection() async throws -> Bool {
         guard let apiKey = keychain.get(.geminiAPIKey) else {
             throw AIError.notConfigured
@@ -119,28 +181,12 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
         }
     }
 
-    private static func extractPDFText(from attachment: AIAttachment) throws -> String {
-        guard let document = PDFDocument(url: attachment.fileURL) else { return "" }
-
-        let maxPages = 20
-        let pageCount = min(document.pageCount, maxPages)
-        var text = ""
-
-        for i in 0..<pageCount {
-            if let page = document.page(at: i), let pageText = page.string {
-                text += pageText + "\n"
-            }
-        }
-
-        let maxChars = 50_000
-        if text.count > maxChars {
-            text = String(text.prefix(maxChars)) + "\n[... truncated ...]"
-        }
-
-        return text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-    }
-    
     private func mapGeminiError(_ error: GenerateContentError) -> AIError {
+        Self.geminiErrorToAIError(error)
+    }
+
+    /// Static form used in closures where self capture is not allowed (sending context)
+    private static func geminiErrorToAIError(_ error: GenerateContentError) -> AIError {
         switch error {
         case .promptBlocked(let response):
             if let feedback = response.promptFeedback {
@@ -153,8 +199,10 @@ final class GeminiProvider: AIProviderProtocol, @unchecked Sendable {
             return AIError.invalidAPIKey
         case .unsupportedUserLocation:
             return AIError.providerError("Gemini is not available in your region")
+        case .internalError(let underlying):
+            return AIError.providerError("Gemini internal: \(underlying)")
         default:
-            return AIError.providerError("Gemini error: \(error.localizedDescription)")
+            return AIError.providerError("Gemini error: \(error)")
         }
     }
 }

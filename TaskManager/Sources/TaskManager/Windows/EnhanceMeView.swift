@@ -55,6 +55,14 @@ struct EnhanceMeView: View {
             }
         }
         .onChange(of: aiService.currentMode?.id) { _, _ in
+            // If Chat mode selected, transition to Chat window
+            if let mode = aiService.currentMode, mode.name == "Chat" && mode.isBuiltIn {
+                // Cycle past Chat to next mode so EnhanceMe keeps a valid mode
+                aiService.cycleMode(in: modelContext)
+                // Open Chat window
+                WindowManager.shared.showChat()
+                return
+            }
             if !currentModeSupportsAttachments {
                 cleanupAttachments()
             }
