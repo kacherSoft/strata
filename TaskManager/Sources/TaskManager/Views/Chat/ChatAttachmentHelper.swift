@@ -104,6 +104,13 @@ enum ChatAttachmentHelper {
         return nil
     }
 
+    /// Clean up stale temp files from previous paste operations.
+    static func cleanupTempFiles() {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("StrataChatAttachments", isDirectory: true)
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
     /// Check if pasteboard contains file URLs with supported extensions.
     static func hasAttachableContent(_ pasteboard: NSPasteboard) -> Bool {
         guard let types = pasteboard.types else { return false }

@@ -189,6 +189,7 @@ extension ModelContainer {
 func seedDefaultData(container: ModelContainer) throws {
     let context = ModelContext(container)
 
+    ChatAttachmentHelper.cleanupTempFiles()
     try seedDefaultAIProviders(context: context)
     try seedDefaultAIModes(context: context)
     try removeDeprecatedBuiltInModesIfNeeded(context: context)

@@ -8,7 +8,7 @@ final class WindowManager: ObservableObject {
     static let shared = WindowManager()
     
     private var quickEntryPanel: QuickEntryPanel?
-    private var settingsWindow: SettingsWindow?  // Legacy, kept for hideSettings
+    // Settings is now a SwiftUI Window scene (no manual NSPanel needed)
     private var enhanceMePanel: EnhanceMePanel?
     private var taskPanel: ChatPanel?  // Reuse ChatPanel (NSPanel subclass) for tasks
     private var modelContainer: ModelContainer?
@@ -56,7 +56,8 @@ final class WindowManager: ObservableObject {
             hideQuickEntry()
             return true
         }
-        if let window = settingsWindow, window.isVisible {
+        // Settings is a Window scene — check by title
+        if let sw = NSApp.windows.first(where: { $0.title == "Settings" }), sw.isVisible {
             hideSettings()
             return true
         }

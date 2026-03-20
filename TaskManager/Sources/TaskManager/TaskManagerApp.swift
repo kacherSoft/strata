@@ -146,7 +146,6 @@ struct TaskManagerApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 780, height: 560)
-        .windowResizability(.contentSize)
     }
 
     @MainActor
