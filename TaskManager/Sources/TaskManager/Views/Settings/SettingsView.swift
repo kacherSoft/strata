@@ -25,22 +25,21 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// Settings window with sidebar navigation.
-/// Uses HStack + List(.sidebar) for clean layout without NavigationSplitView toolbar clutter.
+/// Settings using NavigationSplitView for native sidebar vibrancy (same as ChatView).
+/// Toolbar hidden to avoid unwanted title bar clutter.
 struct SettingsView: View {
-    @State private var selectedTab: SettingsTab = .general
+    @State private var selectedTab: SettingsTab? = .general
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar with native vibrancy via List + .sidebar style
+        NavigationSplitView {
             List(SettingsTab.allCases, selection: $selectedTab) { tab in
                 Label(tab.rawValue, systemImage: tab.icon)
                     .tag(tab)
             }
             .listStyle(.sidebar)
-            .frame(width: 190)
-
-            // Content
+            .navigationSplitViewColumnWidth(min: 160, ideal: 190, max: 220)
+            .toolbar(.hidden)
+        } detail: {
             Group {
                 switch selectedTab {
                 case .general:
@@ -57,10 +56,15 @@ struct SettingsView: View {
                     ShortcutsSettingsView()
                 case .account:
                     AccountSettingsView()
+                case nil:
+                    Text("Select a section")
+                        .foregroundStyle(.secondary)
                 }
             }
+            .toolbar(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(width: 780, height: 560)
     }
 }
