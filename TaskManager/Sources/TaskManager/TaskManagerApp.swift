@@ -120,6 +120,20 @@ struct TaskManagerApp: App {
                 .keyboardShortcut("t", modifiers: [.command, .shift])
             }
         }
+
+        Window("Settings", id: "settings-window") {
+            Group {
+                if let container {
+                    SettingsView()
+                        .withAppEnvironment(container: container)
+                } else {
+                    ProgressView("Loading…")
+                }
+            }
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 780, height: 560)
+        .windowResizability(.contentSize)
     }
 
     @MainActor

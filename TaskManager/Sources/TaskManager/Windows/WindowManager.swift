@@ -8,7 +8,7 @@ final class WindowManager: ObservableObject {
     static let shared = WindowManager()
     
     private var quickEntryPanel: QuickEntryPanel?
-    private var settingsWindow: SettingsWindow?
+    private var settingsWindow: SettingsWindow?  // Legacy, kept for hideSettings
     private var enhanceMePanel: EnhanceMePanel?
     private var taskPanel: ChatPanel?  // Reuse ChatPanel (NSPanel subclass) for tasks
     private var modelContainer: ModelContainer?
@@ -275,19 +275,18 @@ final class WindowManager: ObservableObject {
     
     func showSettings() {
         closeAllFloatingWindows()
-        
-        if settingsWindow == nil {
-            guard let container = modelContainer else { return }
-            settingsWindow = SettingsWindow(modelContainer: container)
+        // Use SwiftUI Window scene via openWindowAction
+        if let action = openWindowAction {
+            action(id: "settings-window")
         }
-        
-        settingsWindow?.center()
-        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    
+
     func hideSettings() {
-        settingsWindow?.orderOut(nil)
+        // Find and close the settings window by title
+        for window in NSApp.windows where window.title == "Settings" {
+            window.orderOut(nil)
+        }
     }
     
     // MARK: - Enhance Me
