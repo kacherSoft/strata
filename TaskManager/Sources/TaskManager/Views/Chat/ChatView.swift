@@ -16,6 +16,7 @@ struct ChatView: View {
     @State private var errorMessage: String?
     @State private var selectedProviderId: UUID?
     @State private var selectedModelName: String = ""
+    @State private var chatModeName: String = "Chat"
 
     /// Reference to sidebar for triggering reloads after ChatView-level operations
     @State private var sidebarKey = UUID()
@@ -46,6 +47,10 @@ struct ChatView: View {
         .onChange(of: selectedSessionId) { _, newValue in
             if let id = newValue { loadMessages(for: id) }
             else { messages = [] }
+        }
+        .onKeyPress(.tab) {
+            cycleChatMode()
+            return .handled
         }
     }
 
@@ -82,6 +87,30 @@ struct ChatView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
                 .background(Color.orange.opacity(0.1))
+            }
+
+            // Chat mode indicator (only show if multiple chat modes exist)
+            if hasMutipleChatModes {
+                HStack(spacing: 8) {
+                    Text(chatModeName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        cycleChatMode()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.caption2)
+                            Text("Tab")
+                                .font(.caption2)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
             }
 
             ChatInputView(
@@ -134,6 +163,14 @@ struct ChatView: View {
     // Chat modes support attachments by default unless explicitly disabled
     private var currentModeSupportsAttachments: Bool {
         resolveChatMode()?.supportsAttachments ?? true
+    }
+
+    private var hasMutipleChatModes: Bool {
+        let viewTypeRaw = AIModeViewType.chat.rawValue
+        let descriptor = FetchDescriptor<AIModeModel>(
+            predicate: #Predicate { $0.viewTypeRaw == viewTypeRaw }
+        )
+        return (try? modelContext.fetchCount(descriptor)) ?? 0 > 1
     }
 
     // MARK: - Data Operations
@@ -276,10 +313,33 @@ struct ChatView: View {
     }
 
     private func resolveChatMode() -> AIModeModel? {
+        let viewTypeRaw = AIModeViewType.chat.rawValue
         let descriptor = FetchDescriptor<AIModeModel>(
-            predicate: #Predicate { $0.isBuiltIn && $0.name == "Chat" }
+            predicate: #Predicate { $0.viewTypeRaw == viewTypeRaw },
+            sortBy: [SortDescriptor(\.sortOrder)]
         )
-        return try? modelContext.fetch(descriptor).first
+        let chatModes = (try? modelContext.fetch(descriptor)) ?? []
+        // Return the mode matching chatModeName, or first chat mode
+        return chatModes.first { $0.name == chatModeName } ?? chatModes.first
+    }
+
+    private func cycleChatMode() {
+        let viewTypeRaw = AIModeViewType.chat.rawValue
+        let descriptor = FetchDescriptor<AIModeModel>(
+            predicate: #Predicate { $0.viewTypeRaw == viewTypeRaw },
+            sortBy: [SortDescriptor(\.sortOrder)]
+        )
+        guard let chatModes = try? modelContext.fetch(descriptor), chatModes.count > 1 else { return }
+        let currentIndex = chatModes.firstIndex { $0.name == chatModeName } ?? 0
+        let nextIndex = (currentIndex + 1) % chatModes.count
+        let nextMode = chatModes[nextIndex]
+        chatModeName = nextMode.name
+
+        // Update provider/model from the selected chat mode
+        if let providerId = nextMode.aiProviderId {
+            selectedProviderId = providerId
+        }
+        selectedModelName = nextMode.modelName
     }
 
     private func resolveProviderModel(_ id: UUID) -> AIProviderModel? {

@@ -55,11 +55,6 @@ struct EnhanceMeView: View {
             }
         }
         .onChange(of: aiService.currentMode?.id) { _, _ in
-            // Skip chat-view modes in EnhanceMe — they belong in the main chat window
-            if let mode = aiService.currentMode, mode.viewType == .chat {
-                aiService.cycleMode(in: modelContext)
-                return
-            }
             if !currentModeSupportsAttachments {
                 cleanupAttachments()
             }
@@ -74,7 +69,7 @@ struct EnhanceMeView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage)
         .background(EnhanceMeShortcutHandler(onCycleMode: {
-            aiService.cycleMode(in: modelContext)
+            aiService.cycleMode(in: modelContext, viewType: .enhance)
         }))
     }
     
@@ -128,7 +123,7 @@ struct EnhanceMeView: View {
             }
             
             Button(action: {
-                aiService.cycleMode(in: modelContext)
+                aiService.cycleMode(in: modelContext, viewType: .enhance)
             }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.2.circlepath")
