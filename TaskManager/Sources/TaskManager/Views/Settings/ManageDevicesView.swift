@@ -159,6 +159,8 @@ struct ManageDevicesView: View {
             // If revoking own device → full sign out + clear entitlements
             if device.install_id == entitlementService.installId {
                 await entitlementService.signOutAccount()
+                devices = [] // Can't list devices after sign out
+                return
             }
 
             devices = try await entitlementService.listAccountDevices()
