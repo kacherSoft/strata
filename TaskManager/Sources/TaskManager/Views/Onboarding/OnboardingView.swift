@@ -46,7 +46,7 @@ private let onboardingPages: [OnboardingPageConfig] = [
         icon: "brain",
         iconColor: .purple,
         title: "AI Enhancement",
-        description: "Add your Gemini or z.ai API key in Settings to unlock AI-powered task enhancement and smart suggestions.",
+        description: "Add your Gemini or Anthropic API key in Settings to unlock AI-powered task enhancement and smart suggestions.",
         footnote: "You can skip this and add later in Settings → AI Config"
     ),
     OnboardingPageConfig(

@@ -203,7 +203,7 @@ func seedDefaultData(container: ModelContainer) throws {
     try context.save()
 }
 
-/// Seed 2 default AI providers (Gemini + z.ai) on first launch.
+/// Seed 2 default AI providers (Gemini + Anthropic) on first launch.
 /// Uses existing Keychain keys so users don't lose their configured API keys.
 @MainActor
 private func seedDefaultAIProviders(context: ModelContext) throws {
@@ -221,16 +221,16 @@ private func seedDefaultAIProviders(context: ModelContext) throws {
     )
     context.insert(gemini)
 
-    let zai = AIProviderModel(
-        name: "z.ai",
-        providerType: .zai,
-        apiKeyRef: KeychainService.Key.zaiAPIKey.rawValue,
-        models: ["GLM-4.7", "GLM-4.5-air"],
-        defaultModelName: "GLM-4.7",
+    let anthropic = AIProviderModel(
+        name: "Anthropic",
+        providerType: .anthropic,
+        apiKeyRef: KeychainService.Key.anthropicAPIKey.rawValue,
+        models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"],
+        defaultModelName: "claude-sonnet-4-20250514",
         isDefault: true,
         sortOrder: 1
     )
-    context.insert(zai)
+    context.insert(anthropic)
 }
 
 @MainActor

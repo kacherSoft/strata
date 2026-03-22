@@ -3,13 +3,13 @@ import Foundation
 
 enum AIProviderType: String, Codable, CaseIterable, Sendable {
     case gemini = "gemini"
-    case zai = "zai"
+    case anthropic = "anthropic"
     case openai = "openai"
 
     var displayName: String {
         switch self {
         case .gemini: return "Google Gemini"
-        case .zai: return "z.ai"
+        case .anthropic: return "Anthropic"
         case .openai: return "OpenAI Compatible"
         }
     }
@@ -17,7 +17,7 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var availableModels: [String] {
         switch self {
         case .gemini: return ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3-flash-preview"]
-        case .zai: return ["GLM-4.7", "GLM-4.5-air"]
+        case .anthropic: return ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"]
         case .openai: return []
         }
     }
@@ -29,7 +29,7 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var supportsImageAttachments: Bool {
         switch self {
         case .gemini: return true
-        case .zai: return false
+        case .anthropic: return false
         case .openai: return false
         }
     }
@@ -37,7 +37,7 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var supportsPDFAttachments: Bool {
         switch self {
         case .gemini: return true
-        case .zai: return false
+        case .anthropic: return false
         case .openai: return false
         }
     }
@@ -69,9 +69,14 @@ final class AIModeModel: Identifiable {
     
     var provider: AIProviderType {
         get {
+            // Migrate legacy "zai" → "anthropic"
+            if providerRaw == "zai" {
+                providerRaw = AIProviderType.anthropic.rawValue
+                modelName = AIProviderType.anthropic.defaultModel
+                return .anthropic
+            }
             guard let valid = AIProviderType(rawValue: providerRaw) else {
                 // Invalid providerRaw — reset both provider AND model to prevent mismatch
-                // (e.g. providerRaw="custom" with modelName="gpt-5.4" would route to Gemini with wrong model)
                 providerRaw = AIProviderType.gemini.rawValue
                 modelName = AIProviderType.gemini.defaultModel
                 return .gemini
