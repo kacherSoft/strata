@@ -6,31 +6,59 @@ import Observation
 @Observable
 final class AIService {
     static let shared = AIService()
-    
+
     private(set) var currentMode: AIModeModel?
     private(set) var isProcessing = false
     private(set) var lastError: AIError?
-    
+
     private let geminiProvider = GeminiProvider()
-    private let zaiProvider = ZAIProvider()
-    
+    private let anthropicProvider = AnthropicProvider()
+
     private init() {}
-    
-    func providerFor(_ type: AIProviderType) -> AIProviderProtocol {
+
+    /// Resolve provider from legacy enum + optional base URL (backward compat)
+    func providerFor(_ type: AIProviderType, customBaseURL: String? = nil) -> AIProviderProtocol {
         switch type {
         case .gemini: return geminiProvider
-        case .zai: return zaiProvider
+        case .anthropic: return anthropicProvider
+        case .openai:
+            guard let baseURL = customBaseURL, !baseURL.isEmpty else {
+                // No base URL for OpenAI-compatible → not configured
+                return anthropicProvider
+            }
+            return OpenAICompatibleProvider(
+                name: "OpenAI Compatible",
+                baseURL: baseURL,
+                apiKeyProvider: { KeychainService.shared.get(.openaiAPIKey) }
+            )
         }
     }
-    
+
+    /// Resolve provider from AIProviderModel (new dynamic system)
+    func providerFor(_ model: AIProviderModel) -> AIProviderProtocol {
+        switch model.providerType {
+        case .gemini:
+            return GeminiProvider(apiKeyRef: model.apiKeyRef)
+        case .anthropic:
+            return AnthropicProvider(apiKeyRef: model.apiKeyRef)
+        case .openai:
+            return OpenAICompatibleProvider(
+                name: model.name,
+                baseURL: model.baseURL ?? "",
+                apiKeyRef: model.apiKeyRef,
+                testModelName: model.defaultModelName ?? model.models.first
+            )
+        }
+    }
+
     func isConfigured(for provider: AIProviderType) -> Bool {
         providerFor(provider).isConfigured
     }
-    
+
     var hasAnyProviderConfigured: Bool {
-        geminiProvider.isConfigured || zaiProvider.isConfigured
+        geminiProvider.isConfigured || anthropicProvider.isConfigured || KeychainService.shared.hasKey(.openaiAPIKey)
     }
-    
+
     func setMode(_ mode: AIModeModel) {
         currentMode = mode
     }
@@ -46,7 +74,7 @@ final class AIService {
             return
         }
     }
-    
+
     func cycleMode(in context: ModelContext) {
         let descriptor = FetchDescriptor<AIModeModel>(sortBy: [SortDescriptor(\.sortOrder)])
         do {
@@ -66,7 +94,7 @@ final class AIService {
             return
         }
     }
-    
+
     func loadDefaultMode(from context: ModelContext) {
         guard currentMode == nil else { return }
 
@@ -86,10 +114,10 @@ final class AIService {
             return
         }
     }
-    
+
     func enhance(text: String, attachments: [AIAttachment] = [], mode: AIModeModel) async throws -> AIEnhancementResult {
         let modeData = AIModeData(from: mode)
-        let provider = providerFor(modeData.provider)
+        let provider = providerFor(modeData.provider, customBaseURL: modeData.customBaseURL)
 
         guard provider.isConfigured else {
             throw AIError.notConfigured
@@ -112,7 +140,7 @@ final class AIService {
             throw aiError
         }
     }
-    
+
     func testProvider(_ type: AIProviderType) async throws -> Bool {
         try await providerFor(type).testConnection()
     }

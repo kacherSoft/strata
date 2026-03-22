@@ -33,12 +33,12 @@ final class SettingsModel {
 
 enum AIProvider: String, Codable, CaseIterable, Sendable {
     case gemini = "gemini"
-    case zai = "zai"
-    
+    case anthropic = "anthropic"
+
     var displayName: String {
         switch self {
         case .gemini: return "Google Gemini"
-        case .zai: return "z.ai (GLM 4.6)"
+        case .anthropic: return "Anthropic (Claude)"
         }
     }
 }

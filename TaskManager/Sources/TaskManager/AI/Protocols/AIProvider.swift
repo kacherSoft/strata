@@ -6,11 +6,26 @@ protocol AIProviderProtocol: Sendable {
 
     func enhance(text: String, attachments: [AIAttachment], mode: AIModeData) async throws -> AIEnhancementResult
     func testConnection() async throws -> Bool
+    func streamChat(messages: [ChatMessage], mode: AIModeData) async throws -> AsyncThrowingStream<ChatStreamChunk, Error>
 }
 
 extension AIProviderProtocol {
     func enhance(text: String, mode: AIModeData) async throws -> AIEnhancementResult {
         try await enhance(text: text, attachments: [], mode: mode)
+    }
+
+    /// Default fallback: wraps single-shot enhance() as a stream for providers that don't implement native streaming
+    func streamChat(messages: [ChatMessage], mode: AIModeData) async throws -> AsyncThrowingStream<ChatStreamChunk, Error> {
+        let combinedText = messages
+            .filter { $0.role != .system }
+            .map { "\($0.role.rawValue): \($0.content)" }
+            .joined(separator: "\n\n")
+        let result = try await enhance(text: combinedText, mode: mode)
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.text(result.enhancedText))
+            continuation.yield(.done(tokensUsed: result.tokensUsed))
+            continuation.finish()
+        }
     }
 }
 

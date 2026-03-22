@@ -35,6 +35,9 @@ final class ShortcutManager: ObservableObject {
         if KeyboardShortcuts.getShortcut(for: .inlineEnhanceMe) == nil {
             KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .option]), for: .inlineEnhanceMe)
         }
+        if KeyboardShortcuts.getShortcut(for: .chatWindow) == nil {
+            KeyboardShortcuts.setShortcut(.init(.j, modifiers: [.command, .option]), for: .chatWindow)
+        }
         // Local (stored for customization)
         if KeyboardShortcuts.getShortcut(for: .settings) == nil {
             KeyboardShortcuts.setShortcut(.init(.comma, modifiers: [.command]), for: .settings)
@@ -53,12 +56,18 @@ final class ShortcutManager: ObservableObject {
             self?.showEnhanceMe()
         }
         
+        // Cmd+Shift+T → Tasks (secondary panel)
         KeyboardShortcuts.onKeyUp(for: .mainWindow) { [weak self] in
-            self?.showMainWindow()
+            self?.showTasks()
         }
-        
+
         KeyboardShortcuts.onKeyUp(for: .inlineEnhanceMe) { [weak self] in
             self?.performInlineEnhance()
+        }
+
+        // Cmd+Option+J → Show main Chat window
+        KeyboardShortcuts.onKeyUp(for: .chatWindow) { [weak self] in
+            self?.showMainWindow()
         }
     }
     
@@ -126,6 +135,10 @@ final class ShortcutManager: ObservableObject {
     func showEnhanceMe() {
         WindowManager.shared.showEnhanceMe()
     }
+
+    func showTasks() {
+        WindowManager.shared.showTasks()
+    }
     
     func showSettings() {
         WindowManager.shared.showSettings()
@@ -152,11 +165,12 @@ final class ShortcutManager: ObservableObject {
     }
     
     static func resetAllToDefaults() {
-        KeyboardShortcuts.reset(.quickEntry, .enhanceMe, .mainWindow, .settings, .newTask, .inlineEnhanceMe)
+        KeyboardShortcuts.reset(.quickEntry, .enhanceMe, .mainWindow, .settings, .newTask, .inlineEnhanceMe, .chatWindow)
         KeyboardShortcuts.setShortcut(.init(.n, modifiers: [.command, .shift]), for: .quickEntry)
         KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .shift]), for: .enhanceMe)
         KeyboardShortcuts.setShortcut(.init(.t, modifiers: [.command, .shift]), for: .mainWindow)
         KeyboardShortcuts.setShortcut(.init(.e, modifiers: [.command, .option]), for: .inlineEnhanceMe)
+        KeyboardShortcuts.setShortcut(.init(.j, modifiers: [.command, .option]), for: .chatWindow)
         KeyboardShortcuts.setShortcut(.init(.comma, modifiers: [.command]), for: .settings)
         KeyboardShortcuts.setShortcut(.init(.n, modifiers: [.command]), for: .newTask)
     }

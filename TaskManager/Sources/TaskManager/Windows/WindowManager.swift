@@ -8,8 +8,9 @@ final class WindowManager: ObservableObject {
     static let shared = WindowManager()
     
     private var quickEntryPanel: QuickEntryPanel?
-    private var settingsWindow: SettingsWindow?
+    // Settings is now a SwiftUI Window scene (no manual NSPanel needed)
     private var enhanceMePanel: EnhanceMePanel?
+    private var taskPanel: ChatPanel?  // Reuse ChatPanel (NSPanel subclass) for tasks
     private var modelContainer: ModelContainer?
     var openWindowAction: OpenWindowAction?
     
@@ -55,12 +56,17 @@ final class WindowManager: ObservableObject {
             hideQuickEntry()
             return true
         }
-        if let window = settingsWindow, window.isVisible {
+        // Settings is a Window scene — check by title
+        if let sw = NSApp.windows.first(where: { $0.title == "Settings" }), sw.isVisible {
             hideSettings()
             return true
         }
         if let panel = enhanceMePanel, panel.isVisible {
             hideEnhanceMe()
+            return true
+        }
+        if let panel = taskPanel, panel.isVisible {
+            hideTasks()
             return true
         }
         return false
@@ -270,19 +276,18 @@ final class WindowManager: ObservableObject {
     
     func showSettings() {
         closeAllFloatingWindows()
-        
-        if settingsWindow == nil {
-            guard let container = modelContainer else { return }
-            settingsWindow = SettingsWindow(modelContainer: container)
+        // Use SwiftUI Window scene via openWindowAction
+        if let action = openWindowAction {
+            action(id: "settings-window")
         }
-        
-        settingsWindow?.center()
-        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    
+
     func hideSettings() {
-        settingsWindow?.orderOut(nil)
+        // Find and close the settings window by title
+        for window in NSApp.windows where window.title == "Settings" {
+            window.orderOut(nil)
+        }
     }
     
     // MARK: - Enhance Me
@@ -318,5 +323,33 @@ final class WindowManager: ObservableObject {
     
     func hideEnhanceMe() {
         enhanceMePanel?.orderOut(nil)
+    }
+
+    // MARK: - Tasks (secondary panel, was main window before pivot)
+
+    func showTasks() {
+        guard let container = modelContainer else { return }
+
+        if taskPanel == nil {
+            let panel = ChatPanel()  // Reuse NSPanel subclass
+            panel.title = "Strata Tasks"
+            let view = ContentView()
+                .withAppEnvironment(container: container)
+            panel.collectionBehavior.insert(.moveToActiveSpace)
+            panel.setContent(view)
+            panel.center()
+            taskPanel = panel
+        }
+
+        guard let panel = taskPanel else { return }
+        if !panel.isVisible || !panel.isOnActiveSpace {
+            panel.orderOut(nil)
+        }
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func hideTasks() {
+        taskPanel?.orderOut(nil)
     }
 }

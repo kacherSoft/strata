@@ -221,8 +221,8 @@ export function deviceSeatsEnforced(env: Env): boolean {
 
 export function seatLimitForTier(env: Env, tier: "free" | "pro" | "vip"): number {
     const freeLimit = parseBoundedInt(env.FREE_DEVICE_LIMIT, 1, 1, 10);
-    const proLimit = parseBoundedInt(env.PRO_DEVICE_LIMIT, 2, 1, 20);
-    const vipLimit = parseBoundedInt(env.VIP_DEVICE_LIMIT, 3, 1, 30);
+    const proLimit = parseBoundedInt(env.PRO_DEVICE_LIMIT, 1, 1, 20);
+    const vipLimit = parseBoundedInt(env.VIP_DEVICE_LIMIT, 1, 1, 30);
 
     if (tier === "vip") return vipLimit;
     if (tier === "pro") return proLimit;

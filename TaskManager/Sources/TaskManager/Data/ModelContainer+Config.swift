@@ -128,10 +128,11 @@ extension ModelContainer {
 
         // Step 4 — Initialise container with explicit URL + migration plan
         let config = ModelConfiguration(url: storeURL)
-        let schema = Schema(StrataSchemaV1.models)
+        let schema = Schema(StrataSchemaV3.models)
+        // No explicit migrationPlan — all V1→V2→V3 changes are purely additive
+        // (new tables + nullable columns), so SwiftData's automatic lightweight migration handles it.
         let container = try ModelContainer(
             for: schema,
-            migrationPlan: StrataMigrationPlan.self,
             configurations: [config]
         )
 
@@ -176,7 +177,7 @@ extension Notification.Name {
 
 extension ModelContainer {
     static func inMemoryForTesting() throws -> ModelContainer {
-        let schema = Schema(StrataSchemaV1.models)
+        let schema = Schema(StrataSchemaV3.models)
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
     }
@@ -188,14 +189,60 @@ extension ModelContainer {
 func seedDefaultData(container: ModelContainer) throws {
     let context = ModelContext(container)
 
+    ChatAttachmentHelper.cleanupTempFiles()
+    try seedDefaultAIProviders(context: context)
     try seedDefaultAIModes(context: context)
     try removeDeprecatedBuiltInModesIfNeeded(context: context)
     try seedExplainModeIfNeeded(context: context)
+    try seedChatModeIfNeeded(context: context)
+    try repairInvalidAIModeProviders(context: context)
     try seedDefaultSettings(context: context)
     try seedDefaultCustomFieldDefinitions(context: context)
     try migrateExistingCustomFieldValues(context: context)
 
     try context.save()
+}
+
+/// Seed 2 default AI providers (Gemini + Anthropic) on first launch.
+/// Uses existing Keychain keys so users don't lose their configured API keys.
+@MainActor
+private func seedDefaultAIProviders(context: ModelContext) throws {
+    // Migrate existing z.ai provider → Anthropic
+    let allProviders = try context.fetch(FetchDescriptor<AIProviderModel>())
+    if let zai = allProviders.first(where: { $0.providerTypeRaw == "zai" || $0.name == "z.ai" }) {
+        zai.name = "Anthropic"
+        zai.providerTypeRaw = AIProviderType.anthropic.rawValue
+        zai.apiKeyRef = KeychainService.Key.anthropicAPIKey.rawValue
+        zai.modelsRaw = "[\"\(["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"].joined(separator: "\",\""))\"]"
+        zai.defaultModelName = "claude-sonnet-4-20250514"
+        try context.save()
+        return
+    }
+
+    let descriptor = FetchDescriptor<AIProviderModel>()
+    guard try context.fetchCount(descriptor) == 0 else { return }
+
+    let gemini = AIProviderModel(
+        name: "Google Gemini",
+        providerType: .gemini,
+        apiKeyRef: KeychainService.Key.geminiAPIKey.rawValue,
+        models: ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3-flash-preview"],
+        defaultModelName: "gemini-flash-lite-latest",
+        isDefault: true,
+        sortOrder: 0
+    )
+    context.insert(gemini)
+
+    let anthropic = AIProviderModel(
+        name: "Anthropic",
+        providerType: .anthropic,
+        apiKeyRef: KeychainService.Key.anthropicAPIKey.rawValue,
+        models: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"],
+        defaultModelName: "claude-sonnet-4-20250514",
+        isDefault: true,
+        sortOrder: 1
+    )
+    context.insert(anthropic)
 }
 
 @MainActor
@@ -215,6 +262,42 @@ private func removeDeprecatedBuiltInModesIfNeeded(context: ModelContext) throws 
     let builtInModes = try context.fetch(FetchDescriptor<AIModeModel>(predicate: #Predicate { $0.isBuiltIn }))
     for mode in builtInModes where modesToRemove.contains(mode.name) {
         context.delete(mode)
+    }
+}
+
+@MainActor
+private func seedChatModeIfNeeded(context: ModelContext) throws {
+    let descriptor = FetchDescriptor<AIModeModel>(
+        predicate: #Predicate { $0.isBuiltIn && $0.name == "Chat" }
+    )
+    guard try context.fetch(descriptor).isEmpty else { return }
+
+    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
+    let maxOrder = allModes.map(\.sortOrder).max() ?? -1
+
+    let chatMode = AIModeModel(
+        name: "Chat",
+        systemPrompt: "You are a helpful, knowledgeable assistant. Respond conversationally. Use markdown formatting for code blocks, lists, and emphasis when appropriate.",
+        provider: .gemini,
+        isBuiltIn: true,
+        supportsAttachments: true
+    )
+    chatMode.sortOrder = maxOrder + 1
+    context.insert(chatMode)
+}
+
+/// Fix modes with invalid providerRaw values (e.g. "custom" from old code).
+/// When providerRaw is unrecognized, the computed `provider` property silently defaults to .gemini,
+/// but the modelName can be stale (e.g. "gpt-5.4"). This repairs both fields.
+@MainActor
+private func repairInvalidAIModeProviders(context: ModelContext) throws {
+    let validRaw = Set(AIProviderType.allCases.map(\.rawValue))
+    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
+    for mode in allModes {
+        guard !validRaw.contains(mode.providerRaw) else { continue }
+        // Invalid providerRaw — reset to gemini with default model
+        mode.providerRaw = AIProviderType.gemini.rawValue
+        mode.modelName = AIProviderType.gemini.defaultModel
     }
 }
 

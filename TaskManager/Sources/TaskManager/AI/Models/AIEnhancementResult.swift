@@ -39,6 +39,7 @@ struct AIModeData: Sendable {
     let provider: AIProviderType
     let modelName: String
     let supportsAttachments: Bool
+    let customBaseURL: String?
 
     init(from mode: AIModeModel) {
         self.name = mode.name
@@ -46,5 +47,15 @@ struct AIModeData: Sendable {
         self.provider = mode.provider
         self.modelName = mode.modelName
         self.supportsAttachments = mode.supportsAttachments
+        self.customBaseURL = mode.customBaseURL
+    }
+
+    init(name: String, systemPrompt: String, provider: AIProviderType, modelName: String, supportsAttachments: Bool = false, customBaseURL: String? = nil) {
+        self.name = name
+        self.systemPrompt = systemPrompt
+        self.provider = provider
+        self.modelName = modelName
+        self.supportsAttachments = supportsAttachments
+        self.customBaseURL = customBaseURL
     }
 }

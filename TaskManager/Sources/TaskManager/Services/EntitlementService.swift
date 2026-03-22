@@ -1,6 +1,9 @@
 import Foundation
 import Observation
 import CryptoKit
+import os
+
+private let entLog = Logger(subsystem: "com.strata.app", category: "Entitlement")
 
 enum PremiumFeature: String, CaseIterable {
     case kanban
@@ -45,16 +48,22 @@ final class EntitlementService {
     var isCheckoutActivationInProgress: Bool {
         validationState == .validating
     }
-    var isAccountSignedIn: Bool {
+    /// Stored property so SwiftUI @Observable can track changes (computed keychain reads are not observable)
+    private(set) var isAccountSignedIn = false
+
+    /// Recalculate sign-in state from keychain + session expiry
+    private func refreshSignedInState() {
         guard let token = keychain.get(.accountSessionToken)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
               !token.isEmpty else {
-            return false
+            isAccountSignedIn = false
+            return
         }
         if let expiry = accountSessionExpiresAt {
-            return Date() < expiry
+            isAccountSignedIn = Date() < expiry
+        } else {
+            isAccountSignedIn = true
         }
-        return true
     }
 
     func canUse(_ feature: PremiumFeature) -> Bool { hasFullAccess }
@@ -172,6 +181,7 @@ final class EntitlementService {
             throw EntitlementError.accountEmailMissing
         }
 
+        entLog.info("verifyEmailAuth: START email=\(normalizedEmail)")
         let response = try await backendClient.verifyEmailAuth(
             email: normalizedEmail,
             challengeId: challengeId,
@@ -183,15 +193,37 @@ final class EntitlementService {
             email: response.email,
             expiresAtUnix: response.session_expires_at
         )
+        entLog.info("verifyEmailAuth: session saved, isSignedIn=\(self.isAccountSignedIn)")
+        entLog.info("verifyEmailAuth: BEFORE revalidate — licenseKey=\(self.keychain.hasKey(.licenseKey)) entToken=\(self.keychain.hasKey(.entitlementToken)) isLicenseValid=\(self.isLicenseValid) isSubActive=\(self.isSubscriptionActive) hasFullAccess=\(self.hasFullAccess)")
 
         await revalidate()
+
+        entLog.info("verifyEmailAuth: AFTER revalidate — licenseKey=\(self.keychain.hasKey(.licenseKey)) entToken=\(self.keychain.hasKey(.entitlementToken)) isLicenseValid=\(self.isLicenseValid) isSubActive=\(self.isSubscriptionActive) hasFullAccess=\(self.hasFullAccess)")
     }
 
     func signOutAccount() async {
-        try? await backendClient.revokeAccountSession()
+        entLog.info("signOutAccount: START — isSignedIn=\(self.isAccountSignedIn) hasFullAccess=\(self.hasFullAccess) isLicenseValid=\(self.isLicenseValid) isSubActive=\(self.isSubscriptionActive)")
+        entLog.info("signOutAccount: keychain — licenseKey=\(self.keychain.hasKey(.licenseKey)) entToken=\(self.keychain.hasKey(.entitlementToken)) sessionToken=\(self.keychain.hasKey(.accountSessionToken))")
+
+        do {
+            try await backendClient.revokeAccountSession()
+            entLog.info("signOutAccount: backend session revoked OK")
+        } catch {
+            entLog.error("signOutAccount: backend session revoke FAILED: \(error)")
+        }
+
         clearAccountSession()
+        entLog.info("signOutAccount: after clearAccountSession — isSignedIn=\(self.isAccountSignedIn)")
+
         clearLinkedSubscriptionState(deleteEmail: true)
-        await revalidate()
+        isLicenseValid = false
+        keychain.delete(.licenseKey)
+        keychain.delete(.licenseInstanceId)
+        keychain.delete(.entitlementToken)
+        keychain.delete(.licenseOfflineGraceUntil)
+        validationState = .invalid
+
+        entLog.info("signOutAccount: DONE — hasFullAccess=\(self.hasFullAccess) isLicenseValid=\(self.isLicenseValid) isSubActive=\(self.isSubscriptionActive) entToken=\(self.keychain.hasKey(.entitlementToken)) licenseKey=\(self.keychain.hasKey(.licenseKey))")
     }
 
     func listAccountDevices() async throws -> [DeviceInfo] {
@@ -203,22 +235,42 @@ final class EntitlementService {
     }
 
     func revokeAccountDevice(installId: String) async throws {
+        entLog.info("revokeAccountDevice: START installId=\(installId) selfInstallId=\(self.installId ?? "nil") isSignedIn=\(self.isAccountSignedIn)")
         guard isAccountSignedIn else {
+            entLog.error("revokeAccountDevice: NOT SIGNED IN — throwing")
             throw EntitlementError.accountSignInRequired
         }
+
+        entLog.info("revokeAccountDevice: calling backend revokeDevice API...")
         try await backendClient.revokeDevice(installId: installId)
+        entLog.info("revokeAccountDevice: backend revokeDevice API SUCCESS")
+
         if installId == self.installId {
+            entLog.info("revokeAccountDevice: OWN DEVICE — clearing all local entitlement keys")
             clearLinkedSubscriptionState(deleteEmail: false)
+            isLicenseValid = false
+            keychain.delete(.licenseKey)
+            keychain.delete(.licenseInstanceId)
+            keychain.delete(.entitlementToken)
+            keychain.delete(.licenseOfflineGraceUntil)
+            validationState = .invalid
+            entLog.info("revokeAccountDevice: OWN DEVICE cleanup DONE — hasFullAccess=\(self.hasFullAccess) isLicenseValid=\(self.isLicenseValid) entToken=\(self.keychain.hasKey(.entitlementToken))")
+        } else {
+            entLog.info("revokeAccountDevice: OTHER DEVICE — revalidating")
+            await revalidate()
         }
-        await revalidate()
     }
 
     func revalidate() async {
+        entLog.info("revalidate: START — isSignedIn=\(self.isAccountSignedIn) hasFullAccess=\(self.hasFullAccess) isLicenseValid=\(self.isLicenseValid) isSubActive=\(self.isSubscriptionActive)")
+        entLog.info("revalidate: keychain — licenseKey=\(self.keychain.hasKey(.licenseKey)) entToken=\(self.keychain.hasKey(.entitlementToken)) sessionToken=\(self.keychain.hasKey(.accountSessionToken))")
+
         loadAccountSession()
+        entLog.info("revalidate: after loadAccountSession — isSignedIn=\(self.isAccountSignedIn)")
+
         validationState = .validating
         var usedOfflineCache = false
 
-        // C4: Code-signature integrity check in release builds.
         let integrity = CodeIntegrityService.validateAtLaunch()
         switch integrity {
         case .invalid(let reason):
@@ -226,24 +278,29 @@ final class EntitlementService {
             isLicenseValid = false
             clearLinkedSubscriptionState(deleteEmail: false)
             validationState = .invalid
-            print("[Entitlement] Code integrity check failed: \(reason)")
+            entLog.error("revalidate: integrity FAILED: \(reason)")
             return
-        case .valid:
-            isIntegrityCompromised = false
-        case .skipped:
+        case .valid, .skipped:
             isIntegrityCompromised = false
         }
 
+        entLog.info("revalidate: calling revalidateLicensePath...")
         await revalidateLicensePath(&usedOfflineCache)
+        entLog.info("revalidate: after licensePath — isLicenseValid=\(self.isLicenseValid)")
+
+        entLog.info("revalidate: calling revalidateSubscriptionPath...")
         await revalidateSubscriptionPath(&usedOfflineCache)
+        entLog.info("revalidate: after subscriptionPath — isSubActive=\(self.isSubscriptionActive) entToken=\(self.keychain.hasKey(.entitlementToken))")
 
         if usedOfflineCache {
             validationState = .offline
+            entLog.info("revalidate: DONE (offline cache) — hasFullAccess=\(self.hasFullAccess)")
             return
         }
 
         saveValidationTimestamp()
         validationState = hasFullAccess ? .valid : .invalid
+        entLog.info("revalidate: DONE — hasFullAccess=\(self.hasFullAccess) validationState=\(String(describing: self.validationState))")
     }
 
     func activateLicense(key: String) async throws {
@@ -474,6 +531,7 @@ final class EntitlementService {
         } else {
             accountSessionExpiresAt = nil
         }
+        refreshSignedInState()
     }
 
     private func saveAccountSession(
@@ -493,6 +551,7 @@ final class EntitlementService {
         accountUserId = userId
         accountEmail = normalizedEmail
         accountSessionExpiresAt = Date(timeIntervalSince1970: TimeInterval(expiresAtUnix))
+        refreshSignedInState()
     }
 
     private func clearAccountSession() {
@@ -505,6 +564,7 @@ final class EntitlementService {
         accountUserId = nil
         accountEmail = nil
         accountSessionExpiresAt = nil
+        refreshSignedInState()
     }
 
     private func normalizedQueryValue(
@@ -723,37 +783,45 @@ final class EntitlementService {
     }
 
     private func revalidateSubscriptionPath(_ usedOfflineCache: inout Bool) async {
+        entLog.info("revalidateSubPath: isSignedIn=\(self.isAccountSignedIn) email=\(self.accountEmail ?? "nil")")
         guard isAccountSignedIn, let email = accountEmail, !email.isEmpty else {
+            entLog.info("revalidateSubPath: NOT signed in or no email — clearing sub state")
             clearLinkedSubscriptionState(deleteEmail: false)
             return
         }
 
         do {
+            entLog.info("revalidateSubPath: creating install proof...")
             let proof = try await createInstallProof()
+            entLog.info("revalidateSubPath: calling /v1/entitlements/resolve...")
             let response = try await backendClient.resolve(
                 email: email,
                 installId: installId,
                 challengeId: proof.challengeId,
                 nonceSignature: proof.signature
             )
+            entLog.info("revalidateSubPath: resolve returned token, verifying...")
 
             let claims = try verifyEntitlementToken(
                 response.token,
                 expectedInstallPubkeyHash: proof.installPubkeyHash
             )
+            entLog.info("revalidateSubPath: token tier=\(claims.tier) sub=\(claims.sub)")
 
             try? keychain.save(response.token, for: .entitlementToken)
 
             if claims.tier == "pro" || claims.tier == "vip" {
+                entLog.info("revalidateSubPath: PREMIUM tier=\(claims.tier) — setting isSubscriptionActive=true")
                 isSubscriptionActive = true
                 resolvedTier = claims.tier
             } else {
+                entLog.info("revalidateSubPath: FREE tier — clearing sub state")
                 clearLinkedSubscriptionState(deleteEmail: false)
             }
 
             saveClockCheckpoint()
         } catch {
-            print("[Entitlement] revalidate failed: \(error)")
+            entLog.error("revalidateSubPath: FAILED: \(error)")
             if let backendError = error as? BackendError, case .authRequired = backendError {
                 clearAccountSession()
                 clearLinkedSubscriptionState(deleteEmail: false)

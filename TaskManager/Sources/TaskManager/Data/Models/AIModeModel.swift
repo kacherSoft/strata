@@ -3,22 +3,25 @@ import Foundation
 
 enum AIProviderType: String, Codable, CaseIterable, Sendable {
     case gemini = "gemini"
-    case zai = "zai"
-    
+    case anthropic = "anthropic"
+    case openai = "openai"
+
     var displayName: String {
         switch self {
         case .gemini: return "Google Gemini"
-        case .zai: return "z.ai"
+        case .anthropic: return "Anthropic"
+        case .openai: return "OpenAI Compatible"
         }
     }
-    
+
     var availableModels: [String] {
         switch self {
         case .gemini: return ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3-flash-preview"]
-        case .zai: return ["GLM-4.6", "GLM-4.7"]
+        case .anthropic: return ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"]
+        case .openai: return []
         }
     }
-    
+
     var defaultModel: String {
         availableModels.first ?? ""
     }
@@ -26,20 +29,28 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var supportsImageAttachments: Bool {
         switch self {
         case .gemini: return true
-        case .zai: return false
+        case .anthropic: return false
+        case .openai: return false
         }
     }
 
     var supportsPDFAttachments: Bool {
         switch self {
         case .gemini: return true
-        case .zai: return false
+        case .anthropic: return false
+        case .openai: return false
         }
     }
 
     var supportsAnyAttachments: Bool {
         supportsImageAttachments || supportsPDFAttachments
     }
+
+    /// Provider allows user to type a custom model name (not limited to availableModels list)
+    var supportsCustomModel: Bool { self == .openai }
+
+    /// Provider requires a base URL to be configured
+    var requiresBaseURL: Bool { self == .openai }
 }
 
 @Model
@@ -52,14 +63,30 @@ final class AIModeModel: Identifiable {
     var sortOrder: Int
     var isBuiltIn: Bool
     var supportsAttachments: Bool = false
+    var customBaseURL: String?
+    var aiProviderId: UUID?
     var createdAt: Date
     
     var provider: AIProviderType {
-        get { AIProviderType(rawValue: providerRaw) ?? .gemini }
+        get {
+            // Migrate legacy "zai" → "anthropic"
+            if providerRaw == "zai" {
+                providerRaw = AIProviderType.anthropic.rawValue
+                modelName = AIProviderType.anthropic.defaultModel
+                return .anthropic
+            }
+            guard let valid = AIProviderType(rawValue: providerRaw) else {
+                // Invalid providerRaw — reset both provider AND model to prevent mismatch
+                providerRaw = AIProviderType.gemini.rawValue
+                modelName = AIProviderType.gemini.defaultModel
+                return .gemini
+            }
+            return valid
+        }
         set { providerRaw = newValue.rawValue }
     }
     
-    init(name: String, systemPrompt: String, provider: AIProviderType = .gemini, modelName: String? = nil, isBuiltIn: Bool = false, supportsAttachments: Bool = false) {
+    init(name: String, systemPrompt: String, provider: AIProviderType = .gemini, modelName: String? = nil, isBuiltIn: Bool = false, supportsAttachments: Bool = false, customBaseURL: String? = nil) {
         self.id = UUID()
         self.name = name
         self.systemPrompt = systemPrompt
@@ -68,6 +95,7 @@ final class AIModeModel: Identifiable {
         self.sortOrder = 0
         self.isBuiltIn = isBuiltIn
         self.supportsAttachments = supportsAttachments
+        self.customBaseURL = customBaseURL
         self.createdAt = Date()
     }
     

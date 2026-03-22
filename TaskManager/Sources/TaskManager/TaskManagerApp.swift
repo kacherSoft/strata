@@ -87,6 +87,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+/// Wrapper that captures @Environment(\.openWindow) for WindowManager,
+/// then renders ChatView as the main window content.
+struct MainChatWrapper: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        ChatView(onDismiss: {})
+            .onAppear {
+                WindowManager.shared.openWindowAction = openWindow
+            }
+    }
+}
+
 @main
 struct TaskManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -95,10 +108,10 @@ struct TaskManagerApp: App {
     private let menuBarController = MenuBarController()
 
     var body: some Scene {
-        Window("Task Manager", id: "main-window") {
+        Window("Strata", id: "main-window") {
             Group {
                 if let container {
-                    ContentView()
+                    MainChatWrapper()
                         .withAppEnvironment(container: container)
                 } else if let error = initError {
                     DataErrorView(error: error, storeURL: ModelContainer.storeURL)
@@ -113,7 +126,26 @@ struct TaskManagerApp: App {
         .defaultSize(width: 1000, height: 700)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .newItem) {
+                Button("Tasks") {
+                    WindowManager.shared.showTasks()
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+            }
         }
+
+        Window("Settings", id: "settings-window") {
+            Group {
+                if let container {
+                    SettingsView()
+                        .withAppEnvironment(container: container)
+                } else {
+                    ProgressView("Loading…")
+                }
+            }
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 780, height: 560)
     }
 
     @MainActor

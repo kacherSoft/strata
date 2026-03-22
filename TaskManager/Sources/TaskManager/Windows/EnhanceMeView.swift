@@ -55,6 +55,11 @@ struct EnhanceMeView: View {
             }
         }
         .onChange(of: aiService.currentMode?.id) { _, _ in
+            // Skip Chat mode in EnhanceMe — Chat is now the main window
+            if let mode = aiService.currentMode, mode.name == "Chat" && mode.isBuiltIn {
+                aiService.cycleMode(in: modelContext)
+                return
+            }
             if !currentModeSupportsAttachments {
                 cleanupAttachments()
             }
