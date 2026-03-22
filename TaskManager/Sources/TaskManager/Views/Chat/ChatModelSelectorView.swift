@@ -55,6 +55,9 @@ struct ChatModelSelectorView: View {
         }
         .buttonStyle(.plain)
         .onAppear { loadProviders() }
+        .onChange(of: selectedProviderId) { _, _ in
+            if providers.isEmpty { loadProviders() }
+        }
     }
 
     private func loadProviders() {
