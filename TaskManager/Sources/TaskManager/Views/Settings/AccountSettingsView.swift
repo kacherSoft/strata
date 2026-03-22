@@ -3,6 +3,7 @@ import SwiftUI
 /// Account settings — subscription status with tasteful premium treatment, device management.
 struct AccountSettingsView: View {
     @Environment(EntitlementService.self) var entitlementService
+    @State private var showSignIn = false
 
     var body: some View {
         ScrollView {
@@ -53,6 +54,10 @@ struct AccountSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
+
+                        Button("Sign In") { showSignIn = true }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
@@ -86,6 +91,9 @@ struct AccountSettingsView: View {
                 Spacer()
             }
             .padding(24)
+        }
+        .sheet(isPresented: $showSignIn) {
+            AccountSignInView()
         }
     }
 
