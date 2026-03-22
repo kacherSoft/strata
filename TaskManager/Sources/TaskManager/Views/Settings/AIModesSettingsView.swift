@@ -277,16 +277,6 @@ private struct ModeEditorSheet: View {
                             .controlSize(.small)
                     }
 
-                    if viewType == .chat && !isBuiltIn {
-                        Toggle("Allow attachments (Images & PDF)", isOn: $supportsAttachments)
-                            .controlSize(.small)
-                            .disabled(selectedProvider?.supportsAttachments != true)
-                        if selectedProvider?.supportsAttachments != true {
-                            Label("Attachments not supported for this provider.", systemImage: "info.circle")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
 
                 // System prompt — read-only for built-in
