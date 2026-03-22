@@ -46,6 +46,10 @@ struct ManageDevicesView: View {
             }
         }
         .task { await reload() }
+        .onChange(of: entitlementService.isAccountSignedIn) { _, signedIn in
+            if signedIn { Task { await reload() } }
+            else { devices = []; errorMessage = nil }
+        }
         .alert("Revoke Device Access",
                isPresented: Binding(
                    get: { deviceToRevoke != nil },
