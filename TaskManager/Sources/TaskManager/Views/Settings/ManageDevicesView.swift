@@ -9,22 +9,18 @@ struct ManageDevicesView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var revokingInstallId: String?
+    @State private var deviceToRevoke: DeviceInfo?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
             HStack {
                 Text("Registered Devices")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                if isLoading {
-                    ProgressView().scaleEffect(0.6)
-                }
-                Button("Refresh") {
-                    Task { await reload() }
-                }
-                .controlSize(.small)
-                .disabled(isLoading || revokingInstallId != nil)
+                if isLoading { ProgressView().scaleEffect(0.6) }
+                Button("Refresh") { Task { await reload() } }
+                    .controlSize(.small)
+                    .disabled(isLoading || revokingInstallId != nil)
             }
 
             if let errorMessage {
@@ -50,6 +46,25 @@ struct ManageDevicesView: View {
             }
         }
         .task { await reload() }
+        .alert("Revoke Device Access",
+               isPresented: Binding(
+                   get: { deviceToRevoke != nil },
+                   set: { if !$0 { deviceToRevoke = nil } }
+               )
+        ) {
+            Button("Cancel", role: .cancel) { deviceToRevoke = nil }
+            Button("Revoke & Sign Out", role: .destructive) {
+                if let device = deviceToRevoke {
+                    Task { await revokeAndSignOut(device) }
+                }
+            }
+        } message: {
+            if deviceToRevoke?.install_id == entitlementService.installId {
+                Text("This will revoke access on this Mac, sign you out, and move you to the Free plan. You'll need to restore your purchase to re-activate.")
+            } else {
+                Text("This will revoke access on that device. The device will lose premium features.")
+            }
+        }
     }
 
     @ViewBuilder
@@ -83,11 +98,9 @@ struct ManageDevicesView: View {
             Spacer()
 
             if device.active {
-                Button("Revoke") {
-                    Task { await revoke(device) }
-                }
-                .controlSize(.small)
-                .disabled(revokingInstallId != nil)
+                Button("Revoke") { deviceToRevoke = device }
+                    .controlSize(.small)
+                    .disabled(revokingInstallId != nil)
             } else {
                 Text("Revoked")
                     .font(.caption).foregroundStyle(.secondary)
@@ -130,15 +143,28 @@ struct ManageDevicesView: View {
         }
     }
 
-    private func revoke(_ device: DeviceInfo) async {
+    /// Revoke device via API, then if it's this Mac, sign out + clear all entitlements → Free plan
+    private func revokeAndSignOut(_ device: DeviceInfo) async {
         revokingInstallId = device.install_id
         errorMessage = nil
         defer { revokingInstallId = nil }
+
         do {
             try await entitlementService.revokeAccountDevice(installId: device.install_id)
+
+            // If revoking own device → full sign out + clear entitlements
+            if device.install_id == entitlementService.installId {
+                await entitlementService.signOutAccount()
+            }
+
             devices = try await entitlementService.listAccountDevices()
         } catch {
-            errorMessage = error.localizedDescription
+            // If signed out, can't list devices anymore — just clear the list
+            if !entitlementService.isAccountSignedIn {
+                devices = []
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

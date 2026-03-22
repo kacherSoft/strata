@@ -45,16 +45,22 @@ final class EntitlementService {
     var isCheckoutActivationInProgress: Bool {
         validationState == .validating
     }
-    var isAccountSignedIn: Bool {
+    /// Stored property so SwiftUI @Observable can track changes (computed keychain reads are not observable)
+    private(set) var isAccountSignedIn = false
+
+    /// Recalculate sign-in state from keychain + session expiry
+    private func refreshSignedInState() {
         guard let token = keychain.get(.accountSessionToken)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
               !token.isEmpty else {
-            return false
+            isAccountSignedIn = false
+            return
         }
         if let expiry = accountSessionExpiresAt {
-            return Date() < expiry
+            isAccountSignedIn = Date() < expiry
+        } else {
+            isAccountSignedIn = true
         }
-        return true
     }
 
     func canUse(_ feature: PremiumFeature) -> Bool { hasFullAccess }
@@ -474,6 +480,7 @@ final class EntitlementService {
         } else {
             accountSessionExpiresAt = nil
         }
+        refreshSignedInState()
     }
 
     private func saveAccountSession(
@@ -493,6 +500,7 @@ final class EntitlementService {
         accountUserId = userId
         accountEmail = normalizedEmail
         accountSessionExpiresAt = Date(timeIntervalSince1970: TimeInterval(expiresAtUnix))
+        refreshSignedInState()
     }
 
     private func clearAccountSession() {
@@ -505,6 +513,7 @@ final class EntitlementService {
         accountUserId = nil
         accountEmail = nil
         accountSessionExpiresAt = nil
+        refreshSignedInState()
     }
 
     private func normalizedQueryValue(
