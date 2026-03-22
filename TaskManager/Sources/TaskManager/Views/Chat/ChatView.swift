@@ -217,16 +217,19 @@ struct ChatView: View {
 
         // Resolve provider/model: toolbar selection > chat mode > session fallback
         let chatMode = resolveChatMode()
+        let resolvedProviderModel: AIProviderModel?
         let resolvedProvider: AIProviderType
         let resolvedModel: String
         let resolvedBaseURL: String?
 
         if let pid = selectedProviderId, !selectedModelName.isEmpty,
            let provModel = resolveProviderModel(pid) {
+            resolvedProviderModel = provModel
             resolvedProvider = provModel.providerType
             resolvedModel = selectedModelName
             resolvedBaseURL = provModel.baseURL
         } else {
+            resolvedProviderModel = nil
             resolvedProvider = chatMode?.provider ?? session.provider
             resolvedModel = chatMode?.modelName ?? session.modelName
             resolvedBaseURL = chatMode?.customBaseURL ?? session.customBaseURL
@@ -248,7 +251,8 @@ struct ChatView: View {
                     userMessage: text,
                     attachments: sentAttachments,
                     history: history,
-                    mode: modeData
+                    mode: modeData,
+                    providerModel: resolvedProviderModel
                 )
                 msgRepo.create(session: session, role: .assistant, content: response)
                 session.touch()

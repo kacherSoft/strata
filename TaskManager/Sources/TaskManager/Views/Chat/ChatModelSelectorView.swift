@@ -16,9 +16,13 @@ struct ChatModelSelectorView: View {
         }
     }
 
-    /// Current selection key for the picker
-    private var selectionKey: String {
-        "\(selectedProviderId?.uuidString ?? ""):\(selectedModelName)"
+    /// Display label with provider prefix: "Gemini / gemini-flash-latest"
+    private var displayLabel: String {
+        guard !selectedModelName.isEmpty else { return "Select model" }
+        if let pid = selectedProviderId, let p = providers.first(where: { $0.id == pid }) {
+            return "\(p.name) / \(selectedModelName)"
+        }
+        return selectedModelName
     }
 
     var body: some View {
@@ -39,7 +43,7 @@ struct ChatModelSelectorView: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(selectedModelName.isEmpty ? "Select model" : selectedModelName)
+                Text(displayLabel)
                     .font(.system(size: 12))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")

@@ -14,16 +14,23 @@ final class ChatService {
 
     private let aiService = AIService.shared
 
-    /// Send a user message and stream the response, returning the full assistant reply.
+    /// Send a message using a specific AIProviderModel (new dynamic system).
+    /// Falls back to legacy enum-based resolution if providerModel is nil.
     func sendMessage(
         userMessage: String,
         attachments: [AIAttachment],
         history: [ChatMessage],
-        mode: AIModeData
+        mode: AIModeData,
+        providerModel: AIProviderModel? = nil
     ) async throws -> String {
         guard !isStreaming else { throw AIError.providerError("Already streaming") }
 
-        let provider = aiService.providerFor(mode.provider, customBaseURL: mode.customBaseURL)
+        // Use AIProviderModel when available (correct keychain ref), else legacy path
+        let provider: AIProviderProtocol = if let model = providerModel {
+            aiService.providerFor(model)
+        } else {
+            aiService.providerFor(mode.provider, customBaseURL: mode.customBaseURL)
+        }
         guard provider.isConfigured else { throw AIError.notConfigured }
 
         isStreaming = true
@@ -55,7 +62,5 @@ final class ChatService {
         streamTask?.cancel()
         streamTask = nil
         isStreaming = false
-        // Don't clear currentStreamText — caller reads it to save partial response.
-        // It's cleared at the start of the next sendMessage() call.
     }
 }
