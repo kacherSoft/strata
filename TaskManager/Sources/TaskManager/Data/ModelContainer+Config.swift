@@ -207,6 +207,18 @@ func seedDefaultData(container: ModelContainer) throws {
 /// Uses existing Keychain keys so users don't lose their configured API keys.
 @MainActor
 private func seedDefaultAIProviders(context: ModelContext) throws {
+    // Migrate existing z.ai provider → Anthropic
+    let allProviders = try context.fetch(FetchDescriptor<AIProviderModel>())
+    if let zai = allProviders.first(where: { $0.providerTypeRaw == "zai" || $0.name == "z.ai" }) {
+        zai.name = "Anthropic"
+        zai.providerTypeRaw = AIProviderType.anthropic.rawValue
+        zai.apiKeyRef = KeychainService.Key.anthropicAPIKey.rawValue
+        zai.modelsRaw = "[\"\(["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"].joined(separator: "\",\""))\"]"
+        zai.defaultModelName = "claude-sonnet-4-20250514"
+        try context.save()
+        return
+    }
+
     let descriptor = FetchDescriptor<AIProviderModel>()
     guard try context.fetchCount(descriptor) == 0 else { return }
 
