@@ -66,8 +66,8 @@ struct AIModesSettingsView: View {
         }
         .sheet(item: $editingItem) { item in
             if let mode = modes.first(where: { $0.id == item.id }) {
-                ModeEditorSheet(mode: mode) { name, prompt, provider, model, viewType, autoCopy, baseURL, providerId in
-                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, viewType: viewType, autoCopyOutput: autoCopy, customBaseURL: baseURL, aiProviderId: providerId)
+                ModeEditorSheet(mode: mode) { name, prompt, provider, model, viewType, autoCopy, attachments, baseURL, providerId in
+                    updateMode(mode, name: name, prompt: prompt, provider: provider, model: model, viewType: viewType, autoCopyOutput: autoCopy, supportsAttachments: attachments, customBaseURL: baseURL, aiProviderId: providerId)
                 }
             }
         }
@@ -81,15 +81,16 @@ struct AIModesSettingsView: View {
         }
     }
 
-    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, viewType: AIModeViewType, autoCopyOutput: Bool, customBaseURL: String?, aiProviderId: UUID?) {
+    private func addMode(name: String, prompt: String, provider: AIProviderType, model: String, viewType: AIModeViewType, autoCopyOutput: Bool, supportsAttachments: Bool, customBaseURL: String?, aiProviderId: UUID?) {
         let mode = AIModeModel(name: name, systemPrompt: prompt, provider: provider, modelName: model, isBuiltIn: false, viewType: viewType, autoCopyOutput: autoCopyOutput, customBaseURL: customBaseURL)
+        mode.supportsAttachments = supportsAttachments && provider.supportsAnyAttachments
         mode.aiProviderId = aiProviderId
         mode.sortOrder = modes.count
         modelContext.insert(mode)
         saveModes()
     }
 
-    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, viewType: AIModeViewType, autoCopyOutput: Bool, customBaseURL: String?, aiProviderId: UUID?) {
+    private func updateMode(_ mode: AIModeModel, name: String, prompt: String, provider: AIProviderType, model: String, viewType: AIModeViewType, autoCopyOutput: Bool, supportsAttachments: Bool, customBaseURL: String?, aiProviderId: UUID?) {
         if !mode.isBuiltIn {
             mode.name = name
             mode.systemPrompt = prompt
@@ -98,6 +99,7 @@ struct AIModesSettingsView: View {
         mode.modelName = model
         mode.viewType = viewType
         mode.autoCopyOutput = autoCopyOutput
+        mode.supportsAttachments = supportsAttachments && provider.supportsAnyAttachments
         mode.customBaseURL = customBaseURL
         mode.aiProviderId = aiProviderId
         saveModes()
@@ -193,7 +195,7 @@ private struct ModeEditorSheet: View {
     @Environment(\.modelContext) private var modelContext
 
     let mode: AIModeModel?
-    let onSave: (String, String, AIProviderType, String, AIModeViewType, Bool, String?, UUID?) -> Void
+    let onSave: (String, String, AIProviderType, String, AIModeViewType, Bool, Bool, String?, UUID?) -> Void
 
     @State private var name = ""
     @State private var systemPrompt = ""
@@ -201,6 +203,7 @@ private struct ModeEditorSheet: View {
     @State private var selectedModel = ""
     @State private var viewType: AIModeViewType = .enhance
     @State private var autoCopyOutput = false
+    @State private var supportsAttachments = true
     @State private var providers: [AIProviderModel] = []
 
     private var isBuiltIn: Bool { mode?.isBuiltIn ?? false }
@@ -257,7 +260,7 @@ private struct ModeEditorSheet: View {
                     }
                 }
 
-                // View type & auto-copy — editable for custom, shown for built-in
+                // View type & behavior — editable for custom, shown for built-in
                 Section("Behavior") {
                     if isBuiltIn {
                         LabeledContent("View", value: viewType.displayName)
@@ -272,6 +275,17 @@ private struct ModeEditorSheet: View {
                     if viewType == .enhance {
                         Toggle("Auto-copy output to clipboard", isOn: $autoCopyOutput)
                             .controlSize(.small)
+                    }
+
+                    if viewType == .chat && !isBuiltIn {
+                        Toggle("Allow attachments (Images & PDF)", isOn: $supportsAttachments)
+                            .controlSize(.small)
+                            .disabled(selectedProvider?.supportsAttachments != true)
+                        if selectedProvider?.supportsAttachments != true {
+                            Label("Attachments not supported for this provider.", systemImage: "info.circle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
@@ -304,7 +318,7 @@ private struct ModeEditorSheet: View {
                 Button("Save") {
                     let provType = selectedProvider?.providerType ?? .gemini
                     let baseURL = selectedProvider?.baseURL
-                    onSave(name, systemPrompt, provType, selectedModel, viewType, autoCopyOutput, baseURL, selectedProviderId)
+                    onSave(name, systemPrompt, provType, selectedModel, viewType, autoCopyOutput, supportsAttachments, baseURL, selectedProviderId)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -325,6 +339,7 @@ private struct ModeEditorSheet: View {
             systemPrompt = mode.systemPrompt
             viewType = mode.viewType
             autoCopyOutput = mode.autoCopyOutput
+            supportsAttachments = mode.supportsAttachments
 
             if let pid = mode.aiProviderId, providers.contains(where: { $0.id == pid }) {
                 selectedProviderId = pid
@@ -337,6 +352,7 @@ private struct ModeEditorSheet: View {
             selectedModel = providers.first?.defaultModelName ?? ""
             viewType = .enhance
             autoCopyOutput = false
+            supportsAttachments = true
         }
     }
 }

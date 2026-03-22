@@ -131,8 +131,10 @@ struct ChatView: View {
         }
     }
 
-    // Chat view always supports attachments (provider permitting)
-    private var currentModeSupportsAttachments: Bool { true }
+    // Chat modes support attachments by default unless explicitly disabled
+    private var currentModeSupportsAttachments: Bool {
+        resolveChatMode()?.supportsAttachments ?? true
+    }
 
     // MARK: - Data Operations
 
