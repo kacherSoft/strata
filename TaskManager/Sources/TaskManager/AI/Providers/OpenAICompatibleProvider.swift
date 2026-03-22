@@ -139,20 +139,34 @@ final class OpenAICompatibleProvider: AIProviderProtocol, @unchecked Sendable {
     func testConnection() async throws -> Bool {
         guard let apiKey = apiKeyProvider() else { throw AIError.notConfigured }
 
-        // Use a minimal chat completion (some providers don't have /models endpoint)
+        // Try /models endpoint first (standard OpenAI-compatible)
+        if let modelsURL = URL(string: "\(baseURL)/models") {
+            var req = URLRequest(url: modelsURL)
+            req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            req.timeoutInterval = 10
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse {
+                if http.statusCode == 401 { throw AIError.invalidAPIKey }
+                if (200...299).contains(http.statusCode) { return true }
+                // 404 = no /models endpoint, fall through to chat test
+            }
+        }
+
+        // Fallback: minimal chat completion with configured default model
         let requestBody: [String: Any] = [
-            "model": defaultModel,
+            "model": testModelName ?? defaultModel,
             "messages": [["role": "user", "content": "hi"]],
             "max_tokens": 5
         ]
-
         let request = try buildRequest(body: requestBody, apiKey: apiKey)
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw AIError.invalidResponse }
         if http.statusCode == 401 { throw AIError.invalidAPIKey }
-        // 402/403 (insufficient balance) still means connection works, key is valid
         return (200...403).contains(http.statusCode)
     }
+
+    /// Model name to use for test connection (set from AIProviderModel.defaultModelName)
+    var testModelName: String?
 
     // MARK: - Private helpers
 
