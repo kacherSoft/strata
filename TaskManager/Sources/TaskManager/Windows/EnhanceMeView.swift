@@ -55,14 +55,12 @@ struct EnhanceMeView: View {
             }
         }
         .onChange(of: aiService.currentMode?.id) { _, _ in
-            // Skip Chat mode in EnhanceMe — Chat is now the main window
-            if let mode = aiService.currentMode, mode.name == "Chat" && mode.isBuiltIn {
+            // Skip chat-view modes in EnhanceMe — they belong in the main chat window
+            if let mode = aiService.currentMode, mode.viewType == .chat {
                 aiService.cycleMode(in: modelContext)
                 return
             }
-            if !currentModeSupportsAttachments {
-                cleanupAttachments()
-            }
+            cleanupAttachments()
         }
         .overlay(alignment: .bottom) {
             if let toastMessage {
@@ -100,10 +98,11 @@ struct EnhanceMeView: View {
                 HStack(spacing: 6) {
                     Text(mode.name)
                         .fontWeight(.medium)
-                    if mode.supportsAttachments && mode.provider.supportsAnyAttachments && entitlementService.hasFullAccess {
-                        Image(systemName: "paperclip")
+                    if mode.autoCopyOutput {
+                        Image(systemName: "doc.on.doc")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .help("Auto-copy enabled")
                     }
                     Text("·")
                         .foregroundStyle(.tertiary)
@@ -202,7 +201,7 @@ struct EnhanceMeView: View {
             HStack(spacing: 4) {
                 Image(systemName: "paperclip")
                     .font(.caption2)
-                Text(currentModeSupportsAttachments ? "Drop or paste image/PDF" : attachmentSupportMessage)
+                Text("Enhance view is text-only")
                     .font(.caption2)
             }
             .foregroundStyle(.tertiary)
@@ -322,54 +321,18 @@ struct EnhanceMeView: View {
         return aiService.isConfigured(for: mode.provider)
     }
 
-    private var currentModeSupportsAttachments: Bool {
-        guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsAnyAttachments && entitlementService.hasFullAccess
-    }
-
-    private var attachmentSupportMessage: String {
-        guard let mode = aiService.currentMode else { return "Select a mode to enable attachments" }
-        if !entitlementService.hasFullAccess {
-            return "Upgrade to Premium to use attachments"
-        }
-        if !mode.supportsAttachments {
-            return "This mode has attachments disabled"
-        }
-        if !mode.provider.supportsAnyAttachments {
-            return "\(mode.provider.displayName) does not support attachments"
-        }
-        return "Attachments not available"
-    }
-
-    private var currentModeSupportsImages: Bool {
-        guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsImageAttachments && entitlementService.hasFullAccess
-    }
-
-    private var currentModeSupportsPDFs: Bool {
-        guard let mode = aiService.currentMode else { return false }
-        return mode.supportsAttachments && mode.provider.supportsPDFAttachments && entitlementService.hasFullAccess
-    }
+    // Enhance view is text-only — no attachment support
+    private var currentModeSupportsAttachments: Bool { false }
+    private var currentModeSupportsImages: Bool { false }
+    private var currentModeSupportsPDFs: Bool { false }
     
     // MARK: - Actions
     
     private func enhance() {
         guard let mode = aiService.currentMode else { return }
 
-        let sendAttachments: [AIAttachment]
-        if currentModeSupportsAttachments {
-            sendAttachments = attachments.filter { attachment in
-                switch attachment.kind {
-                case .image: return currentModeSupportsImages
-                case .pdf: return true
-                }
-            }
-        } else {
-            sendAttachments = []
-        }
-
         let hasText = !originalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        guard hasText || !sendAttachments.isEmpty else { return }
+        guard hasText else { return }
         guard isCurrentModeConfigured else { return }
 
         isLoading = true
@@ -379,10 +342,12 @@ struct EnhanceMeView: View {
 
         Task {
             do {
-                let result = try await aiService.enhance(text: originalText, attachments: sendAttachments, mode: mode)
+                let result = try await aiService.enhance(text: originalText, attachments: [], mode: mode)
                 enhancedText = result.enhancedText
                 startTypewriterAnimation(for: result.enhancedText)
-                copyToClipboard(result.enhancedText)
+                if mode.autoCopyOutput {
+                    copyToClipboard(result.enhancedText)
+                }
             } catch let error as AIError {
                 errorMessage = error.localizedDescription
             } catch {

@@ -50,17 +50,37 @@ enum StrataSchemaV3: VersionedSchema {
     ]
 }
 
+// MARK: - V4 Schema (2026-03 AI mode redesign)
+// Additive changes: +AIModeModel.viewTypeRaw (nullable), +AIModeModel.autoCopyOutput (default false)
+
+enum StrataSchemaV4: VersionedSchema {
+    nonisolated(unsafe) static var versionIdentifier = Schema.Version(4, 0, 0)
+
+    nonisolated(unsafe) static var models: [any PersistentModel.Type] = [
+        TaskModel.self,
+        AIModeModel.self,
+        SettingsModel.self,
+        CustomFieldDefinitionModel.self,
+        CustomFieldValueModel.self,
+        ChatSessionModel.self,
+        ChatMessageModel.self,
+        AIProviderModel.self
+    ]
+}
+
 // MARK: - Migration Plan
 
 enum StrataMigrationPlan: SchemaMigrationPlan {
     nonisolated(unsafe) static var schemas: [any VersionedSchema.Type] = [
         StrataSchemaV1.self,
         StrataSchemaV2.self,
-        StrataSchemaV3.self
+        StrataSchemaV3.self,
+        StrataSchemaV4.self
     ]
 
     nonisolated(unsafe) static var stages: [MigrationStage] = [
         .lightweight(fromVersion: StrataSchemaV1.self, toVersion: StrataSchemaV2.self),
-        .lightweight(fromVersion: StrataSchemaV2.self, toVersion: StrataSchemaV3.self)
+        .lightweight(fromVersion: StrataSchemaV2.self, toVersion: StrataSchemaV3.self),
+        .lightweight(fromVersion: StrataSchemaV3.self, toVersion: StrataSchemaV4.self)
     ]
 }
