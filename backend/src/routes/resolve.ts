@@ -98,8 +98,9 @@ export async function handleResolve(
             `SELECT revoked_at FROM user_devices WHERE user_id = ? AND install_id = ? LIMIT 1`,
         ).bind(principal.userId, installId).first<{ revoked_at: number | null }>();
 
+        console.log(`[${requestId}] resolve: device check — install_id=${installId} revoked_at=${existingDevice?.revoked_at ?? 'null'} resolved_tier_before=${tier}`);
         if (existingDevice?.revoked_at) {
-            // Device was revoked — return free tier, don't re-register
+            console.log(`[${requestId}] resolve: DEVICE REVOKED — forcing tier=free`);
             tier = "free";
         } else {
             await ensureDeviceSeat(env, {
