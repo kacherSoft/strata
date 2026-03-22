@@ -197,6 +197,9 @@ final class EntitlementService {
         try? await backendClient.revokeAccountSession()
         clearAccountSession()
         clearLinkedSubscriptionState(deleteEmail: true)
+        // After clearing session, revalidate should find nothing — but run it
+        // to update validationState properly. isAccountSignedIn is false,
+        // so revalidateSubscriptionPath will bail at the guard.
         await revalidate()
     }
 
@@ -215,12 +218,19 @@ final class EntitlementService {
         try await backendClient.revokeDevice(installId: installId)
         if installId == self.installId {
             // Full entitlement clear — user drops to Free plan
+            // Do NOT call revalidate() here — it would re-fetch a token while still signed in.
+            // The caller (ManageDevicesView) will call signOutAccount() which handles final cleanup.
             clearLinkedSubscriptionState(deleteEmail: false)
             isLicenseValid = false
             keychain.delete(.licenseKey)
             keychain.delete(.licenseInstanceId)
+            keychain.delete(.entitlementToken)
+            keychain.delete(.licenseOfflineGraceUntil)
+            validationState = .invalid
+        } else {
+            // Revoking another device — just refresh state
+            await revalidate()
         }
-        await revalidate()
     }
 
     func revalidate() async {
