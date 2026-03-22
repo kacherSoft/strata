@@ -196,11 +196,14 @@ final class EntitlementService {
     func signOutAccount() async {
         try? await backendClient.revokeAccountSession()
         clearAccountSession()
+        // Clear ALL entitlement state — user drops to Free until restore
         clearLinkedSubscriptionState(deleteEmail: true)
-        // After clearing session, revalidate should find nothing — but run it
-        // to update validationState properly. isAccountSignedIn is false,
-        // so revalidateSubscriptionPath will bail at the guard.
-        await revalidate()
+        isLicenseValid = false
+        keychain.delete(.licenseKey)
+        keychain.delete(.licenseInstanceId)
+        keychain.delete(.entitlementToken)
+        keychain.delete(.licenseOfflineGraceUntil)
+        validationState = .invalid
     }
 
     func listAccountDevices() async throws -> [DeviceInfo] {
