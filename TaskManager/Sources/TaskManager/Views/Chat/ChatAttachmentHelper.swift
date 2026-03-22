@@ -52,8 +52,21 @@ enum ChatAttachmentHelper {
     static func fileURLs(from pasteboard: NSPasteboard) -> [URL] {
         var results: [URL] = []
 
-        // Method 1: readObjects (works for drag & drop)
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] {
+        // Method 1: readObjects with security-scoped options (required for Finder drag & drop)
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [
+            .urlReadingFileURLsOnly: true,
+            .urlReadingContentsConformToTypes: supportedExtensions.map { ext -> String in
+                switch ext {
+                case "png": return "public.png"
+                case "jpg", "jpeg": return "public.jpeg"
+                case "tiff", "tif": return "public.tiff"
+                case "heic": return "public.heic"
+                case "pdf": return "com.adobe.pdf"
+                default: return "public.data"
+                }
+            }
+        ]
+        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] {
             results = urls.filter { $0.isFileURL }
         }
 
@@ -111,10 +124,14 @@ enum ChatAttachmentHelper {
         try? FileManager.default.removeItem(at: tempDir)
     }
 
-    /// Check if pasteboard contains file URLs with supported extensions.
+    /// Check if pasteboard contains file URLs or image/PDF data.
     static func hasAttachableContent(_ pasteboard: NSPasteboard) -> Bool {
         guard let types = pasteboard.types else { return false }
-        return types.contains(.fileURL) || types.contains(.png)
-            || types.contains(.tiff) || types.contains(.pdf)
+        let fileTypes: Set<NSPasteboard.PasteboardType> = [
+            .fileURL, .png, .tiff, .pdf,
+            NSPasteboard.PasteboardType("public.file-url"),
+            NSPasteboard.PasteboardType("NSFilenamesPboardType")
+        ]
+        return !fileTypes.isDisjoint(with: types)
     }
 }

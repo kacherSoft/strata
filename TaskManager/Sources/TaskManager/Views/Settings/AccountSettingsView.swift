@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Account settings — subscription status, device management.
-/// Matches GeneralSettingsView row pattern: icon + label + control.
+/// Uses same row pattern as GeneralSettingsView: icon + label + control + .liquidGlass.
 struct AccountSettingsView: View {
     @Environment(EntitlementService.self) var entitlementService
 
@@ -12,7 +12,7 @@ struct AccountSettingsView: View {
                     .font(.title)
                     .fontWeight(.semibold)
 
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(spacing: 0) {
                     // Subscription status row
                     HStack {
                         Image(systemName: "creditcard")
@@ -32,9 +32,11 @@ struct AccountSettingsView: View {
                         Text(entitlementService.hasFullAccess ? "VIP (Lifetime)" : "Free")
                             .foregroundStyle(entitlementService.hasFullAccess ? .green : .secondary)
                     }
+                    .padding(.horizontal, 20)
                     .padding(.vertical, 12)
 
                     Divider()
+                        .padding(.horizontal, 20)
 
                     // Devices section
                     VStack(alignment: .leading, spacing: 8) {
@@ -51,18 +53,15 @@ struct AccountSettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+                        .padding(.horizontal, 20)
                         .padding(.top, 12)
 
                         ManageDevicesView()
-                            .padding(.leading, 32)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 12)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
+                .liquidGlass(.settingsCard)
 
                 Spacer()
             }
