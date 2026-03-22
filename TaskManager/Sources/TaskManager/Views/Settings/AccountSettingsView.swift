@@ -36,7 +36,9 @@ struct AccountSettingsView: View {
                         Button("Sign Out") {
                             Task { await entitlementService.signOutAccount() }
                         }
+                        .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .frame(width: 80)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
@@ -56,8 +58,10 @@ struct AccountSettingsView: View {
                         Spacer()
 
                         Button("Sign In") { showSignIn = true }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.bordered)
+                            .tint(.accentColor)
                             .controlSize(.small)
+                            .frame(width: 80)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
@@ -159,25 +163,84 @@ struct AccountSettingsView: View {
 
     // MARK: - Free Plan Card
 
+    @State private var isRestoring = false
+    @State private var restoreError: String?
+
     private var freePlanCard: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Free Plan")
-                    .font(.title3.weight(.semibold))
-                Text("Upgrade to unlock AI chat, attachments, and more")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Free Plan")
+                        .font(.title3.weight(.semibold))
+                    Text("Upgrade to unlock AI chat, attachments, and more")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Upgrade") {
+                    // TODO: open purchase flow
+                }
+                .buttonStyle(.bordered)
+                .tint(.accentColor)
+                .controlSize(.small)
+                .frame(width: 80)
             }
 
-            Spacer()
+            // Restore purchases — visible when signed in
+            if entitlementService.isAccountSignedIn {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        Text("Already purchased?")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
 
-            Button("Upgrade") {
-                // TODO: open purchase flow
+                        Spacer()
+
+                        Button {
+                            restorePurchases()
+                        } label: {
+                            if isRestoring {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 14, height: 14)
+                            } else {
+                                Text("Restore")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .frame(width: 80)
+                        .disabled(isRestoring)
+                    }
+
+                    if let restoreError {
+                        Label(restoreError, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
         }
         .padding(20)
         .liquidGlass(.settingsCard)
+    }
+
+    private func restorePurchases() {
+        isRestoring = true
+        restoreError = nil
+        Task {
+            do {
+                let outcome = try await entitlementService.restorePurchases(licenseKey: nil)
+                if outcome == .none {
+                    restoreError = "No purchases found for this account"
+                }
+            } catch {
+                restoreError = error.localizedDescription
+            }
+            isRestoring = false
+        }
     }
 }

@@ -92,23 +92,11 @@ export async function handleResolve(
         });
         tier = resolved.tier;
         source = resolved.source === "provider" ? "fallback" : "store";
-        // Only ensure device seat if device is NOT revoked.
-        // Revoked devices must go through /v1/restore to re-activate.
-        const existingDevice = await env.STRATA_DB.prepare(
-            `SELECT revoked_at FROM user_devices WHERE user_id = ? AND install_id = ? LIMIT 1`,
-        ).bind(principal.userId, installId).first<{ revoked_at: number | null }>();
-
-        console.log(`[${requestId}] resolve: device check — install_id=${installId} revoked_at=${existingDevice?.revoked_at ?? 'null'} resolved_tier_before=${tier}`);
-        if (existingDevice?.revoked_at) {
-            console.log(`[${requestId}] resolve: DEVICE REVOKED — forcing tier=free`);
-            tier = "free";
-        } else {
-            await ensureDeviceSeat(env, {
-                userId: principal.userId,
-                installId,
-                tier,
-            });
-        }
+        await ensureDeviceSeat(env, {
+            userId: principal.userId,
+            installId,
+            tier,
+        });
 
         console.log(`[${requestId}] resolve: email=${email} tier=${tier} source=${source}`);
 

@@ -121,6 +121,30 @@ export class DodoClient {
     }
 
     /**
+     * Find an active VIP license key for a customer (by email → customer_id → license_keys).
+     * Dodo license keys don't store email directly, so we resolve via customer_id.
+     */
+    async findActiveLicenseKey(
+        email: string,
+        vipProductId: string,
+    ): Promise<{ customerId: string; licenseKeyId: string } | null> {
+        const customerId = await this.findCustomerId(email);
+        if (!customerId) return null;
+
+        // Dodo API: GET /license_keys?customer_id=X
+        const url = new URL(`${this.baseURL}/license_keys`);
+        url.searchParams.set("customer_id", customerId);
+
+        const data = await this.get<{ items: Array<{ id: string; product_id: string; status: string }> }>(url.toString());
+        const matched = data.items.find(
+            (lic) => lic.product_id === vipProductId && lic.status === "active",
+        );
+        if (!matched) return null;
+
+        return { customerId, licenseKeyId: matched.id };
+    }
+
+    /**
      * Resolve checkout session details needed for install-email linkage.
      */
     async getCheckoutSession(sessionId: string): Promise<CheckoutSessionLookupResult | null> {

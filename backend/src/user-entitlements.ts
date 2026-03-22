@@ -5,6 +5,7 @@
 import { AppError } from "./errors.js";
 import type { Env, Tier } from "./types.js";
 import { DodoClient } from "./dodo-client.js";
+import { PRODUCT_IDS } from "./types.js";
 import { deviceSeatsEnforced, seatLimitForTier } from "./auth.js";
 import { sanitizeNickname } from "./validation.js";
 
@@ -132,6 +133,23 @@ export async function resolveTierForUser(
     }
 
     if (params.allowProviderFallback && params.dodo) {
+        // Check VIP license keys first (higher tier takes priority)
+        try {
+            const license = await params.dodo.findActiveLicenseKey(params.email, PRODUCT_IDS.vipLifetime);
+            if (license) {
+                await upsertUserEntitlement(env, {
+                    userId: params.userId,
+                    tier: "vip",
+                    state: "active",
+                    sourceEventId: "provider-license-fallback",
+                });
+                return { tier: "vip", source: "provider" };
+            }
+        } catch (error) {
+            console.warn(`[resolveTier] license fallback failed for ${params.email}:`, error);
+        }
+
+        // Then check Pro subscriptions
         try {
             const subscription = await params.dodo.findActiveSubscription(params.email);
             if (subscription) {
@@ -145,8 +163,7 @@ export async function resolveTierForUser(
                 return { tier: "pro", source: "provider" };
             }
         } catch (error) {
-            // Provider unavailable — fall through to "free" instead of propagating 502.
-            console.warn(`[resolveTier] provider fallback failed for ${params.email}:`, error);
+            console.warn(`[resolveTier] subscription fallback failed for ${params.email}:`, error);
         }
     }
 
@@ -242,6 +259,24 @@ export async function ensureDeviceSeat(
             `Device limit (${limit}) reached for your plan. Remove a device first.`,
         );
     }
+}
+
+/**
+ * Clear cached entitlement data for a user, forcing the next resolve to re-check Dodo.
+ * Called on device revocation to prevent stale tier from persisting.
+ */
+export async function clearUserEntitlementCache(
+    env: Env,
+    userId: string,
+    email: string,
+): Promise<void> {
+    await env.STRATA_DB.prepare(
+        `DELETE FROM user_entitlements WHERE user_id = ?`,
+    ).bind(userId).run();
+
+    await env.STRATA_DB.prepare(
+        `DELETE FROM entitlements WHERE subject_type = 'email' AND subject_id = ?`,
+    ).bind(email).run();
 }
 
 export async function listUserDevices(env: Env, userId: string): Promise<DeviceRow[]> {

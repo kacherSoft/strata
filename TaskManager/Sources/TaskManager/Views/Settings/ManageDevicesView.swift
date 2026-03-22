@@ -19,7 +19,9 @@ struct ManageDevicesView: View {
                 Spacer()
                 if isLoading { ProgressView().scaleEffect(0.6) }
                 Button("Refresh") { Task { await reload() } }
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .frame(width: 80)
                     .disabled(isLoading || revokingInstallId != nil)
             }
 
@@ -103,14 +105,17 @@ struct ManageDevicesView: View {
 
             if device.active {
                 Button("Revoke") { deviceToRevoke = device }
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .frame(width: 80)
                     .disabled(revokingInstallId != nil)
             } else {
                 Text("Revoked")
                     .font(.caption).foregroundStyle(.secondary)
+                    .frame(width: 80)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
         .padding(.vertical, 10)
     }
 
