@@ -214,7 +214,11 @@ final class EntitlementService {
         }
         try await backendClient.revokeDevice(installId: installId)
         if installId == self.installId {
+            // Full entitlement clear — user drops to Free plan
             clearLinkedSubscriptionState(deleteEmail: false)
+            isLicenseValid = false
+            keychain.delete(.licenseKey)
+            keychain.delete(.licenseInstanceId)
         }
         await revalidate()
     }
