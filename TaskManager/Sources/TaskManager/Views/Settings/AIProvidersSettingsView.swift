@@ -1,45 +1,86 @@
 import SwiftUI
 import SwiftData
 
-/// AI Provider management — add/edit/remove providers, API keys, model lists, test connection.
+/// AI Provider management — horizontal tab per provider, API keys, model lists, test connection.
 struct AIProvidersSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \AIProviderModel.sortOrder) private var providers: [AIProviderModel]
+    @State private var selectedProviderId: UUID?
     @State private var showAddSheet = false
+
+    private var selectedProvider: AIProviderModel? {
+        if let id = selectedProviderId { return providers.first { $0.id == id } }
+        return providers.first
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    Text("AI Providers")
-                        .font(.title2.bold())
-                    Spacer()
-                    Text("\(providers.count)/\(AIProviderModel.maxProviderCount) providers")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 4)
+                Text("AI Providers")
+                    .font(.title2.bold())
 
-                ForEach(providers) { provider in
-                    AIProviderCardView(provider: provider)
-                }
-
-                if providers.count < AIProviderModel.maxProviderCount {
-                    Button(action: { showAddSheet = true }) {
-                        Label("Add Provider", systemImage: "plus")
+                // Horizontal tab bar
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 2) {
+                        ForEach(providers) { provider in
+                            providerTab(provider)
+                        }
+                        if providers.count < AIProviderModel.maxProviderCount {
+                            Button(action: { showAddSheet = true }) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 12))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Add provider")
+                        }
                     }
-                    .buttonStyle(.bordered)
+                    .padding(2)
+                }
+
+                // Selected provider content
+                if let provider = selectedProvider {
+                    AIProviderCardView(provider: provider)
+                } else {
+                    Text("No providers configured")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(40)
                 }
 
                 Spacer()
             }
             .padding(24)
         }
+        .onAppear {
+            if selectedProviderId == nil { selectedProviderId = providers.first?.id }
+        }
         .sheet(isPresented: $showAddSheet) {
             AddProviderSheet { name, baseURL, apiKey, models in
                 addProvider(name: name, baseURL: baseURL, apiKey: apiKey, models: models)
             }
         }
+    }
+
+    @ViewBuilder
+    private func providerTab(_ provider: AIProviderModel) -> some View {
+        let isSelected = provider.id == (selectedProviderId ?? providers.first?.id)
+        Button(action: { selectedProviderId = provider.id }) {
+            HStack(spacing: 6) {
+                Text(provider.name)
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                if provider.isConfigured {
+                    Circle().fill(.green).frame(width: 6, height: 6)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+            .foregroundStyle(isSelected ? .primary : .secondary)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 
     private func addProvider(name: String, baseURL: String, apiKey: String, models: [String]) {
@@ -56,10 +97,11 @@ struct AIProvidersSettingsView: View {
         )
         modelContext.insert(provider)
         try? modelContext.save()
+        selectedProviderId = provider.id
     }
 }
 
-// MARK: - Provider Card
+// MARK: - Provider Detail Card
 
 struct AIProviderCardView: View {
     @Environment(\.modelContext) private var modelContext
@@ -73,29 +115,21 @@ struct AIProviderCardView: View {
     enum TestResult { case success, failure(String) }
 
     var body: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header
-                HStack {
-                    Text(provider.name)
-                        .font(.headline)
-                    if provider.isDefault {
-                        Text("Default")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.blue.opacity(0.2))
-                            .foregroundStyle(.blue)
-                            .clipShape(Capsule())
-                    }
-                    Spacer()
-                    configuredBadge
+        VStack(alignment: .leading, spacing: 16) {
+            // Status badge
+            HStack {
+                configuredBadge
+                Spacer()
+                if !provider.isDefault {
+                    Button("Remove Provider", role: .destructive) { deleteProvider() }
+                        .controlSize(.small)
                 }
+            }
 
-                // API Key
+            // API Key row
+            VStack(alignment: .leading, spacing: 6) {
+                Text("API Key").font(.subheadline.bold())
                 HStack(spacing: 8) {
-                    Text("API Key")
-                        .frame(width: 60, alignment: .leading)
                     if showAPIKey {
                         TextField("API Key", text: $apiKeyText)
                             .textFieldStyle(.roundedBorder)
@@ -108,91 +142,64 @@ struct AIProviderCardView: View {
                     }
                     .buttonStyle(.borderless)
                     Button("Save") { saveAPIKey() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.bordered).controlSize(.small)
                     Button("Test") { testConnection() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.bordered).controlSize(.small)
                         .disabled(isTesting)
                 }
 
-                // Test result
                 if let result = testResult {
                     testResultView(result)
                 }
+            }
 
-                // Base URL (custom providers only)
-                if provider.requiresBaseURL {
-                    HStack(spacing: 8) {
-                        Text("Base URL")
-                            .frame(width: 60, alignment: .leading)
-                        TextField("https://api.example.com/v1", text: Binding(
-                            get: { provider.baseURL ?? "" },
-                            set: { provider.baseURL = $0.isEmpty ? nil : $0; try? modelContext.save() }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                    }
-                }
-
-                // Models
-                modelsSection
-
-                // Delete button (custom only)
-                if !provider.isDefault {
-                    HStack {
-                        Spacer()
-                        Button("Remove Provider", role: .destructive) { deleteProvider() }
-                            .controlSize(.small)
-                    }
+            // Base URL (custom only)
+            if provider.requiresBaseURL {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Base URL").font(.subheadline.bold())
+                    TextField("https://api.example.com/v1", text: Binding(
+                        get: { provider.baseURL ?? "" },
+                        set: { provider.baseURL = $0.isEmpty ? nil : $0; try? modelContext.save() }
+                    ))
+                    .textFieldStyle(.roundedBorder)
                 }
             }
-            .padding(8)
+
+            // Models
+            modelsSection
         }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .controlBackgroundColor)))
         .onAppear { loadAPIKey() }
     }
 
     @ViewBuilder
     private var configuredBadge: some View {
         if provider.isConfigured {
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text("Configured")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            }
+            Label("Configured", systemImage: "checkmark.circle.fill")
+                .font(.caption).foregroundStyle(.green)
         } else {
-            HStack(spacing: 4) {
-                Image(systemName: "xmark.circle")
-                    .foregroundStyle(.orange)
-                Text("Not configured")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
+            Label("Not configured", systemImage: "xmark.circle")
+                .font(.caption).foregroundStyle(.orange)
         }
     }
 
     private var modelsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Models")
-                .font(.subheadline.bold())
+            Text("Models").font(.subheadline.bold())
             ForEach(provider.models, id: \.self) { model in
                 HStack {
-                    Text(model)
-                        .font(.system(.body, design: .monospaced))
+                    Text(model).font(.system(.body, design: .monospaced))
                     if model == provider.defaultModelName {
-                        Text("default")
-                            .font(.caption2)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
+                        Text("default").font(.caption2)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
                             .background(.secondary.opacity(0.2))
                             .clipShape(Capsule())
                     }
                     Spacer()
                     if !provider.isDefault || provider.models.count > 1 {
                         Button(action: { removeModel(model) }) {
-                            Image(systemName: "minus.circle")
-                                .foregroundStyle(.red.opacity(0.7))
+                            Image(systemName: "minus.circle").foregroundStyle(.red.opacity(0.7))
                         }
                         .buttonStyle(.borderless)
                     }
@@ -223,8 +230,6 @@ struct AIProviderCardView: View {
         }
     }
 
-    // MARK: - Actions
-
     private func loadAPIKey() {
         apiKeyText = KeychainService.shared.getValue(forRef: provider.apiKeyRef) ?? ""
     }
@@ -251,9 +256,8 @@ struct AIProviderCardView: View {
 
     private func addModel() {
         let name = newModelName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
+        guard !name.isEmpty, !provider.models.contains(name) else { return }
         var models = provider.models
-        guard !models.contains(name) else { return }
         models.append(name)
         provider.models = models
         if provider.defaultModelName == nil { provider.defaultModelName = name }
@@ -265,9 +269,7 @@ struct AIProviderCardView: View {
         var models = provider.models
         models.removeAll { $0 == model }
         provider.models = models
-        if provider.defaultModelName == model {
-            provider.defaultModelName = models.first
-        }
+        if provider.defaultModelName == model { provider.defaultModelName = models.first }
         try? modelContext.save()
     }
 
@@ -294,8 +296,7 @@ private struct AddProviderSheet: View {
                 Text("Add OpenAI-Compatible Provider")
                     .font(.headline)
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.escape)
+                Button("Cancel") { dismiss() }.keyboardShortcut(.escape)
             }
             .padding()
 
@@ -315,7 +316,9 @@ private struct AddProviderSheet: View {
             HStack {
                 Spacer()
                 Button("Add") {
-                    let models = modelsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                    let models = modelsText.split(separator: ",")
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
                     onSave(name, baseURL, apiKey, models)
                     dismiss()
                 }

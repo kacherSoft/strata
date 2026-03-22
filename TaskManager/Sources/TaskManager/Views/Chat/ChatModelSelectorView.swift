@@ -10,10 +10,21 @@ struct ChatModelSelectorView: View {
            sort: \AIProviderModel.sortOrder)
     private var providers: [AIProviderModel]
 
+    /// Resolve the provider — by ID first, then by model name match
+    private var resolvedProvider: AIProviderModel? {
+        if let pid = selectedProviderId {
+            return providers.first { $0.id == pid }
+        }
+        // Fallback: find provider whose models contain the selected model
+        return providers.first { $0.models.contains(selectedModelName) }
+    }
+
     /// Display label with provider prefix: "Gemini / gemini-flash-latest"
     private var displayLabel: String {
         guard !selectedModelName.isEmpty else { return "Select model" }
-        if let pid = selectedProviderId, let p = providers.first(where: { $0.id == pid }) {
+        if let p = resolvedProvider {
+            // Auto-set providerId if it was nil (legacy mode without aiProviderId)
+            if selectedProviderId == nil { selectedProviderId = p.id }
             return "\(p.name) / \(selectedModelName)"
         }
         return selectedModelName
