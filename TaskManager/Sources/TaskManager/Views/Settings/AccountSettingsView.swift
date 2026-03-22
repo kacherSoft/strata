@@ -18,6 +18,47 @@ struct AccountSettingsView: View {
                     freePlanCard
                 }
 
+                // Sign in / Sign out
+                if entitlementService.isAccountSignedIn {
+                    HStack {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entitlementService.accountEmail ?? "Signed in")
+                                .font(.body)
+                            Text("Signed in to your Strata account")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Sign Out") {
+                            Task { await entitlementService.signOutAccount() }
+                        }
+                        .controlSize(.small)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .liquidGlass(.settingsCard)
+                } else {
+                    HStack {
+                        Image(systemName: "person.crop.circle")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Not signed in")
+                                .font(.body)
+                            Text("Sign in to sync your subscription")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .liquidGlass(.settingsCard)
+                }
+
                 // Devices section
                 VStack(spacing: 0) {
                     HStack {
