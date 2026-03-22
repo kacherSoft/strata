@@ -8,20 +8,22 @@ final class OpenAICompatibleProvider: AIProviderProtocol, @unchecked Sendable {
     private let timeout: TimeInterval
     private let defaultModel = "gpt-4o-mini"
 
-    init(name: String, baseURL: String, apiKeyProvider: @escaping () -> String?, timeout: TimeInterval = 30) {
+    init(name: String, baseURL: String, apiKeyProvider: @escaping () -> String?, testModelName: String? = nil, timeout: TimeInterval = 30) {
         self.name = name
         let trimmed = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         self.baseURL = trimmed
         self.apiKeyProvider = apiKeyProvider
+        self.testModelName = testModelName
         self.timeout = timeout
     }
 
     /// Convenience init using a Keychain ref string instead of a closure
-    convenience init(name: String, baseURL: String, apiKeyRef: String, timeout: TimeInterval = 30) {
+    convenience init(name: String, baseURL: String, apiKeyRef: String, testModelName: String? = nil, timeout: TimeInterval = 30) {
         self.init(
             name: name,
             baseURL: baseURL,
             apiKeyProvider: { KeychainService.shared.getValue(forRef: apiKeyRef) },
+            testModelName: testModelName,
             timeout: timeout
         )
     }
@@ -162,11 +164,15 @@ final class OpenAICompatibleProvider: AIProviderProtocol, @unchecked Sendable {
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw AIError.invalidResponse }
         if http.statusCode == 401 { throw AIError.invalidAPIKey }
-        return (200...403).contains(http.statusCode)
+        // 200-299 = success, 402 = payment required (key valid, no credits), 403 = forbidden (key valid, quota)
+        if (200...299).contains(http.statusCode) { return true }
+        if http.statusCode == 402 || http.statusCode == 403 { return true } // key works, just no credits
+        throw AIError.providerError("Test failed: HTTP \(http.statusCode)")
     }
 
     /// Model name to use for test connection (set from AIProviderModel.defaultModelName)
-    var testModelName: String?
+    /// Immutable after init to avoid data race on @unchecked Sendable class
+    let testModelName: String?
 
     // MARK: - Private helpers
 

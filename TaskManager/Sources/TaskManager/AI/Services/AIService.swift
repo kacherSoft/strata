@@ -42,13 +42,12 @@ final class AIService {
         case .anthropic:
             return AnthropicProvider(apiKeyRef: model.apiKeyRef)
         case .openai:
-            let provider = OpenAICompatibleProvider(
+            return OpenAICompatibleProvider(
                 name: model.name,
                 baseURL: model.baseURL ?? "",
-                apiKeyRef: model.apiKeyRef
+                apiKeyRef: model.apiKeyRef,
+                testModelName: model.defaultModelName ?? model.models.first
             )
-            provider.testModelName = model.defaultModelName ?? model.models.first
-            return provider
         }
     }
 
