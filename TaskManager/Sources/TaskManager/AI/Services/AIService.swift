@@ -75,10 +75,12 @@ final class AIService {
         }
     }
 
-    func cycleMode(in context: ModelContext) {
+    func cycleMode(in context: ModelContext, viewType: AIModeViewType? = nil) {
         let descriptor = FetchDescriptor<AIModeModel>(sortBy: [SortDescriptor(\.sortOrder)])
         do {
-            let modes = try context.fetch(descriptor)
+            let allModes = try context.fetch(descriptor)
+            // Filter by viewType if specified
+            let modes = viewType == nil ? allModes : allModes.filter { $0.viewType == viewType }
             guard !modes.isEmpty else { return }
 
             if let current = currentMode,

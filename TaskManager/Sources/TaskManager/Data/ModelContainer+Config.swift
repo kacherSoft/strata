@@ -193,8 +193,7 @@ func seedDefaultData(container: ModelContainer) throws {
     try seedDefaultAIProviders(context: context)
     try seedDefaultAIModes(context: context)
     try removeDeprecatedBuiltInModesIfNeeded(context: context)
-    try seedExplainModeIfNeeded(context: context)
-    try seedChatModeIfNeeded(context: context)
+    try migrateAIModesForV4(context: context)
     try repairInvalidAIModeProviders(context: context)
     try seedDefaultSettings(context: context)
     try seedDefaultCustomFieldDefinitions(context: context)
@@ -258,75 +257,84 @@ private func seedDefaultAIModes(context: ModelContext) throws {
 
 @MainActor
 private func removeDeprecatedBuiltInModesIfNeeded(context: ModelContext) throws {
-    let modesToRemove: Set<String> = ["Simplify", "Break Down"]
+    // Delete truly deprecated modes that no longer exist
+    let modesToDelete: Set<String> = ["Simplify", "Break Down"]
+    // Demote former built-ins to custom modes (user can edit/delete them)
+    let modesToDemote: Set<String> = ["Enhance Prompt", "Explain"]
+
     let builtInModes = try context.fetch(FetchDescriptor<AIModeModel>(predicate: #Predicate { $0.isBuiltIn }))
-    for mode in builtInModes where modesToRemove.contains(mode.name) {
-        context.delete(mode)
+    for mode in builtInModes {
+        if modesToDelete.contains(mode.name) {
+            context.delete(mode)
+        } else if modesToDemote.contains(mode.name) {
+            mode.isBuiltIn = false
+        }
     }
 }
 
+/// V4 migration: set viewType and autoCopyOutput for existing modes, seed Chat if missing.
 @MainActor
-private func seedChatModeIfNeeded(context: ModelContext) throws {
-    let descriptor = FetchDescriptor<AIModeModel>(
-        predicate: #Predicate { $0.isBuiltIn && $0.name == "Chat" }
-    )
-    guard try context.fetch(descriptor).isEmpty else { return }
-
+private func migrateAIModesForV4(context: ModelContext) throws {
     let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
-    let maxOrder = allModes.map(\.sortOrder).max() ?? -1
 
-    let chatMode = AIModeModel(
-        name: "Chat",
-        systemPrompt: "You are a helpful, knowledgeable assistant. Respond conversationally. Use markdown formatting for code blocks, lists, and emphasis when appropriate.",
-        provider: .gemini,
-        isBuiltIn: true,
-        supportsAttachments: true
-    )
-    chatMode.sortOrder = maxOrder + 1
-    context.insert(chatMode)
+    for mode in allModes {
+        // Set viewType for modes that don't have it yet (nil = pre-V4)
+        if mode.viewTypeRaw == nil {
+            if mode.name == "Chat" {
+                mode.viewTypeRaw = AIModeViewType.chat.rawValue
+            } else {
+                mode.viewTypeRaw = AIModeViewType.enhance.rawValue
+            }
+        }
+
+        // Set autoCopyOutput for Correct Me
+        if mode.name == "Correct Me" && mode.isBuiltIn {
+            mode.autoCopyOutput = true
+        }
+    }
+
+    // Seed Chat mode if missing
+    let chatExists = allModes.contains { $0.name == "Chat" && $0.isBuiltIn }
+    if !chatExists {
+        let maxOrder = allModes.map(\.sortOrder).max() ?? -1
+        let chatMode = AIModeModel(
+            name: "Chat",
+            systemPrompt: "You are a helpful, knowledgeable assistant. Respond conversationally. Use markdown formatting for code blocks, lists, and emphasis when appropriate.",
+            provider: .gemini,
+            isBuiltIn: true,
+            viewType: .chat
+        )
+        chatMode.sortOrder = maxOrder + 1
+        context.insert(chatMode)
+    }
+
+    // Seed Correct Me if missing
+    let correctExists = allModes.contains { $0.name == "Correct Me" && $0.isBuiltIn }
+    if !correctExists {
+        let maxOrder = allModes.map(\.sortOrder).max() ?? -1
+        let correctMode = AIModeModel(
+            name: "Correct Me",
+            systemPrompt: "You are an expert editor. Correct grammar, spelling, and improve fluency while maintaining the original meaning and tone. Only output the corrected text, nothing else.",
+            provider: .gemini,
+            isBuiltIn: true,
+            viewType: .enhance,
+            autoCopyOutput: true
+        )
+        correctMode.sortOrder = maxOrder + 1
+        context.insert(correctMode)
+    }
 }
 
 /// Fix modes with invalid providerRaw values (e.g. "custom" from old code).
-/// When providerRaw is unrecognized, the computed `provider` property silently defaults to .gemini,
-/// but the modelName can be stale (e.g. "gpt-5.4"). This repairs both fields.
 @MainActor
 private func repairInvalidAIModeProviders(context: ModelContext) throws {
     let validRaw = Set(AIProviderType.allCases.map(\.rawValue))
     let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
     for mode in allModes {
         guard !validRaw.contains(mode.providerRaw) else { continue }
-        // Invalid providerRaw — reset to gemini with default model
         mode.providerRaw = AIProviderType.gemini.rawValue
         mode.modelName = AIProviderType.gemini.defaultModel
     }
-}
-
-@MainActor
-private func seedExplainModeIfNeeded(context: ModelContext) throws {
-    let descriptor = FetchDescriptor<AIModeModel>(
-        predicate: #Predicate { $0.isBuiltIn && $0.name == "Explain" }
-    )
-    let explainModes = try context.fetch(descriptor)
-
-    if let explainMode = explainModes.first {
-        if !explainMode.supportsAttachments {
-            explainMode.supportsAttachments = true
-        }
-        return
-    }
-
-    let allModes = try context.fetch(FetchDescriptor<AIModeModel>())
-    let maxOrder = allModes.map(\.sortOrder).max() ?? -1
-
-    let explainMode = AIModeModel(
-        name: "Explain",
-        systemPrompt: "You are an expert explainer. If an image or document is attached, analyze and explain it clearly and concisely. Otherwise, analyze the provided text. Break down complex concepts into understandable language. Only output the explanation, nothing else.",
-        provider: .gemini,
-        isBuiltIn: true,
-        supportsAttachments: true
-    )
-    explainMode.sortOrder = maxOrder + 1
-    context.insert(explainMode)
 }
 
 @MainActor

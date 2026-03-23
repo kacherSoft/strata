@@ -53,6 +53,29 @@ enum AIProviderType: String, Codable, CaseIterable, Sendable {
     var requiresBaseURL: Bool { self == .openai }
 }
 
+// MARK: - View Type
+
+enum AIModeViewType: String, Codable, CaseIterable, Sendable {
+    case enhance = "enhance"
+    case chat = "chat"
+
+    var displayName: String {
+        switch self {
+        case .enhance: return "Enhance"
+        case .chat: return "Chat"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .enhance: return "wand.and.stars"
+        case .chat: return "bubble.left.and.bubble.right"
+        }
+    }
+}
+
+// MARK: - AI Mode Model
+
 @Model
 final class AIModeModel: Identifiable {
     @Attribute(.unique) var id: UUID
@@ -62,21 +85,27 @@ final class AIModeModel: Identifiable {
     var modelName: String
     var sortOrder: Int
     var isBuiltIn: Bool
-    var supportsAttachments: Bool = false
     var customBaseURL: String?
     var aiProviderId: UUID?
     var createdAt: Date
-    
+
+    // V4 fields
+    var viewTypeRaw: String?
+    var autoCopyOutput: Bool = false
+
+    // Legacy field — kept for schema compatibility, no longer used
+    var supportsAttachments: Bool = false
+
+    // MARK: - Computed Properties
+
     var provider: AIProviderType {
         get {
-            // Migrate legacy "zai" → "anthropic"
             if providerRaw == "zai" {
                 providerRaw = AIProviderType.anthropic.rawValue
                 modelName = AIProviderType.anthropic.defaultModel
                 return .anthropic
             }
             guard let valid = AIProviderType(rawValue: providerRaw) else {
-                // Invalid providerRaw — reset both provider AND model to prevent mismatch
                 providerRaw = AIProviderType.gemini.rawValue
                 modelName = AIProviderType.gemini.defaultModel
                 return .gemini
@@ -85,8 +114,29 @@ final class AIModeModel: Identifiable {
         }
         set { providerRaw = newValue.rawValue }
     }
-    
-    init(name: String, systemPrompt: String, provider: AIProviderType = .gemini, modelName: String? = nil, isBuiltIn: Bool = false, supportsAttachments: Bool = false, customBaseURL: String? = nil) {
+
+    var viewType: AIModeViewType {
+        get {
+            guard let raw = viewTypeRaw, let type = AIModeViewType(rawValue: raw) else {
+                return .enhance
+            }
+            return type
+        }
+        set { viewTypeRaw = newValue.rawValue }
+    }
+
+    // MARK: - Init
+
+    init(
+        name: String,
+        systemPrompt: String,
+        provider: AIProviderType = .gemini,
+        modelName: String? = nil,
+        isBuiltIn: Bool = false,
+        viewType: AIModeViewType = .enhance,
+        autoCopyOutput: Bool = false,
+        customBaseURL: String? = nil
+    ) {
         self.id = UUID()
         self.name = name
         self.systemPrompt = systemPrompt
@@ -94,31 +144,30 @@ final class AIModeModel: Identifiable {
         self.modelName = modelName ?? provider.defaultModel
         self.sortOrder = 0
         self.isBuiltIn = isBuiltIn
-        self.supportsAttachments = supportsAttachments
+        self.viewTypeRaw = viewType.rawValue
+        self.autoCopyOutput = autoCopyOutput
         self.customBaseURL = customBaseURL
         self.createdAt = Date()
     }
-    
+
+    // MARK: - Built-in Defaults
+
     static func createDefaultModes() -> [AIModeModel] {
         [
             AIModeModel(
                 name: "Correct Me",
                 systemPrompt: "You are an expert editor. Correct grammar, spelling, and improve fluency while maintaining the original meaning and tone. Only output the corrected text, nothing else.",
                 provider: .gemini,
-                isBuiltIn: true
+                isBuiltIn: true,
+                viewType: .enhance,
+                autoCopyOutput: true
             ),
             AIModeModel(
-                name: "Enhance Prompt",
-                systemPrompt: "You are an expert at writing clear, detailed descriptions. Expand this text with more specific details, actionable steps, and context. Make it clearer and more comprehensive. Only output the enhanced text, nothing else.",
-                provider: .gemini,
-                isBuiltIn: true
-            ),
-            AIModeModel(
-                name: "Explain",
-                systemPrompt: "You are an expert explainer. If an image or document is attached, analyze and explain it clearly and concisely. Otherwise, analyze the provided text. Break down complex concepts into understandable language. Only output the explanation, nothing else.",
+                name: "Chat",
+                systemPrompt: "You are a helpful, knowledgeable assistant. Respond conversationally. Use markdown formatting for code blocks, lists, and emphasis when appropriate.",
                 provider: .gemini,
                 isBuiltIn: true,
-                supportsAttachments: true
+                viewType: .chat
             )
         ]
     }
